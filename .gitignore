@@ -28,6 +28,10 @@ PLLJ_PLLSPE_INFO.txt
 */soc_system/synthesis/
 */soc_system/simulation/
 *.sopcinfo
+# Salida de scripts/build-soc.sh (RTL, testbench y listas de archivos del tb)
+hw/soc/gen/
+hw/soc/*_tb.csv
+hw/soc/*_tb.spd
 
 # ─────────────────────────────────────────────
 #  Simulacion (Questa / ModelSim)
