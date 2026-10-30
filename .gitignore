@@ -1,0 +1,65 @@
+# ─────────────────────────────────────────────
+#  Quartus / Platform Designer
+# ─────────────────────────────────────────────
+db/
+incremental_db/
+output_files/
+simulation/
+greybox_tmp/
+qdb/
+tmp-clearbox/
+.qsys_edit/
+*.qws
+*.rpt
+*.summary
+*.smsg
+*.done
+*.jdi
+*.sld
+*.pin
+*.pof
+*.sof
+*.rbf
+*.cdf
+*.qarlog
+c5_pin_model_dump.txt
+PLLJ_PLLSPE_INFO.txt
+# Salida generada por Platform Designer (se regenera desde el .qsys)
+*/soc_system/synthesis/
+*/soc_system/simulation/
+*.sopcinfo
+
+# ─────────────────────────────────────────────
+#  Simulacion (Questa / ModelSim)
+# ─────────────────────────────────────────────
+work/
+libraries/
+transcript
+*.wlf
+vsim.wlf
+modelsim.ini
+*.vstf
+
+# ─────────────────────────────────────────────
+#  Software Nios V / HPS
+# ─────────────────────────────────────────────
+build/
+*.o
+*.a
+*.elf
+*.objdump
+*.map
+*.hex
+*.srec
+# El BSP se regenera con niosv-bsp; solo se versiona settings.bsp
+software/*bsp*/*
+!software/*bsp*/settings.bsp
+
+# ─────────────────────────────────────────────
+#  Editores y sistema
+# ─────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
