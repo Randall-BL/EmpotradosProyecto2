@@ -278,10 +278,12 @@ empezar HP-02 en S1 aunque CD-02 no esté cerrado.
 
 ### 3.1 SoC base en Platform Designer — #5
 
-- [ ] **HW-01** `hw/soc/build_system.tcl` es la fuente de verdad del SoC; decidir si el
-      `.qsys` se versiona (recomendado: no, se regenera con `REGEN_QSYS=1
-      scripts/build-soc.sh`). Lo hecho en la GUI se pasa al Tcl antes del commit.
-      *§5 p.8 (compilación con Platform Designer)* → regla escrita en `CONTRIBUTING.md`.
+- [~] **HW-01** `hw/soc/build_system.tcl` es la única fuente de verdad del SoC. **Decidido
+      (29 oct):** el `.qsys` no se versiona (`.gitignore`); `scripts/build-soc.sh` lo
+      regenera cuando falta o cuando el Tcl es más nuevo, y avisa si el `.qsys` fue editado
+      en la GUI. Falta: escribir en `CONTRIBUTING.md` la regla "lo que se cambie en la GUI
+      se pasa al Tcl antes del commit" (junto con GIT-03). *§5 p.8 (compilación con
+      Platform Designer)* → regla escrita en `CONTRIBUTING.md`.
 - [ ] **HW-02** PIO definitivos: `pio_key` (KEY[3:0], entrada, captura de flanco de bajada,
       IRQ), `pio_sw` (SW[9:0], entrada; IRQ según CD-08) y `pio_led` (LEDR[9:0]); quitar
       `pio_in`/`pio_out` del Taller 9. *§3-F p.3 (botones por interrupción), §3-SIS p.5* ·

@@ -77,8 +77,11 @@ scripts/sim-soc.sh         # Questa en consola: transcript con la salida de la J
 scripts/sim-soc.sh gui     # Questa con GUI y waveform de los PIO (captura de evidencia)
 ```
 
-`REGEN_QSYS=1 scripts/build-soc.sh` fuerza regenerar el `.qsys` desde el Tcl. La
-salida generada (`hw/soc/gen/`, `build/`, `*.sopcinfo`) no se versiona.
+`build-soc.sh` regenera `hw/soc/audio_soc.qsys` cuando falta o cuando
+`build_system.tcl` es más nuevo; `REGEN_QSYS=1` lo fuerza. El `.qsys` no se versiona:
+la fuente del SoC es el Tcl, así que lo que se cambie en la GUI de Platform Designer
+hay que pasarlo al Tcl. Tampoco se versiona el resto de la salida generada
+(`hw/soc/gen/`, `build/`, `*.sopcinfo`).
 
 Notas aprendidas en el Taller 9:
 

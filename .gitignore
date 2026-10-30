@@ -28,7 +28,9 @@ PLLJ_PLLSPE_INFO.txt
 */soc_system/synthesis/
 */soc_system/simulation/
 *.sopcinfo
-# Salida de scripts/build-soc.sh (RTL, testbench y listas de archivos del tb)
+# Salida de scripts/build-soc.sh (RTL, testbench y listas de archivos del tb).
+# El .qsys tambien se genera: la fuente del SoC es hw/soc/build_system.tcl.
+hw/soc/*.qsys
 hw/soc/gen/
 hw/soc/*_tb.csv
 hw/soc/*_tb.spd
