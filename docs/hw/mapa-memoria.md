@@ -80,7 +80,7 @@ los IP):
 
 - El `printf` de picolibc con soporte de punto flotante cuesta ~10 KB (`vfprintf`,
   `__dtoa_engine`, `__udivdi3`): la aplicación final no lo usa en el lazo de audio y, si
-  hace falta para mediciones, conviene formatear enteros a mano como `sw/common/screen.c`.
+  hace falta para mediciones, conviene formatear enteros a mano como `sw/common/src/screen.c`.
 - La tabla de seno de `tone.c` (2 KB) y la de volumen (64 B) van en `.rodata`.
 - Quedan ~108 KB para pila, heap y el resto de la aplicación (C, NV-14). Los buffers de
   audio grandes no van aquí sino en `shm` (CD-06).

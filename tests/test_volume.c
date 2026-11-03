@@ -1,5 +1,5 @@
 /*
- * Pruebas en el PC del control de volumen (sw/common/volume.c, SC-11).
+ * Pruebas en el PC del control de volumen (sw/common/src/volume.c, SC-11).
  * Compilar y correr:  make -C tests
  */
 #include <stdio.h>

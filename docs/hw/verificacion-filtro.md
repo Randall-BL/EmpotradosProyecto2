@@ -12,7 +12,7 @@ documentados. Este reporte es esa evidencia. Fecha: 7 de noviembre de 2026.
   igual que lo hará el procesador. No se fuerza ninguna señal interna.
 - **Referencia:** vectores dorados de [`sim/vectors/`](../../sim/vectors/README.md)
   generados por `scripts/design_fir.py` con un **modelo bit a bit** del datapath
-  (`FirModel`). El mismo modelo en C (`sw/common/dsp.c`) reproduce los vectores en el PC
+  (`FirModel`). El mismo modelo en C (`sw/common/src/dsp.c`) reproduce los vectores en el PC
   (`make -C tests`), lo que da una segunda referencia independiente del Verilog.
 - **Criterio:** igualdad **exacta** (0 LSB de tolerancia): el redondeo y la saturación del
   hardware y del modelo son los mismos (CD-14).

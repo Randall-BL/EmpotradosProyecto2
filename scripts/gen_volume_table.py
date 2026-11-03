@@ -7,7 +7,7 @@ sube STEP_DB decibeles; el escalon 0 es silencio y el ultimo es 0 dB (ganancia 1
 Las ganancias quedan en Q15 (32768 = 1.0) y se aplican como (muestra * g) >> 15.
 
 Uso: python3 scripts/gen_volume_table.py > /dev/stdout
-     (pegar la salida en sw/common/volume.c, tabla volume_gain_q15)
+     (pegar la salida en sw/common/src/volume.c, tabla volume_gain_q15)
 """
 STEPS = 32
 STEP_DB = 2.0

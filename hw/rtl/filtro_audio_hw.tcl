@@ -21,7 +21,7 @@ add_fileset_file filtro_audio.v VERILOG PATH filtro_audio.v
 add_fileset_file fir_core.v     VERILOG PATH fir_core.v
 
 # Sin archivo de coeficientes: el driver (NV-10) los carga al arrancar desde
-# sw/common/fir_coefs.h, asi el .hex no tiene que viajar con el IP generado.
+# sw/common/include/fir_coefs.h, asi el .hex no tiene que viajar con el IP generado.
 add_parameter COEF_FILE STRING ""
 set_parameter_property COEF_FILE HDL_PARAMETER true
 set_parameter_property COEF_FILE VISIBLE false

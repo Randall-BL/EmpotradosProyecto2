@@ -1,5 +1,5 @@
 /*
- * Pruebas en el PC de la pantalla del reproductor (sw/common/screen.c, NV-11).
+ * Pruebas en el PC de la pantalla del reproductor (sw/common/src/screen.c, NV-11).
  * Dibuja en una matriz de 80 x 13 y compara con el boceto de CD-09.
  * Con -v imprime la pantalla.  Compilar y correr:  make -C tests
  */

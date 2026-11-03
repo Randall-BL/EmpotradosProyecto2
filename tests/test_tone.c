@@ -1,5 +1,5 @@
 /*
- * Pruebas en el PC del generador de tono (sw/common/tone.c).
+ * Pruebas en el PC del generador de tono (sw/common/src/tone.c).
  * Compilar y correr:  make -C tests
  */
 #include <math.h>

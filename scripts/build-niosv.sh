@@ -13,7 +13,7 @@
 #   scripts/build-niosv.sh              # aplicacion del reproductor (sw/niosv/src)
 #   APP=test_pio scripts/build-niosv.sh # programa de prueba sw/niosv/tests/test_pio
 # En ambos casos se compilan tambien los drivers (sw/niosv/drivers) y la logica
-# portable (sw/common).
+# portable (sw/common/src, headers en sw/common/include).
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -55,7 +55,13 @@ COMMON="$HERE/sw/common"
 
 echo ">> Generando proyecto de aplicacion (CMake): $SRC ..."
 niosv-app --app-dir="$OUT/app" --bsp-dir="$OUT/bsp" \
-          --srcs="$SRC,$DRV,$COMMON" --incs="$DRV,$COMMON" --elf-name="$ELF"
+          --srcs="$SRC,$DRV,$COMMON/src" --incs="$DRV,$COMMON/include" --elf-name="$ELF"
+
+# --- agregado por scripts/build-niosv.sh (NV-02) ---
+set_target_properties(\${BspLibraryName} PROPERTIES SYSTEM TRUE)
+target_compile_options($ELF PRIVATE -std=c11 -Wall -Wextra \$<\$<BOOL:${WERROR:-0}>:-Werror>)
+set_source_files_properties("$DRV/irq.c" PROPERTIES COMPILE_OPTIONS "-std=gnu11")
+CMAKE
 
 echo ">> Compilando ..."
 # Release (-O2): el CMake que genera niosv-app usa Debug por defecto (solo -g, sin

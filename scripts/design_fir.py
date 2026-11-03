@@ -20,7 +20,7 @@ Bancos de coeficientes (hasta 128 taps cada uno):
 
 Salidas (con --out, por defecto en el repositorio):
   hw/rtl/fir_coefs.hex         256 coeficientes (banco 0 y 1) para $readmemh del RTL
-  sw/common/fir_coefs.h        los mismos para C (driver NV-10 y modelo SC-10)
+  sw/common/include/fir_coefs.h        los mismos para C (driver NV-10 y modelo SC-10)
   sim/vectors/fir_*.txt        casos de prueba con la salida esperada bit a bit
   docs/img/fir_respuesta.png   respuesta ideal frente a cuantizada
   y el analisis de error de CD-14 por la salida estandar.
@@ -208,7 +208,7 @@ def main():
     (out / "hw" / "rtl").mkdir(parents=True, exist_ok=True)
     (out / "sw" / "common").mkdir(parents=True, exist_ok=True)
     (out / "docs" / "img").mkdir(parents=True, exist_ok=True)
-    export(banks_q, out / "hw/rtl/fir_coefs.hex", out / "sw/common/fir_coefs.h")
+    export(banks_q, out / "hw/rtl/fir_coefs.hex", out / "sw/common/include/fir_coefs.h")
     plot(out / "docs/img/fir_respuesta.png", curves)
     idx = vectors(out / "sim/vectors", banks_q)
     print(f"Vectores: {len(idx)} casos en sim/vectors/ (con saturacion: "
