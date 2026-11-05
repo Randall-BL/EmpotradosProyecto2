@@ -233,7 +233,7 @@ Puntos de contacto entre personas:
 
 ---
 
-## 0. Arranque y organización
+## 0. Arranque y organización — #30
 
 - [ ] **OR-01** `D·1` Leer el enunciado completo y enviar P1–P15 al profesor; registrar las
       respuestas en `docs/respuestas-profesor.md`. *§3-N p.6* → archivo con fecha de cada
@@ -241,15 +241,16 @@ Puntos de contacto entre personas:
 - [~] **OR-02** `A·1` Definir roles y responsables por sección de este plan. Reparto para 4
       personas propuesto en [Reparto del trabajo](#reparto-del-trabajo); falta confirmarlo en
       grupo, asociar cada letra a un integrante y pasarlo al README. *§5 p.8 (gestión)* →
-      tabla de roles en el README.
+      tabla de roles en el README. **A = Randall Bolaños** (ya en el README); faltan B, C y D.
 - [x] **OR-03** Revisar el Taller 9 y copiar lo reutilizable. *§2 p.2* →
       [docs/reutilizado-taller9.md](docs/reutilizado-taller9.md).
 - [ ] **OR-04** `Todos` Verificar en cada máquina Quartus 25.1std + Nios V/RiscFree + Questa con
       `scripts/env.sh` (la sección "Verificar que todo responde" de
       [docs/entorno-nativo.md](docs/entorno-nativo.md)). *§2 p.2* → los 4 comandos responden.
-- [ ] **OR-05** `A·1` Conseguir el material: DE1-SoC, microSD (≥ 4 GB), lector de SD,
+- [~] **OR-05** `A·1` Conseguir el material: DE1-SoC, microSD (≥ 4 GB), lector de SD,
       potenciómetro y cables para el conector del ADC, parlantes o audífonos, monitor VGA
       (o LCD/TFT según P9). *§3-F p.3–4, §3-SIS p.5* ⟵ P9, P10 → lista con responsable.
+      Lista en [docs/material.md](docs/material.md); faltan responsables y conseguirlo.
 
 ## 1. Repositorio y flujo Git — 10% — #1, #2
 
@@ -264,7 +265,7 @@ Puntos de contacto entre personas:
       `grep -rnE 'IOWR|IORD|alt_' sw/niosv/` y ámbitos de commit `docker`, `ci`, `hps`,
       `common`. Ajustar en `.gitignore` la regla `software/*bsp*/*`, que ya no aplica.
       *§5 p.8* ⟵ GIT-02
-- [ ] **GIT-04** `A·2` Crear issues para las tareas nuevas de este plan (OR, CD, SC, HP, IN,
+- [x] **GIT-04** Crear issues para las tareas nuevas de este plan (OR, CD, SC, HP, IN,
       DK, PR, RP, DOC sin número) y asignarlas a hitos M0–M8. *§5 p.8* → todas las tareas OBL
       tienen issue.
 - [ ] **GIT-05** `Todos` Una rama `feat/*` por issue, PR a `develop` con `Refs #n`, revisión
@@ -289,7 +290,7 @@ Puntos de contacto entre personas:
 - [ ] **CD-02** `D·2` Software del HPS: bare metal (U-Boot SPL + aplicación propia, driver
       SD/MMC + FatFs) vs Linux mínimo (Buildroot, aplicación con `mmap` de `/dev/mem`).
       Criterios: arranque < 10 s, esfuerzo del driver SD, "SO mínimo sin interacción". *§3-SW
-      p.5, §3-F p.4* ⟵ P2, P4, P14 · *issue nuevo* → decisión escrita. Define la toolchain del
+      p.5, §3-F p.4* ⟵ P2, P4, P14 · #32 → decisión escrita. Define la toolchain del
       contenedor (DK-02).
 - [ ] **CD-03** `D·2` Camino de las muestras y presupuesto de latencia: SD → HPS → buffer
       compartido → Nios V → filtro → FIFO del IP de Audio. Calcular tamaños de buffer: el
@@ -308,7 +309,8 @@ Puntos de contacto entre personas:
       SDRAM de 64 MB de la FPGA vs DDR3 del HPS por el bridge F2H; dónde vive el buffer
       compartido (RAM on-chip de doble puerto vs SDRAM). *§3-SW p.5 (gestión de memoria)*
       ⟵ CD-01, CD-03 · #4 → mapa de memoria preliminar.
-- [x] **CD-07** Frecuencias de muestreo (dato 2). *§3-F p.3* ⟵ P8 · *issue nuevo*
+- [x] **CD-07** Frecuencias de muestreo (dato 2). *§3-F p.3* ⟵ P8 · #37 →
+      [docs/decisiones/CD-07.md](docs/decisiones/CD-07.md): códec fijo a 48 kHz, remuestreo en el HPS.
       - A: códec fijo a 48 kHz y remuestreo de 8k (×6), 16k (×3) y 44.1k (→48k).
       - B: reconfigurar el códec por canción con el registro de direcciones/datos del IP de
         Config: 8k nativo; 16k → 32k (×2); 44.1k con MCLK de 11.2896 MHz o modo USB a 12 MHz.
@@ -358,10 +360,11 @@ Puntos de contacto entre personas:
       `PIO_LED_BASE`.
 - [x] **HW-03** Configurar el Nios V/m: pipeline sí/no (medir), tamaño de la RAM on-chip,
       vector de reset, `timer_sw_agent`. *§2 p.2* ⟵ CD-06 · #5
-- [ ] **HW-04** `A·2` Si CD-06 lo pide: SDRAM de 64 MB (`altera_up_avalon_sys_sdram_pll` +
-      controlador SDRAM) con los pines `DRAM_*`. *§3-SW p.5* ⟵ CD-06 · #5
+- [x] **HW-04** ~~Si CD-06 lo pide: SDRAM de 64 MB (`altera_up_avalon_sys_sdram_pll` +
+      controlador SDRAM) con los pines `DRAM_*`.~~ **No aplica:** CD-06 deja todo en RAM
+      on-chip (ver [docs/decisiones/CD-06.md](docs/decisiones/CD-06.md)). *§3-SW p.5* ⟵ CD-06 · #5
 
-### 3.2 HPS y canal HPS ↔ FPGA — *issue nuevo*
+### 3.2 HPS y canal HPS ↔ FPGA — #31
 
 - [ ] **HW-05** `D·3` Agregar el componente HPS de Cyclone V con la configuración de la DE1-SoC
       (DDR3, pines de SD/MMC, UART0, reloj) tomada del GHRD del System CD de Terasic;
@@ -534,7 +537,7 @@ Puntos de contacto entre personas:
       muestra `alt_ic_isr_register` / `alt_ic_irq_enable` / `alt_ic_irq_disable`. *§3-SW p.5*
       (OBL) → agregar el chequeo a `make lint` (DK-10).
 
-## 6. Software HPS `sw/hps/` — *issue nuevo*
+## 6. Software HPS `sw/hps/` — #32
 
 > Asume CD-01 = A. Toolchain ARM dentro del contenedor (DK-02).
 
@@ -566,7 +569,7 @@ Puntos de contacto entre personas:
       informa), menos de 10 archivos. *§3-F p.4 (estabilidad)* ⟵ HP-06
 - [ ] **HP-10** `D·2` Filtros en el ARM, solo si CD-12 los asigna al HPS. *§3-SIS p.5* ⟵ CD-12
 
-## 7. Integración HW/SW en la tarjeta
+## 7. Integración HW/SW en la tarjeta — #33 (IN-01..04), #34 (IN-05..09)
 
 - [~] **IN-01** `A·1` Prueba de humo en tarjeta: LEDs y 7 segmentos por puntero desde el Nios V.
       *§3-HW p.4* ⟵ HW-02, HW-10, HW-22 (EVID foto)
@@ -585,7 +588,7 @@ Puntos de contacto entre personas:
 - [ ] **IN-09** `D·2` Sistema completo arrancando solo desde reset, sin PC conectado. *§3-F
       p.4* ⟵ HP-04, IN-07, IN-08
 
-## 8. Contenedor Docker y CI (en paralelo, no bloquea Quartus) — *issues nuevos*
+## 8. Contenedor Docker y CI (en paralelo, no bloquea Quartus) — #35
 
 > El contenedor no reemplaza a Quartus. Sirve para: toolchain del HPS, simulación del HDL
 > propio con cocotb, pruebas en C de `sw/common/` y CI. Aporta al rubro "Herramientas de
@@ -670,7 +673,7 @@ Puntos de contacto entre personas:
       herramientas gráficas, tamaño de la instalación, licencia de Questa atada a la MAC. *§5
       p.8 (README: entorno)* ⟵ DK-07
 
-## 9. Pruebas y verificación
+## 9. Pruebas y verificación — #36
 
 - [ ] **PR-01** `D·2` Plan de pruebas en `docs/plan-pruebas.md`: por cada requisito del PDF,
       método (simulación, prueba unitaria, tarjeta), criterio de aceptación y responsable. *§5
