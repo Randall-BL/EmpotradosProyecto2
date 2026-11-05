@@ -39,7 +39,12 @@ Las filas marcadas con la tarea entre paréntesis se agregan al Tcl en esa tarea
 | `shm` | 65 536 | CD-06 |
 | `char_buf` | ≈ 8 192 | 80 × 60 caracteres (HW-09) |
 | FIFO del IP de Audio | ≈ 1 024 | 128 palabras × 2 canales (HW-07) |
-| Total previsto | ≈ 206 KB | ≈ 41 % de los 397 M10K del 5CSEMA5 |
+| Total previsto | ≈ 206 KB | ≈ 41 % de los bits de M10K del 5CSEMA5 |
+
+Medido en la compilación (HW-21, `scripts/report-resources.py`): 1 648 768 bits (41 %) en
+**207 de 397 bloques M10K (52 %)**. La diferencia es porque cada memoria ocupa bloques
+enteros de 10 Kbit; por ejemplo, el Character Buffer reserva 8 KB (direcciones de 13 bits)
+para 4 800 caracteres.
 
 El mapa final, exportado de Platform Designer y visto también desde el HPS, se cierra en
 HW-24.
