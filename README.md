@@ -142,11 +142,9 @@ completo en Questa con el Nios V ejecutando un programa de prueba, y con modelos
 chips externos hechos a partir de sus datasheets. Cada uno termina en `PASS` o `FAIL`.
 
 ```bash
-scripts/sim-tb.sh pio      # PIO, IRQ de botones y switches
-scripts/sim-tb.sh audio    # flujo de audio hacia el WM8731
-scripts/sim-tb.sh codec    # configuración I2C del códec (~15 min)
-scripts/sim-tb.sh adc      # ADC con AD7928;  ELAB_OPTS=-gLTC=1 para LTC2308
-scripts/sim-tb.sh vga      # video VGA y texto en pantalla
+scripts/test-all.sh        # PC + testbenches rapidos (~3 min); --all agrega vga y codec
+scripts/sim-tb.sh pio      # un testbench: pio, audio, codec, adc, shm, vga
+ELAB_OPTS=-gLTC=1 scripts/sim-tb.sh adc   # ADC con LTC2308 en vez de AD7928
 make -C tests              # lógica portable en el PC
 ```
 
@@ -154,10 +152,25 @@ make -C tests              # lógica portable en el PC
 |---|---|---|
 | `tb_pio` | Escritura de LEDR, lectura de SW, IRQ de cada KEY, pulsación simultánea, rebote, IRQ de SW | PASS; respuesta botón → LED **17 µs** (requisito < 200 ms) |
 | `tb_audio` | 240 pares seguidos (5 ms a 48 kHz) en Left Justified, canales sin cruzarse, sin muestras perdidas por sondeo ni por IRQ | PASS |
-| `tb_codec` | Registros del WM8731 por I2C: maestro, LJ 16 bits, 48 kHz, activo; corrección de la de-énfasis | ver [TODO.md](TODO.md) |
-| `tb_adc` | Potenciómetro en CH0 con AD7928 y con LTC2308 | ver [TODO.md](TODO.md) |
-| `tb_vga` | 640 × 480 @ 60 Hz y texto en la celda correcta | ver [TODO.md](TODO.md) |
-| `test_volume`, `test_screen` | Curva de volumen, histéresis, saturación; pantalla del reproductor | PASS |
+| `tb_codec` | Las 57 transferencias I²C de la autoinicialización (10 al WM8731, 47 al ADV7180); R7 = 0x041 (maestro, LJ, 16 bits), R8 = 0x000 (48 kHz), R9 activo; `codec_init` quita la de-énfasis (R5 0x006 → 0x000) y `codec_mute` | PASS (~75 ms simulados) |
+| `tb_adc` | Potenciómetro en CH0 con el modelo del **AD7928** y con el del **LTC2308** (las dos revisiones de la placa) | PASS en ambos |
+| `tb_shm` | Memoria compartida: bus de datos, bus de direcciones en 64 KB, March C-, accesos de 8/16 bits, sin solape con la RAM | PASS |
+| `tb_vga` | 640 × 480 @ 60 Hz (línea de 32.000 µs, HS de 3.840 µs, 640 píxeles activos) y texto: las filas 9–12 coinciden celda por celda con la pantalla de referencia | PASS |
+| `test_volume`, `test_screen`, `test_tone` | Curva de volumen, histéresis y saturación; pantalla del reproductor; tono de 440 Hz con SNR de 48.9 dB | PASS |
+
+Hallazgos de la verificación que cambiaron el diseño:
+
+- Con el **LTC2308** el IP del ADC guarda cada resultado en el registro del canal
+  anterior: con un solo canal, CH0 nunca se actualizaría. Se convierten dos canales.
+- La ROM de autoinicialización del códec deja **de-énfasis a 48 kHz** (atenúa agudos):
+  `codec_init` la quita.
+- El borrado del **Character Buffer** tarda un cuadro de video (16.7–33 ms, no "5000 ciclos")
+  y sus lecturas por el bus no son confiables: el driver espera el borrado y no relee.
+- Dos artefactos de simulación (no del diseño) se resuelven en el testbench y están
+  documentados en `sim/questa/tb_vga.sv`: el `.mif` de la fuente con varios valores por
+  línea y la salida X del `dcfifo` en modo *show-ahead*.
+
+Pruebas que faltan en la tarjeta y su procedimiento: [docs/pruebas-tarjeta.md](docs/pruebas-tarjeta.md).
 
 ## Programar la tarjeta
 

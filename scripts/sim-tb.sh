@@ -33,12 +33,15 @@ GEN="$HERE/hw/soc/gen/testbench"
 HEX="$HERE/build/niosv-test_$NAME/app/build/ram.hex"
 [ -f "$HEX" ] || { echo "ERROR: falta $HEX" >&2; exit 1; }
 mkdir -p "$HERE/build/sim"
-LOG="$HERE/build/sim/tb_$NAME.log"
+# Las opciones de elaboracion forman parte del nombre: la misma prueba con distintos
+# parametros (p. ej. tb_adc con -gLTC=1) puede correr en paralelo sin pisarse.
+SUFFIX="$(printf '%s' "${ELAB_OPTS:-}" | tr -c 'A-Za-z0-9' '_')"
+LOG="$HERE/build/sim/tb_$NAME${SUFFIX:+_$SUFFIX}.log"
 
 # Directorio de simulacion propio de este testbench: las fuentes generadas se
 # enlazan (enlaces duros, solo se leen) y mentor/ es una copia, porque ahi Questa
 # compila sus librerias y lee ram.hex. Asi varios testbenches corren en paralelo.
-WORK="$HERE/build/sim/tb_$NAME.d"
+WORK="$HERE/build/sim/tb_$NAME${SUFFIX:+_$SUFFIX}.d"
 rm -rf "$WORK"
 mkdir -p "$WORK/mentor"
 cp -al "$GEN/audio_soc_tb" "$WORK/"
