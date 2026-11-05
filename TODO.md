@@ -377,7 +377,7 @@ Puntos de contacto entre personas:
 - [~] **HW-07** `A·2` Audio: Audio PLL (frecuencia según CD-07), IP de Audio (Memory-Mapped o
       Streaming según CD-04) y Audio and Video Config (I2C al WM8731); exportar `AUD_*` y
       `FPGA_I2C_*`. *§3-HW p.4 (audio en la FPGA), §4 p.7* ⟵ CD-04, CD-07 · #6 (OBL)
-- [~] **HW-08** `A·1` ADC: IP de ADC de la DE1-SoC con el chip de nuestra revisión (AD7928 o
+- [x] **HW-08** ADC: IP de ADC de la DE1-SoC con el chip de nuestra revisión (AD7928 o
       LTC2308), canal del potenciómetro; exportar `ADC_*`. *§3-SIS p.5, §4 p.7* ⟵ P10 · #6
       (OBL)
 - [~] **HW-09** `A·2` Visualización según CD-09 (p. ej. Video PLL + VGA Controller + Character
@@ -470,7 +470,7 @@ Puntos de contacto entre personas:
 - [ ] **SC-10** `B·3` Filtros en software en punto fijo (biquad forma directa I, ecualizador
       de 3 bandas o notch/pasa-banda) y modelo del FIR igual bit a bit al HDL. *§3-SIS p.5* ⟵
       CD-14 · #16 (OBL)
-- [ ] **SC-11** `A·1` Volumen: lectura del ADC de 12 bits → ganancia (curva logarítmica) y
+- [x] **SC-11** Volumen: lectura del ADC de 12 bits → ganancia (curva logarítmica) y
       escalado con saturación. *§3-SIS p.5* ⟵ CD-05 · #17 (OBL)
 - [ ] **SC-12** `D·2` Remuestreo, si CD-07 lo pide. *§3-F p.3* ⟵ CD-07
 - [ ] **SC-13** `D·2` Protocolo HPS ↔ Nios V en un header común (`shm_proto.h`): versión,
@@ -503,13 +503,13 @@ Puntos de contacto entre personas:
 - [ ] **NV-05** `C·1` Switches (lectura periódica o IRQ según CD-08) → selección de filtro;
       LEDs para el estado y el filtro activo. *§3-F p.4, §3-SIS p.5* ⟵ HW-02, CD-08 · #16
       (OBL)
-- [ ] **NV-06** `A·2` Driver del IP de Audio: espacio libre de la FIFO, escritura de canal
+- [x] **NV-06** Driver del IP de Audio: espacio libre de la FIFO, escritura de canal
       izquierdo y derecho, limpieza de FIFOs; escritura no bloqueante de bloques de muestras.
       *§3-HW p.4* ⟵ HW-07 · #14 (OBL)
 - [ ] **NV-07** `A·2` Driver del Audio and Video Config: inicializar el códec (salida de
       línea, sin silencio, formato) y, si CD-07 = B, cambiar la frecuencia por canción. *§3-HW
       p.4* ⟵ HW-07, CD-07 · #14 (OBL)
-- [ ] **NV-08** `A·1` Driver del ADC (actualización automática, canal del potenciómetro) +
+- [x] **NV-08** Driver del ADC (actualización automática, canal del potenciómetro) +
       volumen (SC-11 o registro de HW-15). *§3-SIS p.5* ⟵ HW-08 · #17 (OBL)
 - [ ] **NV-09** `B·1` Driver de 7 segmentos (registro de HW-10) que muestra MM:SS del tiempo
       transcurrido. *§3-F p.3* ⟵ HW-10, CD-10 · #18 (OBL)
