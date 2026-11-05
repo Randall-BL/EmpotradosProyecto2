@@ -420,13 +420,13 @@ Puntos de contacto entre personas:
 
 ### 3.6 Proyecto Quartus y tarjeta — #5
 
-- [ ] **HW-19** `A·2` Top-level `hw/DE1_SoC_top.v` que instancia `audio_soc` y un `.qsf` con
+- [x] **HW-19** Top-level `hw/DE1_SoC_top.v` que instancia `audio_soc` y un `.qsf` con
       los pines tomados del `.qsf` de referencia del System CD de Terasic (solo los que se
       usan). *§2 p.2, §4 p.7* ⟵ HW-02 · #5 (OBL)
-- [ ] **HW-20** `A·1` Restricciones de tiempo `.sdc`: reloj de 50 MHz, `derive_pll_clocks`,
+- [x] **HW-20** Restricciones de tiempo `.sdc`: reloj de 50 MHz, `derive_pll_clocks`,
       `derive_clock_uncertainty`, rutas falsas para entradas asíncronas (KEY, SW). *§3-F p.4
       (estabilidad)* ⟵ HW-19 · #5 → Timing Analyzer sin slack negativo en ningún reloj.
-- [ ] **HW-21** `A·1` Script `scripts/build-quartus.sh` (`quartus_sh --flow compile`) y
+- [x] **HW-21** Script `scripts/build-quartus.sh` (`quartus_sh --flow compile`) y
       compilación limpia: sin errores, warnings críticos revisados. *§5 p.8 (compilación)* ⟵
       HW-20 · #5 (OBL)
 - [ ] **HW-22** `A·1` Cargar el software del Nios V: `ram.hex` dentro del `.sof` (actualizar

@@ -70,3 +70,6 @@ build/
 
 # Rutas locales de cada maquina para scripts/env.sh
 scripts/env.local.sh
+
+# Log y contenido de RAM que copia scripts/build-quartus.sh
+hw/quartus/output_files.log
