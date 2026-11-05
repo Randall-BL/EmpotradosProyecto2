@@ -317,7 +317,7 @@ Puntos de contacto entre personas:
 - [ ] **CD-08** `C·1` Switches: lectura periódica (≤ 20 ms) vs interrupción por flanco;
       asignación de switches a filtros y qué pasa con combinaciones inválidas. *§3-F p.4,
       §3-SIS p.5* · #16 → tabla SW → filtro.
-- [ ] **CD-09** `A·1` Visualización: VGA con IP del University Program (Character Buffer 80×60)
+- [x] **CD-09** Visualización: VGA con IP del University Program (Character Buffer 80×60)
       vs controlador VGA propio en HDL vs LCD/TFT externo. *§3-F p.4, §3-SIS p.6* ⟵ P9 · #19
       → decisión y boceto de la pantalla.
 - [ ] **CD-10** `C·1` Tiempo de reproducción: timer de hardware vs contar muestras enviadas al
