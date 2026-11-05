@@ -6,7 +6,7 @@
 # Es la simulacion nativa del SoC (Nios V + IP de Altera); las pruebas de los
 # modulos HDL propios con cocotb corren aparte, en el contenedor (make sim).
 #
-# Requiere haber corrido build-soc.sh y build-niosv.sh
+# Requiere haber corrido build-soc.sh (compila el software por su cuenta)
 #
 # Uso:
 #   scripts/sim-soc.sh            # modo consola (headless), imprime el transcript
@@ -15,6 +15,13 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$HERE/scripts/env.sh"
+
+# Compila la prueba de humo (sw/niosv/src): sim-tb.sh deja en la RAM simulada el
+# programa de su testbench. NOBUILD=1 reusa el ram.hex que ya este copiado.
+if [ "${NOBUILD:-0}" != "1" ]; then
+    "$HERE/scripts/build-niosv.sh" > "$HERE/build/niosv-smoke.log" 2>&1 \
+        || { echo "ERROR: fallo build-niosv.sh, ver build/niosv-smoke.log" >&2; exit 1; }
+fi
 
 MENTOR="$HERE/hw/soc/gen/testbench/mentor"
 DO_DIR="$HERE/sim/questa"
@@ -27,15 +34,16 @@ rm -rf work ./*_lib transcript 2>/dev/null || true
 
 # ld_debug elabora con -voptargs=+acc: sin eso los puertos de los PIO quedan
 # optimizados y no se pueden forzar ni ver en el waveform.
-# pio.do fuerza pio_in = 4'hA y registra todas las senales.
-# 6 ms: la JTAG UART simulada es lenta y el printf de PIO_IN sale despues de 3 ms.
-SIM_TIME="${SIM_TIME:-6 ms}"
+# El top es sim/questa/tb_smoke.sv (no el audio_soc_tb generado, ver su encabezado);
+# tb_smoke pone SW = 10'h00A. pio.do registra todas las senales.
+# 4 ms: la JTAG UART simulada es lenta; el ultimo printf sale cerca de 3.5 ms.
+SIM_TIME="${SIM_TIME:-4 ms}"
 
 if [ "${1:-}" = "gui" ]; then
     # GUI: compila, elabora, fuerza pio_in, agrega las senales de los PIO al
     # waveform, corre la simulacion y acomoda las ventanas para la captura.
-    vsim -gui -do "source msim_setup.tcl; file_copy; ld_debug; do $DO_DIR/pio.do; do $DO_DIR/wave.do; run $SIM_TIME; do $DO_DIR/evidence.do"
+    vsim -gui -do "set TOP_LEVEL_NAME tb_smoke; source msim_setup.tcl; file_copy; dev_com; com; vlog -sv -work work $HERE/sim/questa/tb_smoke.sv; elab_debug; do $DO_DIR/pio.do; do $DO_DIR/wave.do; run $SIM_TIME; do $DO_DIR/evidence.do"
 else
     # Consola: compila, elabora, fuerza pio_in, corre y sale.
-    vsim -c -do "source msim_setup.tcl; file_copy; ld_debug; do $DO_DIR/pio.do; run $SIM_TIME; quit -f"
+    vsim -c -do "set TOP_LEVEL_NAME tb_smoke; source msim_setup.tcl; file_copy; dev_com; com; vlog -sv -work work $HERE/sim/questa/tb_smoke.sv; elab_debug; do $DO_DIR/pio.do; run $SIM_TIME; quit -f"
 fi
