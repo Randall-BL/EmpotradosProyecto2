@@ -351,12 +351,12 @@ Puntos de contacto entre personas:
       en la GUI. Falta: escribir en `CONTRIBUTING.md` la regla "lo que se cambie en la GUI
       se pasa al Tcl antes del commit" (junto con GIT-03). *§5 p.8 (compilación con
       Platform Designer)* → regla escrita en `CONTRIBUTING.md`.
-- [ ] **HW-02** `A·1` PIO definitivos: `pio_key` (KEY[3:0], entrada, captura de flanco de
+- [x] **HW-02** PIO definitivos: `pio_key` (KEY[3:0], entrada, captura de flanco de
       bajada, IRQ), `pio_sw` (SW[9:0], entrada; IRQ según CD-08) y `pio_led` (LEDR[9:0]);
       quitar `pio_in`/`pio_out` del Taller 9. *§3-F p.3 (botones por interrupción), §3-SIS
       p.5* · #5 (OBL) → `system.h` define `PIO_KEY_BASE`, `PIO_KEY_IRQ`, `PIO_SW_BASE`,
       `PIO_LED_BASE`.
-- [ ] **HW-03** `A·1` Configurar el Nios V/m: pipeline sí/no (medir), tamaño de la RAM on-chip,
+- [x] **HW-03** Configurar el Nios V/m: pipeline sí/no (medir), tamaño de la RAM on-chip,
       vector de reset, `timer_sw_agent`. *§2 p.2* ⟵ CD-06 · #5
 - [ ] **HW-04** `A·2` Si CD-06 lo pide: SDRAM de 64 MB (`altera_up_avalon_sys_sdram_pll` +
       controlador SDRAM) con los pines `DRAM_*`. *§3-SW p.5* ⟵ CD-06 · #5
