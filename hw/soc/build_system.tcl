@@ -86,8 +86,91 @@ set_instance_parameter_value pio_led width {10}
 set_instance_parameter_value pio_led resetValue {0}
 
 # ============================================================================
+#  Audio (HW-07, CD-07): codec WM8731 fijo a 48 kHz, 16 bits, Left Justified
+# ============================================================================
+
+# ---- Audio PLL: MCLK del codec (AUD_XCK) = 12.288 MHz = 256 x 48 kHz ----
+add_instance audio_pll altera_up_avalon_audio_pll
+set_instance_parameter_value audio_pll audio_clk_freq 12.288
+
+# ---- IP de Audio: solo salida (no se graba), FIFO de 128 muestras por canal ----
+add_instance audio altera_up_avalon_audio
+set_instance_parameter_value audio avalon_bus_type {Memory Mapped}
+set_instance_parameter_value audio audio_in 0
+set_instance_parameter_value audio audio_out 1
+set_instance_parameter_value audio dw 16
+
+# ---- Audio and Video Config: I2C al WM8731 con autoinicializacion ----
+add_instance av_config altera_up_avalon_audio_and_video_config
+set_instance_parameter_value av_config device {On-Board Peripherals}
+set_instance_parameter_value av_config board {DE1-SoC}
+set_instance_parameter_value av_config eai 1
+set_instance_parameter_value av_config audio_in {Line In to ADC}
+set_instance_parameter_value av_config dac_enable 1
+set_instance_parameter_value av_config line_in_bypass 0
+set_instance_parameter_value av_config mic_bypass 0
+set_instance_parameter_value av_config data_format {Left Justified}
+set_instance_parameter_value av_config bit_length 16
+set_instance_parameter_value av_config sampling_rate {48 kHz}
+
+# ============================================================================
+#  ADC del potenciometro de volumen (HW-08)
+# ============================================================================
+# El IP detecta solo si la placa trae AD7928 o LTC2308 (isLTC en
+# altera_up_avalon_de1_soc_adv_adc.v): adc_cs_n va al pin ADC_CONVST.
+# Un solo canal (CH0): el ciclo de conversion es el mas corto posible.
+add_instance adc altera_up_avalon_de1_soc_adc
+set_instance_parameter_value adc numch_ 1
+set_instance_parameter_value adc sclk_freq 12.5
+
+# ============================================================================
+#  Video VGA 640x480 con texto 80x60 (HW-09, CD-09)
+# ============================================================================
+# char_buf (RGB de 30 bits) -> video_fifo (50 -> 25 MHz) -> vga. El controlador VGA
+# de la DE1-SoC usa 10 bits por color, igual que la salida del char_buf: no hace
+# falta remuestrear el color.
+add_instance video_pll altera_up_avalon_video_pll
+set_instance_parameter_value video_pll video_in_clk_en 0
+set_instance_parameter_value video_pll vga_clk_en 1
+set_instance_parameter_value video_pll lcd_clk_en 0
+set_instance_parameter_value video_pll gui_resolution {VGA 640x480}
+
+add_instance char_buf altera_up_avalon_video_character_buffer_with_dma
+set_instance_parameter_value char_buf vga_device {On-board VGA DAC}
+set_instance_parameter_value char_buf enable_transparency 0
+set_instance_parameter_value char_buf resolution {80 x 60}
+
+add_instance video_fifo altera_up_avalon_video_dual_clock_buffer
+set_instance_parameter_value video_fifo color_bits 10
+set_instance_parameter_value video_fifo color_planes 3
+
+add_instance vga altera_up_avalon_video_vga_controller
+set_instance_parameter_value vga board {DE1-SoC}
+set_instance_parameter_value vga device {VGA Connector}
+set_instance_parameter_value vga resolution {VGA 640x480}
+
+# ============================================================================
 #  Conexiones de reloj y reset
 # ============================================================================
+foreach inst {audio av_config adc char_buf} {
+    add_connection clk.clk $inst.clk
+    add_connection clk.clk_reset $inst.reset
+}
+add_connection clk.clk audio_pll.ref_clk
+add_connection clk.clk_reset audio_pll.ref_reset
+add_connection clk.clk video_pll.ref_clk
+add_connection clk.clk_reset video_pll.ref_reset
+add_connection clk.clk video_fifo.clock_stream_in
+add_connection clk.clk_reset video_fifo.reset_stream_in
+add_connection video_pll.vga_clk video_fifo.clock_stream_out
+add_connection video_pll.reset_source video_fifo.reset_stream_out
+add_connection video_pll.vga_clk vga.clk
+add_connection video_pll.reset_source vga.reset
+
+# ---- Avalon-ST de video ----
+add_connection char_buf.avalon_char_source video_fifo.avalon_dc_buffer_sink
+add_connection video_fifo.avalon_dc_buffer_source vga.avalon_vga_sink
+
 foreach inst {cpu juart pio_key pio_sw pio_led} {
     add_connection clk.clk $inst.clk
     add_connection clk.clk_reset $inst.reset
@@ -115,6 +198,11 @@ map cpu.data_manager        pio_led.s1             0x00040010
 map cpu.data_manager        pio_key.s1             0x00040020
 map cpu.data_manager        pio_sw.s1              0x00040030
 map cpu.data_manager        cpu.timer_sw_agent     0x00040040
+map cpu.data_manager        audio.avalon_audio_slave 0x00040080
+map cpu.data_manager        av_config.avalon_av_config_slave 0x00040090
+map cpu.data_manager        adc.adc_slave          0x000400A0
+map cpu.data_manager        char_buf.avalon_char_control_slave 0x000400C0
+map cpu.data_manager        char_buf.avalon_char_buffer_slave  0x00042000
 map cpu.data_manager        cpu.dm_agent           0x00050000
 
 # ============================================================================
@@ -127,6 +215,9 @@ proc irq {slave num} {
 irq juart.irq   1
 irq pio_key.irq 2
 irq pio_sw.irq  3
+# Escritura: la FIFO de salida tiene >= 75 % libre (bit WE); permite rellenarla
+# por interrupcion en vez de sondear (NV-06).
+irq audio.interrupt 4
 
 # ============================================================================
 #  Interfaces exportadas al top-level (hw/quartus/DE1_SoC_top.v)
@@ -142,5 +233,16 @@ add_interface sw conduit end
 set_interface_property sw EXPORT_OF pio_sw.external_connection
 add_interface led conduit end
 set_interface_property led EXPORT_OF pio_led.external_connection
+
+add_interface audio_clk clock source
+set_interface_property audio_clk EXPORT_OF audio_pll.audio_clk
+add_interface audio conduit end
+set_interface_property audio EXPORT_OF audio.external_interface
+add_interface av_config conduit end
+set_interface_property av_config EXPORT_OF av_config.external_interface
+add_interface adc conduit end
+set_interface_property adc EXPORT_OF adc.external_interface
+add_interface vga conduit end
+set_interface_property vga EXPORT_OF vga.external_interface
 
 save_system audio_soc.qsys

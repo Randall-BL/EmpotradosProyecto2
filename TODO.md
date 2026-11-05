@@ -374,13 +374,13 @@ Puntos de contacto entre personas:
 
 ### 3.3 Periféricos de catálogo — #6, #7
 
-- [ ] **HW-07** `A·2` Audio: Audio PLL (frecuencia según CD-07), IP de Audio (Memory-Mapped o
+- [~] **HW-07** `A·2` Audio: Audio PLL (frecuencia según CD-07), IP de Audio (Memory-Mapped o
       Streaming según CD-04) y Audio and Video Config (I2C al WM8731); exportar `AUD_*` y
       `FPGA_I2C_*`. *§3-HW p.4 (audio en la FPGA), §4 p.7* ⟵ CD-04, CD-07 · #6 (OBL)
-- [ ] **HW-08** `A·1` ADC: IP de ADC de la DE1-SoC con el chip de nuestra revisión (AD7928 o
+- [~] **HW-08** `A·1` ADC: IP de ADC de la DE1-SoC con el chip de nuestra revisión (AD7928 o
       LTC2308), canal del potenciómetro; exportar `ADC_*`. *§3-SIS p.5, §4 p.7* ⟵ P10 · #6
       (OBL)
-- [ ] **HW-09** `A·2` Visualización según CD-09 (p. ej. Video PLL + VGA Controller + Character
+- [~] **HW-09** `A·2` Visualización según CD-09 (p. ej. Video PLL + VGA Controller + Character
       Buffer) y pines `VGA_*`. *§3-F p.4, §3-SIS p.6* ⟵ CD-09 · #7 (OBL)
 
 ### 3.4 Displays de 7 segmentos — #18
