@@ -59,5 +59,6 @@ Medido en la compilación (HW-21, `scripts/report-resources.py`): 1 648 768 bits
 enteros de 10 Kbit; por ejemplo, el Character Buffer reserva 8 KB (direcciones de 13 bits)
 para 4 800 caracteres.
 
-El mapa final, exportado de Platform Designer y visto también desde el HPS, se cierra en
-HW-24.
+El mapa exportado de Platform Designer (`python3 scripts/report-memory-map.py`) está en
+[mapa-memoria-generado.md](mapa-memoria-generado.md) y coincide con esta tabla. Cuando D
+agregue el HPS (HW-05), el mismo script lista también la vista desde su bridge (HW-24).

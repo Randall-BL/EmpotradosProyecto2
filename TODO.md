@@ -439,7 +439,7 @@ Puntos de contacto entre personas:
       función → requisito) y quitar los que no tengan función (p. ej. la JTAG UART en la
       versión final, salvo que se use para mediciones). *§3-HW p.5* ⟵ HW-01..17 · #5 (OBL,
       EVID)
-- [ ] **HW-24** `A·1` Mapa de memoria final visto desde el Nios V y desde el HPS (exportado de
+- [~] **HW-24** `A·1` Mapa de memoria final visto desde el Nios V y desde el HPS (exportado de
       Platform Designer). *§5 p.7–8* ⟵ HW-23 · #4 (EVID)
 
 ## 4. Software portable `sw/common/` — #11, #12, #14
