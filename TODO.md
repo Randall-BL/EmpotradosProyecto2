@@ -308,7 +308,7 @@ Puntos de contacto entre personas:
       SDRAM de 64 MB de la FPGA vs DDR3 del HPS por el bridge F2H; dónde vive el buffer
       compartido (RAM on-chip de doble puerto vs SDRAM). *§3-SW p.5 (gestión de memoria)*
       ⟵ CD-01, CD-03 · #4 → mapa de memoria preliminar.
-- [ ] **CD-07** `A·2` Frecuencias de muestreo (dato 2). *§3-F p.3* ⟵ P8 · *issue nuevo*
+- [x] **CD-07** Frecuencias de muestreo (dato 2). *§3-F p.3* ⟵ P8 · *issue nuevo*
       - A: códec fijo a 48 kHz y remuestreo de 8k (×6), 16k (×3) y 44.1k (→48k).
       - B: reconfigurar el códec por canción con el registro de direcciones/datos del IP de
         Config: 8k nativo; 16k → 32k (×2); 44.1k con MCLK de 11.2896 MHz o modo USB a 12 MHz.
