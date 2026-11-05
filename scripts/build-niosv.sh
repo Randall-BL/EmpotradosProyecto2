@@ -32,7 +32,8 @@ rm -rf "$OUT"
 mkdir -p "$OUT"
 
 echo ">> Generando BSP (HAL) ..."
-niosv-bsp --create --type=hal --sopcinfo="$SOPC" "$OUT/bsp/settings.bsp"
+niosv-bsp --create --type=hal --sopcinfo="$SOPC" --no-default \
+          --script="$HERE/sw/niosv/bsp.tcl" "$OUT/bsp/settings.bsp"
 
 APP="${APP:-}"
 if [ -n "$APP" ]; then

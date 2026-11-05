@@ -487,7 +487,7 @@ Puntos de contacto entre personas:
 > offsets y bits tomados de la documentación del IP, y un puntero `volatile` a la base de
 > `system.h`.
 
-- [ ] **NV-01** `A·1` Ajustes del BSP como opciones de `niosv-bsp` dentro de
+- [x] **NV-01** Ajustes del BSP como opciones de `niosv-bsp` dentro de
       `scripts/build-niosv.sh` (biblioteca C reducida, drivers reducidos, stdout por JTAG UART
       solo para depuración, tamaño de pila, regiones de memoria según CD-06). *§3-SW p.5
       (gestión de memoria)* ⟵ CD-06, P5 · #15
