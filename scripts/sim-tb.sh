@@ -43,6 +43,13 @@ rm -rf "$WORK"
 mkdir -p "$WORK/mentor"
 cp -al "$GEN/audio_soc_tb" "$WORK/"
 cp "$GEN/mentor/msim_setup.tcl" "$WORK/mentor/"
+# Los .mif con varios valores por linea (la fuente del Character Buffer) se expanden
+# en la copia de simulacion: el modelo altsyncram solo lee el primer valor de cada
+# linea (ver scripts/expand-mif.py). Se rompe el enlace duro antes de reescribir.
+for mif in "$WORK"/audio_soc_tb/simulation/submodules/*.mif; do
+    cp --remove-destination "$(readlink -f "$mif")" "$mif.tmp" && mv "$mif.tmp" "$mif"
+    python3 -I "$HERE/scripts/expand-mif.py" "$mif" > /dev/null
+done
 cp "$HEX" "$WORK/mentor/ram.hex"
 cd "$WORK/mentor"
 # TOP_LEVEL_NAME antes de msim_setup.tcl: se elabora nuestro testbench en vez del
