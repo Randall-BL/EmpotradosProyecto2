@@ -259,7 +259,7 @@ Puntos de contacto entre personas:
       `hw/soc/`, `scripts/`, `sim/questa/`, `sw/niosv/src/`, `docs/`; faltan `hw/rtl/`,
       `sw/common/`, `sw/hps/`, `tests/`, `docker/`, que se crean con su primer archivo real.
       *§5 p.8* · #2
-- [ ] **GIT-03** `A·1` Actualizar `CONTRIBUTING.md` a la estructura nueva: `software/` → `sw/`,
+- [x] **GIT-03** Actualizar `CONTRIBUTING.md` a la estructura nueva: `software/` → `sw/`,
       testbenches en `sim/` (no en `hw/tb/`), auditoría con
       `grep -rnE 'IOWR|IORD|alt_' sw/niosv/` y ámbitos de commit `docker`, `ci`, `hps`,
       `common`. Ajustar en `.gitignore` la regla `software/*bsp*/*`, que ya no aplica.
@@ -345,7 +345,7 @@ Puntos de contacto entre personas:
 
 ### 3.1 SoC base en Platform Designer — #5
 
-- [~] **HW-01** `A·1` `hw/soc/build_system.tcl` es la única fuente de verdad del SoC. **Decidido
+- [x] **HW-01** `hw/soc/build_system.tcl` es la única fuente de verdad del SoC. **Decidido
       (29 oct):** el `.qsys` no se versiona (`.gitignore`); `scripts/build-soc.sh` lo
       regenera cuando falta o cuando el Tcl es más nuevo, y avisa si el `.qsys` fue editado
       en la GUI. Falta: escribir en `CONTRIBUTING.md` la regla "lo que se cambie en la GUI

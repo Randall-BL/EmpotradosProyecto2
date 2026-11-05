@@ -70,8 +70,8 @@ Refs #<issue>
 
 ### Ámbitos del proyecto
 
-`hw`, `dsp`, `soc`, `sw`, `sd`, `wav`, `irq`, `ui`, `audio`, `adc`, `display`,
-`metrics`, `docs`.
+`hw`, `dsp`, `soc`, `sw`, `sd`, `wav`, `irq`, `ui`, `audio`, `adc`, `display`, `video`,
+`hps`, `common`, `docker`, `ci`, `sim`, `metrics`, `docs`.
 
 ### Ejemplos
 
@@ -147,19 +147,41 @@ Todos los issues están en el proyecto **Reproductor de Audio - Proyecto II** co
 - Las ISR son cortas: limpian la fuente, registran el evento y salen.
 - Comentarios en español, explicando el **porqué**.
 
+### Platform Designer
+
+- La **única fuente del SoC es `hw/soc/build_system.tcl`**. El `.qsys` no se versiona:
+  `scripts/build-soc.sh` lo regenera cuando falta o cuando el Tcl es más nuevo.
+- Lo que se cambie en la GUI de Platform Designer **se pasa al Tcl antes del commit**.
+  Si `build-soc.sh` avisa que el `.qsys` es más nuevo que el Tcl, es que quedó un cambio
+  de la GUI sin pasar; `REGEN_QSYS=1` lo descarta.
+
+### Estructura del repositorio
+
+| Ruta | Contenido |
+|---|---|
+| `hw/rtl/` | HDL propio (módulo de filtro, 7 segmentos) y sus `*_hw.tcl` |
+| `hw/soc/` | `build_system.tcl` del SoC |
+| `hw/quartus/` | Top-level, `.qsf` y `.sdc` del proyecto Quartus |
+| `sw/niosv/`, `sw/hps/` | Drivers y aplicación de cada procesador |
+| `sw/common/` | Lógica portable (sin `system.h`), probada en el PC |
+| `sim/` | Testbenches: cocotb y `.do`/testbenches de Questa |
+| `tests/` | Pruebas en C y datos de prueba |
+| `scripts/` | Flujo nativo: generar SoC, compilar, simular, programar |
+| `docs/` | Documentación y decisiones (`docs/decisiones/CD-xx.md`) |
+
 ### HDL
 
 - Un módulo por archivo, nombre de archivo = nombre del módulo.
 - Reset síncrono y explícito; nada de latches inferidos.
 - Mapa de registros documentado en el encabezado del módulo y en `docs/`.
-- Todo módulo propio tiene su testbench en `hw/tb/`.
+- Todo módulo propio tiene su testbench en `sim/` (cocotb o Questa).
 
 ---
 
 ## 6. Antes de abrir un PR
 
 - [ ] El diseño compila en Quartus y el software compila sin warnings nuevos.
-- [ ] `grep -rnE 'IOWR|IORD|alt_' software/` solo muestra llamadas de interrupciones.
+- [ ] `grep -rnE 'IOWR|IORD|alt_' sw/niosv/ sw/common/` solo muestra llamadas de interrupciones.
 - [ ] Los commits siguen Conventional Commits y referencian su issue.
 - [ ] La rama está al día con `develop`.
 - [ ] Nada de `db/`, `output_files/`, `.sof`, BSP generado ni binarios en el diff.
