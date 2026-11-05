@@ -383,7 +383,7 @@ Puntos de contacto entre personas:
 - [x] **HW-08** ADC: IP de ADC de la DE1-SoC con el chip de nuestra revisión (AD7928 o
       LTC2308), canal del potenciómetro; exportar `ADC_*`. *§3-SIS p.5, §4 p.7* ⟵ P10 · #6
       (OBL)
-- [~] **HW-09** `A·2` Visualización según CD-09 (p. ej. Video PLL + VGA Controller + Character
+- [x] **HW-09** Visualización según CD-09 (p. ej. Video PLL + VGA Controller + Character
       Buffer) y pines `VGA_*`. *§3-F p.4, §3-SIS p.6* ⟵ CD-09 · #7 (OBL)
 
 ### 3.4 Displays de 7 segmentos — #18
@@ -518,7 +518,7 @@ Puntos de contacto entre personas:
       transcurrido. *§3-F p.3* ⟵ HW-10, CD-10 · #18 (OBL)
 - [ ] **NV-10** `B·1` Driver del módulo de filtro (modo, coeficientes, muestras o
       configuración del flujo). *§3-HW p.4* ⟵ HW-17 · #9 (OBL)
-- [ ] **NV-11** `A·2` Driver de video (p. ej. escribir texto en (x, y) del Character Buffer) y
+- [x] **NV-11** Driver de video (p. ej. escribir texto en (x, y) del Character Buffer) y
       pantalla con título, artista, álbum, duración, "n/total", estado y filtro activo.
       *§3-F p.4* ⟵ HW-09 · #19 (OBL)
 - [ ] **NV-12** `C·1` Base de tiempo por puntero a `mtime` del `timer_sw_agent` (milisegundos) y
