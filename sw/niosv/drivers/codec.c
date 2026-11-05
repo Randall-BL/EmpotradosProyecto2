@@ -21,6 +21,11 @@ static int wait_status(uintptr_t base, uint32_t mask, uint32_t timeout)
     return CODEC_OK;
 }
 
+/* Lecturas del estado para ver arrancar una transferencia: el IP sube
+ * start_external_transfer 2 ciclos despues de escribir el dato (RDY baja ahi). */
+#define START_POLLS   64u
+#define START_RETRIES 4u
+
 int codec_write(uintptr_t base, uint32_t reg, uint32_t value, uint32_t timeout)
 {
     int rc = wait_status(base, CFG_STATUS_RDY, timeout);
@@ -28,10 +33,26 @@ int codec_write(uintptr_t base, uint32_t reg, uint32_t value, uint32_t timeout)
         return rc;
 
     /* Pasos de la seccion 4.2 de la guia del IP: dispositivo, registro y dato;
-     * la escritura en data inicia la transferencia I2C. */
+     * la escritura en data inicia la transferencia I2C. Dos detalles del RTL del IP
+     * (altera_up_avalon_audio_and_video_config) que este codigo cubre por seguridad:
+     *  - RDY sigue en 1 durante 2 ciclos despues de escribir el dato, asi que no se
+     *    da por terminada la transferencia sin haber visto bajar RDY primero.
+     *  - Justo al terminar una transferencia, transfer_complete sigue en 1 un ciclo
+     *    y el IP ignoraria una escritura nueva; si RDY no baja, se reintenta. */
     HW_REG(base, CFG_REG_CONTROL) = CFG_DEV_AUDIO;
     HW_REG(base, CFG_REG_ADDRESS) = reg & 0x7Fu;
-    HW_REG(base, CFG_REG_DATA)    = value & 0x1FFu;
+    uint32_t started = 0;
+    for (uint32_t attempt = 0; attempt < START_RETRIES && !started; ++attempt) {
+        HW_REG(base, CFG_REG_DATA) = value & 0x1FFu;
+        for (uint32_t i = 0; i < START_POLLS; ++i) {
+            if ((HW_REG(base, CFG_REG_STATUS) & CFG_STATUS_RDY) == 0) {
+                started = 1;
+                break;
+            }
+        }
+    }
+    if (!started)
+        return CODEC_ERR_TIMEOUT;
 
     rc = wait_status(base, CFG_STATUS_RDY, timeout);
     if (rc != CODEC_OK)

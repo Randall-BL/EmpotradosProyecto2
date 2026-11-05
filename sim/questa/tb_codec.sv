@@ -15,9 +15,14 @@
 // que comparte el bus. AIS llega a los ~68 ms; el software escribe despues.
 //
 // Uso: scripts/sim-tb.sh codec   (lento: ~75 ms simulados, unos 30 min)
+//      ELAB_OPTS=-gFAST=1 scripts/sim-tb.sh codec   (depuracion, ~15 ms: al terminar
+//      las 10 escrituras del codec salta las del ADV7180 adelantando el puntero de la
+//      ROM de autoinicializacion; no sirve como evidencia)
 `timescale 1ns / 1ps
 
-module tb_codec;
+module tb_codec #(
+    parameter bit FAST = 0
+);
     logic clk = 1'b0, rst_n = 1'b0;
     always #10 clk = ~clk;
 
@@ -55,7 +60,15 @@ module tb_codec;
     always @(posedge codec.reg_valid) begin
         log_q.push_back('{codec.reg_addr, codec.reg_data});
         $display("[%0t] I2C: R%0d <= 0x%03h", $time, codec.reg_addr, codec.reg_data);
+        if (FAST && codec.reg_addr == 9 && log_q.size() == 10) begin
+            #1us;
+            dut.av_config.AV_Config_Auto_Init.rom_address = dut.av_config.AV_Config_Auto_Init.ROM_SIZE - 1;
+            $display("[%0t] FAST: se saltan las escrituras al ADV7180", $time);
+            codec.debug = 1;
+        end
     end
+    always @(led) $display("[%0t] LEDR = 0x%03h", $time, led);
+    always @(posedge dut.av_config.auto_init_complete) $display("[%0t] AIS: autoinicializacion completa", $time);
 
     task automatic check_reg(input int r, input logic [8:0] exp, input string what);
         if (codec.regs[r] !== exp) begin
@@ -77,6 +90,9 @@ module tb_codec;
             $error("el software reporto error: LEDR = 0x%03h", led);
             errors++;
         end
+        // El IP da la transferencia por terminada (RDY = 1) al entrar al bit de STOP,
+        // ~20 us antes de que el STOP aparezca en el bus: se espera a que llegue.
+        #200us;
 
         // Valores finales (R5 ya corregido por el software).
         check_reg(7, 9'h041, "formato: maestro, Left Justified, 16 bits");

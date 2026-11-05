@@ -88,10 +88,13 @@ module wm8731_model #(
     logic [7:0] b [0:2];
     bit         in_frame = 0;
 
+    bit debug = 0;                                     // tb: codec.debug = 1
     always @(negedge sda) if (scl === 1'b1) begin      // START
+        if (debug) $display("[%0t] I2C START (in_frame=%0d nbytes=%0d)", $time, in_frame, nbytes);
         in_frame = 1; nbits = 0; nbytes = 0;
     end
     always @(posedge sda) if (scl === 1'b1 && in_frame) begin   // STOP
+        if (debug) $display("[%0t] I2C STOP nbytes=%0d b=%h %h %h", $time, nbytes, b[0], b[1], b[2]);
         in_frame = 0;
         if (nbytes == 3 && b[0] == 8'h34) begin
             reg_addr = b[1][7:1];
