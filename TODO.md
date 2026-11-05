@@ -2,7 +2,7 @@
 
 **Curso:** CE-1113 Sistemas Empotrados — TEC · **Profesor:** Dr.-Ing. Jeferson González Gómez
 **Plataforma:** Altera DE1-SoC · Platform Designer · Quartus Prime Lite 25.1std
-**Fecha de entrega:** 2 de diciembre de 2026 · **Última revisión de este plan:** 30 de octubre de 2026
+**Fecha de entrega:** 2 de diciembre de 2026 · **Última revisión de este plan:** 5 de noviembre de 2026
 
 ## Cómo leer este plan
 
@@ -230,6 +230,46 @@ Puntos de contacto entre personas:
   revisa SC-13, A revisa HW-17).
 - **Rebalanceo:** si una tarea condicional no hace falta (HW-04, HW-15, SC-05, SC-12, HP-10) o
   alguien se atrasa, se reasigna en la revisión semanal y se cambia la letra en este plan.
+
+---
+
+## Estado de la persona A (SoC y plataforma) — 5 de noviembre de 2026
+
+Todo lo de A que no necesita la tarjeta ni el trabajo de otra persona está hecho y
+**verificado en simulación** (`scripts/test-all.sh --all`: PC, `tb_pio`, `tb_audio`,
+`tb_codec`, `tb_adc` con AD7928 y LTC2308, `tb_shm`, `tb_vga`). Resultados en el
+[README](README.md#verificación-sin-tarjeta).
+
+**Hecho:** GIT-03, GIT-04, CD-06, CD-07, CD-09, HW-01..04, HW-07..09, HW-19..21, HW-23,
+SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
+
+**Pendiente de A**, con lo que lo bloquea y el siguiente paso:
+
+| Tarea | Estado | Bloqueo | Siguiente paso |
+|---|---|---|---|
+| IN-01..IN-04, PR-05 | Programas de prueba listos y verificados en simulación | La tarjeta DE1-SoC | Correr `docs/pruebas-tarjeta.md` y anotar resultado y evidencia (foto/video) |
+| HW-22 | `scripts/update-sw.sh` probado; `scripts/program.sh` escrito | La tarjeta (programar por JTAG) | `scripts/program.sh` con la DE1-SoC conectada |
+| HW-06 | Lado del Nios V hecho (`shm.s1`, `tb_shm`) | HW-05 (D) | Cuando D agregue el HPS: `add_connection hps.h2f_lw_axi_master shm.s2` y documentar la dirección vista por el HPS |
+| HW-24 | Mapa exportado del `.sopcinfo` (`scripts/report-memory-map.py`) | HW-05 (D) | Regenerar `docs/hw/mapa-memoria-generado.md` cuando exista el maestro del HPS |
+| NV-16 | Uso de RAM medido por programa (`scripts/report-memory.sh`) | NV-14 (C, lazo principal) | Medir la aplicación final y ubicar sus buffers |
+| RP-02 | Script listo (`report-resources.py --entity`) | HW-17 (B, módulo propio) | Correrlo con la instancia del filtro |
+| RP-05, DOC-04 | Análisis escrito en `docs/metricas/recursos-y-potencia.md` | RP-02 y RP-04 (B) | Agregar el costo del filtro en HW frente a SW |
+| DOC-06 | README con arquitectura, compilación, verificación y captura | CD-16, PR-10 y partes de B/C/D | Completar las secciones marcadas *(pendiente)* y agregar fotos/videos de la tarjeta |
+| DOC-09 | — | P15 (formato de entrega) | Esperar la respuesta del profesor |
+| OR-02 | A = Randall Bolaños | El grupo | Asociar B, C y D a integrantes y pasarlo al README |
+| OR-05 | Lista en `docs/material.md` | El grupo | Asignar responsables y conseguir el material |
+
+**Hallazgos que afectan a otras personas:**
+
+- **B:** el códec queda fijo a 48 kHz (CD-07): un solo juego de coeficientes. Hay 0 DSP
+  usados y 190 M10K libres; la memoria es el recurso que hay que cuidar. Base reservada para
+  el módulo propio y `seg7_time`: `0x0004_0100`–`0x0004_01FF`.
+- **C:** usar los drivers de `sw/niosv/drivers/` (sin HAL; el HAL solo en `irq.c`). El
+  relleno de la FIFO de audio por IRQ ya está probado (IRQ 4). `vga_text` no permite leer
+  la pantalla; guardar una copia en RAM si hace falta. El `printf` cuesta ~10 KB.
+- **D:** el HPS remuestrea todo a 48 kHz estéreo (CD-07). `shm.s2` queda libre para su
+  bridge. La autoinicialización del códec tarda ~71 ms tras el reset (cuenta para el
+  arranque < 10 s).
 
 ---
 
@@ -714,7 +754,7 @@ Puntos de contacto entre personas:
 - [x] **RP-01** Utilización del sistema completo (ALMs, registros, bits y bloques M10K,
       bloques DSP) desde el reporte del Fitter; script que extrae la tabla. *§3-REC p.6* ⟵ HW-21
       (OBL, EVID)
-- [ ] **RP-02** `A·1` Utilización del módulo propio por separado ("Resource Utilization by
+- [ ] **RP-02** `A·1` *(bloqueada por HW-17; script listo: `report-resources.py --entity`)* Utilización del módulo propio por separado ("Resource Utilization by
       Entity"). *§3-REC p.6* ⟵ HW-17, HW-21 (OBL, EVID)
 - [x] **RP-03** Potencia del sistema completo con el Power Analyzer de Quartus
       (`quartus_pow`); documentar las tasas de conmutación supuestas o usar un VCD de
