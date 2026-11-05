@@ -23,6 +23,18 @@ que genera el BSP en `system.h` (`<INSTANCIA>_BASE`). Decisiones: [CD-06](../dec
 
 Las filas marcadas con la tarea entre paréntesis se agregan al Tcl en esa tarea.
 
+## Canal HPS ↔ Nios V (HW-06)
+
+| Vista | Dirección de `shm` | Puerto | Estado |
+|---|---|---|---|
+| Nios V | `0x0002_0000` – `0x0002_FFFF` (`SHM_BASE`) | `shm.s1` | En el SoC; verificado con `tb_shm` (bus de datos, bus de direcciones, March C-, accesos de 8/16 bits) |
+| HPS | Propuesta: `0xFF20_0000` (offset 0 del bridge liviano H2F) | `shm.s2` | Lo conecta D en HW-05 con `add_connection hps.h2f_lw_axi_master shm.s2` |
+
+Los dos puertos son independientes (RAM de doble puerto): el HPS escribe muestras y el
+Nios V las lee sin arbitraje de bus. El handshake son los índices de productor y
+consumidor del ring buffer al inicio de `shm` (protocolo SC-13); cada índice lo escribe
+un solo lado, así que no hace falta exclusión mutua ni buzón (CD-06).
+
 ## Interrupciones (`platform_irq_rx` del Nios V)
 
 | IRQ | Fuente | Uso |
@@ -30,6 +42,7 @@ Las filas marcadas con la tarea entre paréntesis se agregan al Tcl en esa tarea
 | 1 | `juart` | JTAG UART (HAL de stdout) |
 | 2 | `pio_key` | Botones play/pausa, stop, anterior, siguiente |
 | 3 | `pio_sw` | Cambio de switches (si CD-08 elige interrupción) |
+| 4 | `audio` | FIFO de salida con ≥ 75 % libre (relleno por interrupción, NV-06) |
 
 ## Uso de la memoria embebida (M10K)
 

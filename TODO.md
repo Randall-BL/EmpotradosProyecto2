@@ -367,7 +367,7 @@ Puntos de contacto entre personas:
       (DDR3, pines de SD/MMC, UART0, reloj) tomada del GHRD del System CD de Terasic;
       habilitar el bridge liviano H2F y los que pida CD-06. Confirmar en el manual que la
       microSD está cableada al HPS. *§3-SW p.5, §4 p.7* ⟵ CD-01 (OBL)
-- [ ] **HW-06** `A·2` Canal HPS ↔ Nios V: memoria compartida (según CD-06) + registros de
+- [~] **HW-06** `A·2` Canal HPS ↔ Nios V: memoria compartida (según CD-06) + registros de
       buzón para el handshake (comandos y punteros del ring buffer), y una IRQ si hace falta.
       *§3-SW p.5* ⟵ HW-05, SC-13 (OBL) → dirección del canal vista por ambos procesadores,
       documentada.
