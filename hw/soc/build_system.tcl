@@ -118,9 +118,13 @@ set_instance_parameter_value av_config sampling_rate {48 kHz}
 # ============================================================================
 # El IP detecta solo si la placa trae AD7928 o LTC2308 (isLTC en
 # altera_up_avalon_de1_soc_adv_adc.v): adc_cs_n va al pin ADC_CONVST.
-# Un solo canal (CH0): el ciclo de conversion es el mas corto posible.
+# Potenciometro en CH0. Se convierten DOS canales, no uno: con el LTC2308 el
+# resultado llega una trama tarde y el IP lo guarda en el registro del canal
+# anterior (address 0 -> reading7, 1 -> reading0). Con un solo canal, CH0 nunca
+# se actualizaria en esa revision de la placa; con dos, CH0 es correcto en ambas
+# (verificado con sim/questa/tb_adc.sv para los dos chips).
 add_instance adc altera_up_avalon_de1_soc_adc
-set_instance_parameter_value adc numch_ 1
+set_instance_parameter_value adc numch_ 2
 set_instance_parameter_value adc sclk_freq 12.5
 
 # ============================================================================
