@@ -568,12 +568,12 @@ Puntos de contacto entre personas:
 
 ## 7. Integración HW/SW en la tarjeta
 
-- [ ] **IN-01** `A·1` Prueba de humo en tarjeta: LEDs y 7 segmentos por puntero desde el Nios V.
+- [~] **IN-01** `A·1` Prueba de humo en tarjeta: LEDs y 7 segmentos por puntero desde el Nios V.
       *§3-HW p.4* ⟵ HW-02, HW-10, HW-22 (EVID foto)
-- [ ] **IN-02** `A·1` Tono senoidal generado por el Nios V por el line-out, sin SD. *§3-HW
+- [~] **IN-02** `A·1` Tono senoidal generado por el Nios V por el line-out, sin SD. *§3-HW
       p.4* ⟵ NV-06, NV-07 → se oye limpio en audífonos.
-- [ ] **IN-03** `A·1` Potenciómetro → volumen sobre el tono. *§3-SIS p.5* ⟵ NV-08, IN-02
-- [ ] **IN-04** `A·1` Pantalla con metadatos fijos. *§3-F p.4* ⟵ NV-11
+- [~] **IN-03** `A·1` Potenciómetro → volumen sobre el tono. *§3-SIS p.5* ⟵ NV-08, IN-02
+- [~] **IN-04** `A·1` Pantalla con metadatos fijos. *§3-F p.4* ⟵ NV-11
 - [ ] **IN-05** `D·2` El HPS lee un WAV de la SD y lo deja en memoria compartida; el Nios V lo
       recibe completo (checksum). *§3-SW p.5* ⟵ HP-07, NV-13
 - [ ] **IN-06** `D·2` Reproducción de un WAV completo desde la SD, en bypass y sin cortes.
@@ -686,7 +686,7 @@ Puntos de contacto entre personas:
       (`scripts/sim-soc.sh`): el Nios V escribe muestras al módulo propio y compara con
       vectores dorados. Es la verificación conjunta HW/SW de §2. *§2 p.2, §3-HW p.4* ⟵ HW-17,
       NV-15 (EVID)
-- [ ] **PR-05** `A·2` Prueba en tarjeta de cada driver por separado (programa de prueba por
+- [~] **PR-05** `A·2` Prueba en tarjeta de cada driver por separado (programa de prueba por
       periférico) antes del lazo principal. *§3-SW p.5* ⟵ NV-03..13
 - [ ] **PR-06** `D·2` Colección de ≥ 10 canciones WAV de licencia libre (8/16/44.1 kHz, mono y
       estéreo) con `LIST/INFO`, etiquetadas con un script; fuentes y licencias en
