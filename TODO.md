@@ -2,7 +2,7 @@
 
 **Curso:** CE-1113 Sistemas Empotrados — TEC · **Profesor:** Dr.-Ing. Jeferson González Gómez
 **Plataforma:** Altera DE1-SoC · Platform Designer · Quartus Prime Lite 25.1std
-**Fecha de entrega:** 2 de diciembre de 2026 · **Última revisión de este plan:** 30 de octubre de 2026
+**Fecha de entrega:** 2 de diciembre de 2026 · **Última revisión de este plan:** 5 de noviembre de 2026
 
 ## Cómo leer este plan
 
@@ -233,7 +233,47 @@ Puntos de contacto entre personas:
 
 ---
 
-## 0. Arranque y organización
+## Estado de la persona A (SoC y plataforma) — 5 de noviembre de 2026
+
+Todo lo de A que no necesita la tarjeta ni el trabajo de otra persona está hecho y
+**verificado en simulación** (`scripts/test-all.sh --all`: PC, `tb_pio`, `tb_audio`,
+`tb_codec`, `tb_adc` con AD7928 y LTC2308, `tb_shm`, `tb_vga`). Resultados en el
+[README](README.md#verificación-sin-tarjeta).
+
+**Hecho:** GIT-03, GIT-04, CD-06, CD-07, CD-09, HW-01..04, HW-07..09, HW-19..21, HW-23,
+SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
+
+**Pendiente de A**, con lo que lo bloquea y el siguiente paso:
+
+| Tarea | Estado | Bloqueo | Siguiente paso |
+|---|---|---|---|
+| IN-01..IN-04, PR-05 | Programas de prueba listos y verificados en simulación | La tarjeta DE1-SoC | Correr `docs/pruebas-tarjeta.md` y anotar resultado y evidencia (foto/video) |
+| HW-22 | `scripts/update-sw.sh` probado; `scripts/program.sh` escrito | La tarjeta (programar por JTAG) | `scripts/program.sh` con la DE1-SoC conectada |
+| HW-06 | Lado del Nios V hecho (`shm.s1`, `tb_shm`) | HW-05 (D) | Cuando D agregue el HPS: `add_connection hps.h2f_lw_axi_master shm.s2` y documentar la dirección vista por el HPS |
+| HW-24 | Mapa exportado del `.sopcinfo` (`scripts/report-memory-map.py`) | HW-05 (D) | Regenerar `docs/hw/mapa-memoria-generado.md` cuando exista el maestro del HPS |
+| NV-16 | Uso de RAM medido por programa (`scripts/report-memory.sh`) | NV-14 (C, lazo principal) | Medir la aplicación final y ubicar sus buffers |
+| RP-02 | Script listo (`report-resources.py --entity`) | HW-17 (B, módulo propio) | Correrlo con la instancia del filtro |
+| RP-05, DOC-04 | Análisis escrito en `docs/metricas/recursos-y-potencia.md` | RP-02 y RP-04 (B) | Agregar el costo del filtro en HW frente a SW |
+| DOC-06 | README con arquitectura, compilación, verificación y captura | CD-16, PR-10 y partes de B/C/D | Completar las secciones marcadas *(pendiente)* y agregar fotos/videos de la tarjeta |
+| DOC-09 | — | P15 (formato de entrega) | Esperar la respuesta del profesor |
+| OR-02 | A = Randall Bolaños | El grupo | Asociar B, C y D a integrantes y pasarlo al README |
+| OR-05 | Lista en `docs/material.md` | El grupo | Asignar responsables y conseguir el material |
+
+**Hallazgos que afectan a otras personas:**
+
+- **B:** el códec queda fijo a 48 kHz (CD-07): un solo juego de coeficientes. Hay 0 DSP
+  usados y 190 M10K libres; la memoria es el recurso que hay que cuidar. Base reservada para
+  el módulo propio y `seg7_time`: `0x0004_0100`–`0x0004_01FF`.
+- **C:** usar los drivers de `sw/niosv/drivers/` (sin HAL; el HAL solo en `irq.c`). El
+  relleno de la FIFO de audio por IRQ ya está probado (IRQ 4). `vga_text` no permite leer
+  la pantalla; guardar una copia en RAM si hace falta. El `printf` cuesta ~10 KB.
+- **D:** el HPS remuestrea todo a 48 kHz estéreo (CD-07). `shm.s2` queda libre para su
+  bridge. La autoinicialización del códec tarda ~71 ms tras el reset (cuenta para el
+  arranque < 10 s).
+
+---
+
+## 0. Arranque y organización — #30
 
 - [ ] **OR-01** `D·1` Leer el enunciado completo y enviar P1–P15 al profesor; registrar las
       respuestas en `docs/respuestas-profesor.md`. *§3-N p.6* → archivo con fecha de cada
@@ -241,15 +281,16 @@ Puntos de contacto entre personas:
 - [~] **OR-02** `A·1` Definir roles y responsables por sección de este plan. Reparto para 4
       personas propuesto en [Reparto del trabajo](#reparto-del-trabajo); falta confirmarlo en
       grupo, asociar cada letra a un integrante y pasarlo al README. *§5 p.8 (gestión)* →
-      tabla de roles en el README.
+      tabla de roles en el README. **A = Randall Bolaños** (ya en el README); faltan B, C y D.
 - [x] **OR-03** Revisar el Taller 9 y copiar lo reutilizable. *§2 p.2* →
       [docs/reutilizado-taller9.md](docs/reutilizado-taller9.md).
 - [ ] **OR-04** `Todos` Verificar en cada máquina Quartus 25.1std + Nios V/RiscFree + Questa con
       `scripts/env.sh` (la sección "Verificar que todo responde" de
       [docs/entorno-nativo.md](docs/entorno-nativo.md)). *§2 p.2* → los 4 comandos responden.
-- [ ] **OR-05** `A·1` Conseguir el material: DE1-SoC, microSD (≥ 4 GB), lector de SD,
+- [~] **OR-05** `A·1` Conseguir el material: DE1-SoC, microSD (≥ 4 GB), lector de SD,
       potenciómetro y cables para el conector del ADC, parlantes o audífonos, monitor VGA
       (o LCD/TFT según P9). *§3-F p.3–4, §3-SIS p.5* ⟵ P9, P10 → lista con responsable.
+      Lista en [docs/material.md](docs/material.md); faltan responsables y conseguirlo.
 
 ## 1. Repositorio y flujo Git — 10% — #1, #2
 
@@ -259,12 +300,12 @@ Puntos de contacto entre personas:
       `hw/soc/`, `scripts/`, `sim/questa/`, `sw/niosv/src/`, `docs/`; faltan `hw/rtl/`,
       `sw/common/`, `sw/hps/`, `tests/`, `docker/`, que se crean con su primer archivo real.
       *§5 p.8* · #2
-- [ ] **GIT-03** `A·1` Actualizar `CONTRIBUTING.md` a la estructura nueva: `software/` → `sw/`,
+- [x] **GIT-03** Actualizar `CONTRIBUTING.md` a la estructura nueva: `software/` → `sw/`,
       testbenches en `sim/` (no en `hw/tb/`), auditoría con
       `grep -rnE 'IOWR|IORD|alt_' sw/niosv/` y ámbitos de commit `docker`, `ci`, `hps`,
       `common`. Ajustar en `.gitignore` la regla `software/*bsp*/*`, que ya no aplica.
       *§5 p.8* ⟵ GIT-02
-- [ ] **GIT-04** `A·2` Crear issues para las tareas nuevas de este plan (OR, CD, SC, HP, IN,
+- [x] **GIT-04** Crear issues para las tareas nuevas de este plan (OR, CD, SC, HP, IN,
       DK, PR, RP, DOC sin número) y asignarlas a hitos M0–M8. *§5 p.8* → todas las tareas OBL
       tienen issue.
 - [ ] **GIT-05** `Todos` Una rama `feat/*` por issue, PR a `develop` con `Refs #n`, revisión
@@ -289,7 +330,7 @@ Puntos de contacto entre personas:
 - [ ] **CD-02** `D·2` Software del HPS: bare metal (U-Boot SPL + aplicación propia, driver
       SD/MMC + FatFs) vs Linux mínimo (Buildroot, aplicación con `mmap` de `/dev/mem`).
       Criterios: arranque < 10 s, esfuerzo del driver SD, "SO mínimo sin interacción". *§3-SW
-      p.5, §3-F p.4* ⟵ P2, P4, P14 · *issue nuevo* → decisión escrita. Define la toolchain del
+      p.5, §3-F p.4* ⟵ P2, P4, P14 · #32 → decisión escrita. Define la toolchain del
       contenedor (DK-02).
 - [ ] **CD-03** `D·2` Camino de las muestras y presupuesto de latencia: SD → HPS → buffer
       compartido → Nios V → filtro → FIFO del IP de Audio. Calcular tamaños de buffer: el
@@ -304,11 +345,12 @@ Puntos de contacto entre personas:
 - [ ] **CD-05** `B·1` Volumen: multiplicador en hardware (dentro del módulo propio) vs
       escalado en software. Considerar que el Nios V/m no tiene `mul` (dato 3). *§3-SIS p.5* ·
       #17 → decisión con ciclos medidos de `__mulsi3` o recursos estimados del multiplicador.
-- [ ] **CD-06** `A·2` Memoria: código y datos del Nios V en RAM on-chip (256 KB del Taller 9) vs
+- [x] **CD-06** Memoria: código y datos del Nios V en RAM on-chip (256 KB del Taller 9) vs
       SDRAM de 64 MB de la FPGA vs DDR3 del HPS por el bridge F2H; dónde vive el buffer
       compartido (RAM on-chip de doble puerto vs SDRAM). *§3-SW p.5 (gestión de memoria)*
       ⟵ CD-01, CD-03 · #4 → mapa de memoria preliminar.
-- [ ] **CD-07** `A·2` Frecuencias de muestreo (dato 2). *§3-F p.3* ⟵ P8 · *issue nuevo*
+- [x] **CD-07** Frecuencias de muestreo (dato 2). *§3-F p.3* ⟵ P8 · #37 →
+      [docs/decisiones/CD-07.md](docs/decisiones/CD-07.md): códec fijo a 48 kHz, remuestreo en el HPS.
       - A: códec fijo a 48 kHz y remuestreo de 8k (×6), 16k (×3) y 44.1k (→48k).
       - B: reconfigurar el códec por canción con el registro de direcciones/datos del IP de
         Config: 8k nativo; 16k → 32k (×2); 44.1k con MCLK de 11.2896 MHz o modo USB a 12 MHz.
@@ -317,7 +359,7 @@ Puntos de contacto entre personas:
 - [ ] **CD-08** `C·1` Switches: lectura periódica (≤ 20 ms) vs interrupción por flanco;
       asignación de switches a filtros y qué pasa con combinaciones inválidas. *§3-F p.4,
       §3-SIS p.5* · #16 → tabla SW → filtro.
-- [ ] **CD-09** `A·1` Visualización: VGA con IP del University Program (Character Buffer 80×60)
+- [x] **CD-09** Visualización: VGA con IP del University Program (Character Buffer 80×60)
       vs controlador VGA propio en HDL vs LCD/TFT externo. *§3-F p.4, §3-SIS p.6* ⟵ P9 · #19
       → decisión y boceto de la pantalla.
 - [ ] **CD-10** `C·1` Tiempo de reproducción: timer de hardware vs contar muestras enviadas al
@@ -345,42 +387,43 @@ Puntos de contacto entre personas:
 
 ### 3.1 SoC base en Platform Designer — #5
 
-- [~] **HW-01** `A·1` `hw/soc/build_system.tcl` es la única fuente de verdad del SoC. **Decidido
+- [x] **HW-01** `hw/soc/build_system.tcl` es la única fuente de verdad del SoC. **Decidido
       (29 oct):** el `.qsys` no se versiona (`.gitignore`); `scripts/build-soc.sh` lo
       regenera cuando falta o cuando el Tcl es más nuevo, y avisa si el `.qsys` fue editado
       en la GUI. Falta: escribir en `CONTRIBUTING.md` la regla "lo que se cambie en la GUI
       se pasa al Tcl antes del commit" (junto con GIT-03). *§5 p.8 (compilación con
       Platform Designer)* → regla escrita en `CONTRIBUTING.md`.
-- [ ] **HW-02** `A·1` PIO definitivos: `pio_key` (KEY[3:0], entrada, captura de flanco de
+- [x] **HW-02** PIO definitivos: `pio_key` (KEY[3:0], entrada, captura de flanco de
       bajada, IRQ), `pio_sw` (SW[9:0], entrada; IRQ según CD-08) y `pio_led` (LEDR[9:0]);
       quitar `pio_in`/`pio_out` del Taller 9. *§3-F p.3 (botones por interrupción), §3-SIS
       p.5* · #5 (OBL) → `system.h` define `PIO_KEY_BASE`, `PIO_KEY_IRQ`, `PIO_SW_BASE`,
       `PIO_LED_BASE`.
-- [ ] **HW-03** `A·1` Configurar el Nios V/m: pipeline sí/no (medir), tamaño de la RAM on-chip,
+- [x] **HW-03** Configurar el Nios V/m: pipeline sí/no (medir), tamaño de la RAM on-chip,
       vector de reset, `timer_sw_agent`. *§2 p.2* ⟵ CD-06 · #5
-- [ ] **HW-04** `A·2` Si CD-06 lo pide: SDRAM de 64 MB (`altera_up_avalon_sys_sdram_pll` +
-      controlador SDRAM) con los pines `DRAM_*`. *§3-SW p.5* ⟵ CD-06 · #5
+- [x] **HW-04** ~~Si CD-06 lo pide: SDRAM de 64 MB (`altera_up_avalon_sys_sdram_pll` +
+      controlador SDRAM) con los pines `DRAM_*`.~~ **No aplica:** CD-06 deja todo en RAM
+      on-chip (ver [docs/decisiones/CD-06.md](docs/decisiones/CD-06.md)). *§3-SW p.5* ⟵ CD-06 · #5
 
-### 3.2 HPS y canal HPS ↔ FPGA — *issue nuevo*
+### 3.2 HPS y canal HPS ↔ FPGA — #31
 
 - [ ] **HW-05** `D·3` Agregar el componente HPS de Cyclone V con la configuración de la DE1-SoC
       (DDR3, pines de SD/MMC, UART0, reloj) tomada del GHRD del System CD de Terasic;
       habilitar el bridge liviano H2F y los que pida CD-06. Confirmar en el manual que la
       microSD está cableada al HPS. *§3-SW p.5, §4 p.7* ⟵ CD-01 (OBL)
-- [ ] **HW-06** `A·2` Canal HPS ↔ Nios V: memoria compartida (según CD-06) + registros de
+- [~] **HW-06** `A·2` Canal HPS ↔ Nios V: memoria compartida (según CD-06) + registros de
       buzón para el handshake (comandos y punteros del ring buffer), y una IRQ si hace falta.
       *§3-SW p.5* ⟵ HW-05, SC-13 (OBL) → dirección del canal vista por ambos procesadores,
       documentada.
 
 ### 3.3 Periféricos de catálogo — #6, #7
 
-- [ ] **HW-07** `A·2` Audio: Audio PLL (frecuencia según CD-07), IP de Audio (Memory-Mapped o
+- [x] **HW-07** Audio: Audio PLL (frecuencia según CD-07), IP de Audio (Memory-Mapped o
       Streaming según CD-04) y Audio and Video Config (I2C al WM8731); exportar `AUD_*` y
       `FPGA_I2C_*`. *§3-HW p.4 (audio en la FPGA), §4 p.7* ⟵ CD-04, CD-07 · #6 (OBL)
-- [ ] **HW-08** `A·1` ADC: IP de ADC de la DE1-SoC con el chip de nuestra revisión (AD7928 o
+- [x] **HW-08** ADC: IP de ADC de la DE1-SoC con el chip de nuestra revisión (AD7928 o
       LTC2308), canal del potenciómetro; exportar `ADC_*`. *§3-SIS p.5, §4 p.7* ⟵ P10 · #6
       (OBL)
-- [ ] **HW-09** `A·2` Visualización según CD-09 (p. ej. Video PLL + VGA Controller + Character
+- [x] **HW-09** Visualización según CD-09 (p. ej. Video PLL + VGA Controller + Character
       Buffer) y pines `VGA_*`. *§3-F p.4, §3-SIS p.6* ⟵ CD-09 · #7 (OBL)
 
 ### 3.4 Displays de 7 segmentos — #18
@@ -420,23 +463,23 @@ Puntos de contacto entre personas:
 
 ### 3.6 Proyecto Quartus y tarjeta — #5
 
-- [ ] **HW-19** `A·2` Top-level `hw/DE1_SoC_top.v` que instancia `audio_soc` y un `.qsf` con
+- [x] **HW-19** Top-level `hw/DE1_SoC_top.v` que instancia `audio_soc` y un `.qsf` con
       los pines tomados del `.qsf` de referencia del System CD de Terasic (solo los que se
       usan). *§2 p.2, §4 p.7* ⟵ HW-02 · #5 (OBL)
-- [ ] **HW-20** `A·1` Restricciones de tiempo `.sdc`: reloj de 50 MHz, `derive_pll_clocks`,
+- [x] **HW-20** Restricciones de tiempo `.sdc`: reloj de 50 MHz, `derive_pll_clocks`,
       `derive_clock_uncertainty`, rutas falsas para entradas asíncronas (KEY, SW). *§3-F p.4
       (estabilidad)* ⟵ HW-19 · #5 → Timing Analyzer sin slack negativo en ningún reloj.
-- [ ] **HW-21** `A·1` Script `scripts/build-quartus.sh` (`quartus_sh --flow compile`) y
+- [x] **HW-21** Script `scripts/build-quartus.sh` (`quartus_sh --flow compile`) y
       compilación limpia: sin errores, warnings críticos revisados. *§5 p.8 (compilación)* ⟵
       HW-20 · #5 (OBL)
-- [ ] **HW-22** `A·1` Cargar el software del Nios V: `ram.hex` dentro del `.sof` (actualizar
+- [~] **HW-22** `A·1` Cargar el software del Nios V: `ram.hex` dentro del `.sof` (actualizar
       la MIF sin recompilar todo) o `niosv-download` por JTAG; script `scripts/program.sh` con
       `quartus_pgm`. *§3-F p.4 (arranque)* ⟵ HW-21, NV-01 · #5
-- [ ] **HW-23** `A·1` Tabla de justificación de **cada** componente del SoC (componente →
+- [x] **HW-23** Tabla de justificación de **cada** componente del SoC (componente →
       función → requisito) y quitar los que no tengan función (p. ej. la JTAG UART en la
       versión final, salvo que se use para mediciones). *§3-HW p.5* ⟵ HW-01..17 · #5 (OBL,
       EVID)
-- [ ] **HW-24** `A·1` Mapa de memoria final visto desde el Nios V y desde el HPS (exportado de
+- [~] **HW-24** `A·1` Mapa de memoria final visto desde el Nios V y desde el HPS (exportado de
       Platform Designer). *§5 p.7–8* ⟵ HW-23 · #4 (EVID)
 
 ## 4. Software portable `sw/common/` — #11, #12, #14
@@ -470,7 +513,7 @@ Puntos de contacto entre personas:
 - [ ] **SC-10** `B·3` Filtros en software en punto fijo (biquad forma directa I, ecualizador
       de 3 bandas o notch/pasa-banda) y modelo del FIR igual bit a bit al HDL. *§3-SIS p.5* ⟵
       CD-14 · #16 (OBL)
-- [ ] **SC-11** `A·1` Volumen: lectura del ADC de 12 bits → ganancia (curva logarítmica) y
+- [x] **SC-11** Volumen: lectura del ADC de 12 bits → ganancia (curva logarítmica) y
       escalado con saturación. *§3-SIS p.5* ⟵ CD-05 · #17 (OBL)
 - [ ] **SC-12** `D·2` Remuestreo, si CD-07 lo pide. *§3-F p.3* ⟵ CD-07
 - [ ] **SC-13** `D·2` Protocolo HPS ↔ Nios V en un header común (`shm_proto.h`): versión,
@@ -487,7 +530,7 @@ Puntos de contacto entre personas:
 > offsets y bits tomados de la documentación del IP, y un puntero `volatile` a la base de
 > `system.h`.
 
-- [ ] **NV-01** `A·1` Ajustes del BSP como opciones de `niosv-bsp` dentro de
+- [x] **NV-01** Ajustes del BSP como opciones de `niosv-bsp` dentro de
       `scripts/build-niosv.sh` (biblioteca C reducida, drivers reducidos, stdout por JTAG UART
       solo para depuración, tamaño de pila, regiones de memoria según CD-06). *§3-SW p.5
       (gestión de memoria)* ⟵ CD-06, P5 · #15
@@ -503,19 +546,19 @@ Puntos de contacto entre personas:
 - [ ] **NV-05** `C·1` Switches (lectura periódica o IRQ según CD-08) → selección de filtro;
       LEDs para el estado y el filtro activo. *§3-F p.4, §3-SIS p.5* ⟵ HW-02, CD-08 · #16
       (OBL)
-- [ ] **NV-06** `A·2` Driver del IP de Audio: espacio libre de la FIFO, escritura de canal
+- [x] **NV-06** Driver del IP de Audio: espacio libre de la FIFO, escritura de canal
       izquierdo y derecho, limpieza de FIFOs; escritura no bloqueante de bloques de muestras.
       *§3-HW p.4* ⟵ HW-07 · #14 (OBL)
-- [ ] **NV-07** `A·2` Driver del Audio and Video Config: inicializar el códec (salida de
+- [x] **NV-07** Driver del Audio and Video Config: inicializar el códec (salida de
       línea, sin silencio, formato) y, si CD-07 = B, cambiar la frecuencia por canción. *§3-HW
       p.4* ⟵ HW-07, CD-07 · #14 (OBL)
-- [ ] **NV-08** `A·1` Driver del ADC (actualización automática, canal del potenciómetro) +
+- [x] **NV-08** Driver del ADC (actualización automática, canal del potenciómetro) +
       volumen (SC-11 o registro de HW-15). *§3-SIS p.5* ⟵ HW-08 · #17 (OBL)
 - [ ] **NV-09** `B·1` Driver de 7 segmentos (registro de HW-10) que muestra MM:SS del tiempo
       transcurrido. *§3-F p.3* ⟵ HW-10, CD-10 · #18 (OBL)
 - [ ] **NV-10** `B·1` Driver del módulo de filtro (modo, coeficientes, muestras o
       configuración del flujo). *§3-HW p.4* ⟵ HW-17 · #9 (OBL)
-- [ ] **NV-11** `A·2` Driver de video (p. ej. escribir texto en (x, y) del Character Buffer) y
+- [x] **NV-11** Driver de video (p. ej. escribir texto en (x, y) del Character Buffer) y
       pantalla con título, artista, álbum, duración, "n/total", estado y filtro activo.
       *§3-F p.4* ⟵ HW-09 · #19 (OBL)
 - [ ] **NV-12** `C·1` Base de tiempo por puntero a `mtime` del `timer_sw_agent` (milisegundos) y
@@ -528,13 +571,13 @@ Puntos de contacto entre personas:
 - [ ] **NV-15** `B·1` Autoprueba del módulo propio en el arranque: escribe vectores conocidos y
       compara con la salida esperada (la "rutina de prueba en software" de §3-HW p.4).
       *§3-HW p.4* ⟵ NV-10 · #10 (EVID)
-- [ ] **NV-16** `A·1` Gestión de memoria: revisar el `.map` y `riscv32-unknown-elf-size`, ubicar
+- [~] **NV-16** `A·1` Gestión de memoria: revisar el `.map` y `riscv32-unknown-elf-size`, ubicar
       buffers en la memoria elegida y documentar el uso. *§3-SW p.5* ⟵ NV-14 · #15 (OBL, EVID)
 - [ ] **NV-17** `C·1` Auditoría sin HAL: `grep -rnE 'IOWR|IORD|alt_' sw/niosv/ sw/common/` solo
       muestra `alt_ic_isr_register` / `alt_ic_irq_enable` / `alt_ic_irq_disable`. *§3-SW p.5*
       (OBL) → agregar el chequeo a `make lint` (DK-10).
 
-## 6. Software HPS `sw/hps/` — *issue nuevo*
+## 6. Software HPS `sw/hps/` — #32
 
 > Asume CD-01 = A. Toolchain ARM dentro del contenedor (DK-02).
 
@@ -566,14 +609,14 @@ Puntos de contacto entre personas:
       informa), menos de 10 archivos. *§3-F p.4 (estabilidad)* ⟵ HP-06
 - [ ] **HP-10** `D·2` Filtros en el ARM, solo si CD-12 los asigna al HPS. *§3-SIS p.5* ⟵ CD-12
 
-## 7. Integración HW/SW en la tarjeta
+## 7. Integración HW/SW en la tarjeta — #33 (IN-01..04), #34 (IN-05..09)
 
-- [ ] **IN-01** `A·1` Prueba de humo en tarjeta: LEDs y 7 segmentos por puntero desde el Nios V.
+- [~] **IN-01** `A·1` Prueba de humo en tarjeta: LEDs y 7 segmentos por puntero desde el Nios V.
       *§3-HW p.4* ⟵ HW-02, HW-10, HW-22 (EVID foto)
-- [ ] **IN-02** `A·1` Tono senoidal generado por el Nios V por el line-out, sin SD. *§3-HW
+- [~] **IN-02** `A·1` Tono senoidal generado por el Nios V por el line-out, sin SD. *§3-HW
       p.4* ⟵ NV-06, NV-07 → se oye limpio en audífonos.
-- [ ] **IN-03** `A·1` Potenciómetro → volumen sobre el tono. *§3-SIS p.5* ⟵ NV-08, IN-02
-- [ ] **IN-04** `A·1` Pantalla con metadatos fijos. *§3-F p.4* ⟵ NV-11
+- [~] **IN-03** `A·1` Potenciómetro → volumen sobre el tono. *§3-SIS p.5* ⟵ NV-08, IN-02
+- [~] **IN-04** `A·1` Pantalla con metadatos fijos. *§3-F p.4* ⟵ NV-11
 - [ ] **IN-05** `D·2` El HPS lee un WAV de la SD y lo deja en memoria compartida; el Nios V lo
       recibe completo (checksum). *§3-SW p.5* ⟵ HP-07, NV-13
 - [ ] **IN-06** `D·2` Reproducción de un WAV completo desde la SD, en bypass y sin cortes.
@@ -585,7 +628,7 @@ Puntos de contacto entre personas:
 - [ ] **IN-09** `D·2` Sistema completo arrancando solo desde reset, sin PC conectado. *§3-F
       p.4* ⟵ HP-04, IN-07, IN-08
 
-## 8. Contenedor Docker y CI (en paralelo, no bloquea Quartus) — *issues nuevos*
+## 8. Contenedor Docker y CI (en paralelo, no bloquea Quartus) — #35
 
 > El contenedor no reemplaza a Quartus. Sirve para: toolchain del HPS, simulación del HDL
 > propio con cocotb, pruebas en C de `sw/common/` y CI. Aporta al rubro "Herramientas de
@@ -670,7 +713,7 @@ Puntos de contacto entre personas:
       herramientas gráficas, tamaño de la instalación, licencia de Questa atada a la MAC. *§5
       p.8 (README: entorno)* ⟵ DK-07
 
-## 9. Pruebas y verificación
+## 9. Pruebas y verificación — #36
 
 - [ ] **PR-01** `D·2` Plan de pruebas en `docs/plan-pruebas.md`: por cada requisito del PDF,
       método (simulación, prueba unitaria, tarjeta), criterio de aceptación y responsable. *§5
@@ -686,7 +729,7 @@ Puntos de contacto entre personas:
       (`scripts/sim-soc.sh`): el Nios V escribe muestras al módulo propio y compara con
       vectores dorados. Es la verificación conjunta HW/SW de §2. *§2 p.2, §3-HW p.4* ⟵ HW-17,
       NV-15 (EVID)
-- [ ] **PR-05** `A·2` Prueba en tarjeta de cada driver por separado (programa de prueba por
+- [~] **PR-05** `A·2` Prueba en tarjeta de cada driver por separado (programa de prueba por
       periférico) antes del lazo principal. *§3-SW p.5* ⟵ NV-03..13
 - [ ] **PR-06** `D·2` Colección de ≥ 10 canciones WAV de licencia libre (8/16/44.1 kHz, mono y
       estéreo) con `LIST/INFO`, etiquetadas con un script; fuentes y licencias en
@@ -708,18 +751,18 @@ Puntos de contacto entre personas:
 
 ## 10. Recursos y potencia — #21
 
-- [ ] **RP-01** `A·1` Utilización del sistema completo (ALMs, registros, bits y bloques M10K,
+- [x] **RP-01** Utilización del sistema completo (ALMs, registros, bits y bloques M10K,
       bloques DSP) desde el reporte del Fitter; script que extrae la tabla. *§3-REC p.6* ⟵ HW-21
       (OBL, EVID)
-- [ ] **RP-02** `A·1` Utilización del módulo propio por separado ("Resource Utilization by
+- [ ] **RP-02** `A·1` *(bloqueada por HW-17; script listo: `report-resources.py --entity`)* Utilización del módulo propio por separado ("Resource Utilization by
       Entity"). *§3-REC p.6* ⟵ HW-17, HW-21 (OBL, EVID)
-- [ ] **RP-03** `A·2` Potencia del sistema completo con el Power Analyzer de Quartus
+- [x] **RP-03** Potencia del sistema completo con el Power Analyzer de Quartus
       (`quartus_pow`); documentar las tasas de conmutación supuestas o usar un VCD de
       simulación. *§3-REC p.6* ⟵ HW-21 (OBL, EVID)
 - [ ] **RP-04** `B·2` Costo de mover un filtro de software a hardware: recursos y potencia del
       módulo frente a ciclos por muestra del mismo filtro en software (medidos con `mcycle`).
       *§3-REC p.6* ⟵ RP-02, CD-12
-- [ ] **RP-05** `A·1` Discusión de cómo la partición HW/SW afectó recursos y potencia. *§3-REC
+- [~] **RP-05** `A·1` Discusión de cómo la partición HW/SW afectó recursos y potencia. *§3-REC
       p.6, §5 p.8 (3%)* ⟵ RP-01..04 (OBL)
 
 ## 11. Documentación y entregables — #22 a #25
@@ -733,14 +776,14 @@ Puntos de contacto entre personas:
 - [ ] **DOC-03** `B·2` Diseño del hardware personalizado: diagrama de bloques, registros, mapa
       de memoria, diagramas de tiempo y justificación. *§5 p.7 (4%)* ⟵ HW-11, HW-18, HW-24 ·
       #22 (OBL)
-- [ ] **DOC-04** `A·1` Análisis de recursos y consumo (RP-01..05). *§5 p.8 (3%)* ⟵ RP-05 · #22
+- [~] **DOC-04** `A·1` Análisis de recursos y consumo (RP-01..05). *§5 p.8 (3%)* ⟵ RP-05 · #22
       (OBL)
 - [ ] **DOC-05** `B·2` Herramientas de ingeniería: herramientas usadas (Quartus, Platform
       Designer, Questa, Docker, cocotb, GitHub Actions), modelos y ecuaciones (FIR, punto
       fijo, duración, volumen, presupuesto de latencia), scripts creados o modificados
       (incluye [docs/reutilizado-taller9.md](docs/reutilizado-taller9.md)). *§5 p.8 (3%)* ·
       #22 (OBL)
-- [ ] **DOC-06** `A·3` `README.md`: instalación, compilación con Platform Designer, entorno
+- [~] **DOC-06** `A·3` `README.md`: instalación, compilación con Platform Designer, entorno
       nativo ([docs/entorno-nativo.md](docs/entorno-nativo.md)) y contenedor (DK-20), uso del
       sistema (botones y switches), diagramas de arquitectura HW y SW, interfaz del módulo
       propio, mapas de memoria, evidencias de los filtros, resultados con capturas y videos.

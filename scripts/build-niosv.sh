@@ -8,30 +8,54 @@
 # Origen: Taller 9, scripts/build-sw.sh (ver docs/reutilizado-taller9.md).
 #
 # Requiere haber corrido antes:  scripts/build-soc.sh
+#
+# Uso:
+#   scripts/build-niosv.sh              # aplicacion del reproductor (sw/niosv/src)
+#   APP=test_pio scripts/build-niosv.sh # programa de prueba sw/niosv/tests/test_pio
+# En ambos casos se compilan tambien los drivers (sw/niosv/drivers) y la logica
+# portable (sw/common).
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$HERE/scripts/env.sh"
 cd "$HERE"
 
+APP="${APP:-}"
 SOPC="$HERE/hw/soc/audio_soc.sopcinfo"
-OUT="$HERE/build/niosv"
+# Cada programa compila en su carpeta (build/niosv para la aplicacion,
+# build/niosv-<APP> para las pruebas): asi varias simulaciones corren en paralelo.
+OUT="$HERE/build/niosv${APP:+-$APP}"
 if [ ! -f "$SOPC" ]; then
     echo "ERROR: falta $SOPC. Corra primero scripts/build-soc.sh" >&2
     exit 1
 fi
 
 # Partimos de cero para que el BSP refleje cambios del .qsys (p. ej. PIO nuevos).
-# Solo se borra build/niosv: build/ tambien guarda la salida del HPS.
+# Solo se borra la carpeta de este programa: build/ tambien guarda la salida del HPS.
 rm -rf "$OUT"
 mkdir -p "$OUT"
 
 echo ">> Generando BSP (HAL) ..."
-niosv-bsp --create --type=hal --sopcinfo="$SOPC" "$OUT/bsp/settings.bsp"
+niosv-bsp --create --type=hal --sopcinfo="$SOPC" --no-default \
+          --script="$HERE/sw/niosv/bsp.tcl" "$OUT/bsp/settings.bsp"
 
-echo ">> Generando proyecto de aplicacion (CMake) ..."
+if [ -n "${APP:-}" ]; then
+    SRC="$HERE/sw/niosv/tests/$APP"
+    ELF="$APP.elf"
+else
+    SRC="$HERE/sw/niosv/src"
+    ELF="audio_player.elf"
+fi
+if [ ! -d "$SRC" ]; then
+    echo "ERROR: no existe $SRC" >&2
+    exit 1
+fi
+DRV="$HERE/sw/niosv/drivers"
+COMMON="$HERE/sw/common"
+
+echo ">> Generando proyecto de aplicacion (CMake): $SRC ..."
 niosv-app --app-dir="$OUT/app" --bsp-dir="$OUT/bsp" \
-          --srcs="$HERE/sw/niosv/src" --elf-name=audio_player.elf
+          --srcs="$SRC,$DRV,$COMMON" --incs="$DRV,$COMMON" --elf-name="$ELF"
 
 echo ">> Compilando ..."
 cmake -G "Unix Makefiles" -S "$OUT/app" -B "$OUT/app/build" >/dev/null
@@ -40,9 +64,9 @@ make -C "$OUT/app/build"
 # La RAM on-chip en simulacion lee "ram.hex" desde el directorio donde corre
 # vsim (hw/soc/gen/testbench/mentor). Copiamos la imagen recien generada ahi.
 MENTOR="$HERE/hw/soc/gen/testbench/mentor"
-if [ -d "$MENTOR" ]; then
+if [ -z "$APP" ] && [ -d "$MENTOR" ]; then
     cp "$OUT/app/build/ram.hex" "$MENTOR/ram.hex"
     echo ">> ram.hex copiado a $MENTOR"
 fi
 
-echo ">> Listo. ELF en: $OUT/app/build/audio_player.elf"
+echo ">> Listo. ELF en: $OUT/app/build/$ELF"
