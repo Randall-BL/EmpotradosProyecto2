@@ -15,7 +15,7 @@
  *    4  | Artista : ...
  *    5  | Album   : ...
  *    6  | Duracion: MM:SS                Transcurrido: MM:SS
- *    7  |
+ *    7  | (mensajes: esperando al HPS, errores, subdesbordes)
  *    8  | Estado  : ...                  Filtro: ...
  *    9  | Volumen : [####----...] NNN%
  *   10  |-----...-----|
@@ -61,6 +61,9 @@ void screen_draw_track(const screen_port_t *p, const screen_track_t *t);
 /* Estado, filtro, volumen y tiempo transcurrido (cada segundo o al cambiar). */
 void screen_draw_status(const screen_port_t *p, screen_state_t st, const char *filter,
                         uint32_t volume_percent, uint32_t elapsed_s);
+
+/* Linea de mensajes (fila 7): avisos del reproductor; "" la borra. */
+void screen_draw_message(const screen_port_t *p, const char *msg);
 
 /* Utilidades de formato (expuestas para las pruebas). out debe tener 6 bytes. */
 void screen_fmt_mmss(char *out, uint32_t seconds);
