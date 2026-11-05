@@ -133,7 +133,7 @@ scripts/build-quartus.sh   # 3. Quartus: síntesis, fitter, .sof y Timing Analyz
 Para cambiar solo el software sin recompilar el hardware: `scripts/update-sw.sh` (~20 s).
 
 Resultado actual de la compilación: sin errores ni warnings críticos, tiempos cumplidos en
-las cuatro esquinas del Timing Analyzer (slack mínimo de setup **+8.39 ns** a 50 MHz).
+las cuatro esquinas del Timing Analyzer (slack mínimo de setup **+7.55 ns** a 50 MHz, hold +0.05 ns).
 
 ## Verificación sin tarjeta
 
@@ -192,12 +192,12 @@ Sistema completo (sin el módulo propio ni el HPS todavía), de
 
 | Recurso | Uso |
 |---|---|
-| Lógica | 3 212 / 32 070 ALMs (10 %) |
-| Registros | 4 507 |
+| Lógica | 3 292 / 32 070 ALMs (10 %) |
+| Registros | 4 671 |
 | Memoria embebida | 1 648 768 bits (41 %), 207 / 397 M10K (52 %) |
 | DSP | 0 / 87 |
 | PLL | 2 / 6 |
-| Potencia total estimada | 544.8 mW (dinámica del núcleo 91.7 mW, estática 421.5 mW, E/S 31.6 mW; estimación sin vectores) |
+| Potencia total estimada | 547.8 mW (dinámica del núcleo 94.7 mW, estática 421.6 mW, E/S 31.5 mW; estimación sin vectores) |
 
 ## Decisiones de diseño
 

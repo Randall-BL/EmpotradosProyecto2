@@ -32,9 +32,10 @@ STA="$QDIR/output_files/audio_player.sta.rpt"
 echo ">> Resumen:"
 grep -E "Total logic elements|Logic utilization|Total registers|Total block memory bits|Total DSP Blocks|Total pins" \
     "$QDIR/output_files/audio_player.fit.summary" | sed 's/^/   /'
-echo ">> Slack por reloj (Timing Analyzer, peor esquina):"
-grep -E "^; Worst-case (Setup|Hold) Slack" -A 30 "$STA" | grep -E "^; -?[0-9]" | head -20 | sed 's/^/   /' || true
-if grep -qE "Timing requirements not met|critical warning.*timing" -i "$STA"; then
+echo ">> Slack por reloj (Timing Analyzer, peor de las 4 esquinas; setup, hold, recovery, removal):"
+awk '/; Multicorner Timing Analysis Summary/,/^$/' "$STA" | \
+    awk -F';' '/Worst-case Slack|CLOCK_50|altera_reserved_tck|divclk/ {gsub(/ +/," "); print "  " $2 ":" $3 $4 $5 $6}' | head -6
+if awk '/; Multicorner Timing Analysis Summary/,/^$/' "$STA" | grep -E "Worst-case Slack" | grep -q -- " -[0-9]"; then
     echo "AVISO: hay requisitos de tiempo sin cumplir (ver $STA)" >&2
     exit 2
 fi
