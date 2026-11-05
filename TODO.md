@@ -429,10 +429,10 @@ Puntos de contacto entre personas:
 - [x] **HW-21** Script `scripts/build-quartus.sh` (`quartus_sh --flow compile`) y
       compilación limpia: sin errores, warnings críticos revisados. *§5 p.8 (compilación)* ⟵
       HW-20 · #5 (OBL)
-- [ ] **HW-22** `A·1` Cargar el software del Nios V: `ram.hex` dentro del `.sof` (actualizar
+- [~] **HW-22** `A·1` Cargar el software del Nios V: `ram.hex` dentro del `.sof` (actualizar
       la MIF sin recompilar todo) o `niosv-download` por JTAG; script `scripts/program.sh` con
       `quartus_pgm`. *§3-F p.4 (arranque)* ⟵ HW-21, NV-01 · #5
-- [ ] **HW-23** `A·1` Tabla de justificación de **cada** componente del SoC (componente →
+- [x] **HW-23** Tabla de justificación de **cada** componente del SoC (componente →
       función → requisito) y quitar los que no tengan función (p. ej. la JTAG UART en la
       versión final, salvo que se use para mediciones). *§3-HW p.5* ⟵ HW-01..17 · #5 (OBL,
       EVID)
@@ -708,12 +708,12 @@ Puntos de contacto entre personas:
 
 ## 10. Recursos y potencia — #21
 
-- [ ] **RP-01** `A·1` Utilización del sistema completo (ALMs, registros, bits y bloques M10K,
+- [x] **RP-01** Utilización del sistema completo (ALMs, registros, bits y bloques M10K,
       bloques DSP) desde el reporte del Fitter; script que extrae la tabla. *§3-REC p.6* ⟵ HW-21
       (OBL, EVID)
 - [ ] **RP-02** `A·1` Utilización del módulo propio por separado ("Resource Utilization by
       Entity"). *§3-REC p.6* ⟵ HW-17, HW-21 (OBL, EVID)
-- [ ] **RP-03** `A·2` Potencia del sistema completo con el Power Analyzer de Quartus
+- [x] **RP-03** Potencia del sistema completo con el Power Analyzer de Quartus
       (`quartus_pow`); documentar las tasas de conmutación supuestas o usar un VCD de
       simulación. *§3-REC p.6* ⟵ HW-21 (OBL, EVID)
 - [ ] **RP-04** `B·2` Costo de mover un filtro de software a hardware: recursos y potencia del

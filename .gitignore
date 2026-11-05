@@ -73,3 +73,4 @@ scripts/env.local.sh
 
 # Log y contenido de RAM que copia scripts/build-quartus.sh
 hw/quartus/output_files.log
+hw/quartus/update_mif.log
