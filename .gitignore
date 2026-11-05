@@ -57,9 +57,7 @@ build/
 *.map
 *.hex
 *.srec
-# El BSP se regenera con niosv-bsp; solo se versiona settings.bsp
-software/*bsp*/*
-!software/*bsp*/settings.bsp
+# El BSP se regenera con niosv-bsp dentro de build/ (scripts/build-niosv.sh)
 
 # ─────────────────────────────────────────────
 #  Editores y sistema
@@ -69,3 +67,6 @@ software/*bsp*/*
 *.swp
 *~
 .DS_Store
+
+# Rutas locales de cada maquina para scripts/env.sh
+scripts/env.local.sh

@@ -27,11 +27,20 @@ scripts lo cargan solos. Por defecto usa:
 
 | Variable | Valor por defecto | Cómo cambiarlo |
 |---|---|---|
-| `ALTERA_ROOT` | `/opt/altera_lite/25.1std` | `export ALTERA_ROOT=/ruta/a/altera_lite/25.1std` antes de llamar a los scripts |
+| `ALTERA_ROOT` | `/opt/altera_lite/25.1std`; si no existe, `~/altera_lite/25.1std` | `export ALTERA_ROOT=/ruta/a/altera_lite/25.1std` antes de llamar a los scripts |
 | `SALT_LICENSE_SERVER` | `~/altera_lite/LR-203954_License.dat` | `export SALT_LICENSE_SERVER=/ruta/a/su/licencia.dat` |
 
-Cada integrante exporta sus propias rutas; los valores por defecto son los de la
-máquina donde se armó el Taller 9.
+Cada integrante deja sus propias rutas en `scripts/env.local.sh` (ignorado por Git), que
+`env.sh` carga antes de aplicar los valores por defecto:
+
+```bash
+# scripts/env.local.sh
+export ALTERA_ROOT=$HOME/altera_lite/25.1std
+export SALT_LICENSE_SERVER=$HOME/Descargas/LR-XXXXXX_License.dat
+```
+
+La licencia de Questa está atada a la MAC de cada máquina, así que cada quien usa la
+suya.
 
 ### Rutas que agrega `env.sh` al `PATH`
 
@@ -42,6 +51,7 @@ máquina donde se armó el Taller 9.
 | `niosv/bin` | `niosv-bsp`, `niosv-app`, `niosv-download`, `elf2hex` |
 | `riscfree/toolchain/riscv32-unknown-elf/bin` | compilador RISC-V (`riscv32-unknown-elf-gcc`) |
 | `questa_fse/bin` | `vsim` (Questa) |
+| `riscfree/build_tools/cmake/bin` (al final) | `cmake` que trae RiscFree; lo usa `build-niosv.sh`, así no hace falta instalarlo |
 
 También fija `QSYS_ROOTDIR`, para no tomar por error una instalación vieja de Quartus.
 
