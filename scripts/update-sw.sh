@@ -18,7 +18,7 @@ QDIR="$HERE/hw/quartus"
 
 "$HERE/scripts/build-niosv.sh" > "$HERE/build/niosv-update.log" 2>&1 \
     || { echo "ERROR: fallo build-niosv.sh, ver build/niosv-update.log" >&2; exit 1; }
-cp "$HERE/build/niosv/app/build/ram.hex" "$QDIR/ram.hex"
+cp "$HERE/build/niosv${APP:+-$APP}/app/build/ram.hex" "$QDIR/ram.hex"
 
 cd "$QDIR"
 echo ">> Actualizando el contenido de la RAM ..."

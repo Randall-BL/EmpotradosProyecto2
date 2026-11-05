@@ -9,7 +9,10 @@
 # testbench imprime "PASS". El transcript queda en build/sim/tb_<nombre>.log.
 #
 # Requiere haber corrido scripts/build-soc.sh (testbench generado del SoC).
+# Varios testbenches pueden correr a la vez (cada uno en build/sim/tb_<nombre>.d).
 # Con NOBUILD=1 no recompila el software (reusa el ram.hex actual).
+# ELAB_OPTS pasa opciones a la elaboracion, p. ej. parametros del testbench:
+#   ELAB_OPTS=-gLTC=1 scripts/sim-tb.sh adc
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -25,19 +28,31 @@ if [ "${NOBUILD:-0}" != "1" ] && [ -d "$APP_DIR" ]; then
         || { echo "ERROR: fallo build-niosv.sh, ver build/niosv-test_$NAME.log" >&2; exit 1; }
 fi
 
-MENTOR="$HERE/hw/soc/gen/testbench/mentor"
-[ -f "$MENTOR/msim_setup.tcl" ] || { echo "ERROR: corra primero scripts/build-soc.sh" >&2; exit 1; }
+GEN="$HERE/hw/soc/gen/testbench"
+[ -f "$GEN/mentor/msim_setup.tcl" ] || { echo "ERROR: corra primero scripts/build-soc.sh" >&2; exit 1; }
+HEX="$HERE/build/niosv-test_$NAME/app/build/ram.hex"
+[ -f "$HEX" ] || { echo "ERROR: falta $HEX" >&2; exit 1; }
 mkdir -p "$HERE/build/sim"
 LOG="$HERE/build/sim/tb_$NAME.log"
 
-cd "$MENTOR"
-rm -rf work ./*_lib transcript 2>/dev/null || true
+# Directorio de simulacion propio de este testbench: las fuentes generadas se
+# enlazan (enlaces duros, solo se leen) y mentor/ es una copia, porque ahi Questa
+# compila sus librerias y lee ram.hex. Asi varios testbenches corren en paralelo.
+WORK="$HERE/build/sim/tb_$NAME.d"
+rm -rf "$WORK"
+mkdir -p "$WORK/mentor"
+cp -al "$GEN/audio_soc_tb" "$WORK/"
+cp "$GEN/mentor/msim_setup.tcl" "$WORK/mentor/"
+cp "$HEX" "$WORK/mentor/ram.hex"
+cd "$WORK/mentor"
 # TOP_LEVEL_NAME antes de msim_setup.tcl: se elabora nuestro testbench en vez del
 # audio_soc_tb generado; audio_soc se resuelve en la libreria audio_soc_inst.
-vsim -c -do "set TOP_LEVEL_NAME tb_$NAME; source msim_setup.tcl; file_copy; dev_com; com; \
-vlog -sv -work work $TB; elab; run -all; quit -f" > "$LOG" 2>&1 || true
+# Los modelos de perifericos externos (sim/questa/*_model.sv) se compilan siempre.
+MODELS="$(ls "$HERE"/sim/questa/*_model.sv 2>/dev/null | tr '\n' ' ')"
+vsim -c -do "set TOP_LEVEL_NAME tb_$NAME; set USER_DEFINED_ELAB_OPTIONS {${ELAB_OPTS:-}}; source msim_setup.tcl; file_copy; dev_com; com; \
+vlog -sv -work work $MODELS $TB; elab; run -all; quit -f" > "$LOG" 2>&1 || true
 
-grep -E "^# (TB_|\[|Respuesta|\*\* (Error|Fatal))|OK |FALLO" "$LOG" | sed 's/^# //'
+grep -E "^# (TB_|\[|Respuesta|Pares|Relleno|Escrituras|OK |\*\* (Error|Fatal))|FALLO" "$LOG" | sed 's/^# //'
 if grep -q "TB_[A-Z_]*: PASS" "$LOG"; then
     exit 0
 fi
