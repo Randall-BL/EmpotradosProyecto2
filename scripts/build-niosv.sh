@@ -8,6 +8,11 @@
 # Origen: Taller 9, scripts/build-sw.sh (ver docs/reutilizado-taller9.md).
 #
 # Requiere haber corrido antes:  scripts/build-soc.sh
+#
+# Uso:
+#   scripts/build-niosv.sh              # aplicacion del reproductor (sw/niosv/src)
+#   APP=test_pio scripts/build-niosv.sh # programa de prueba sw/niosv/tests/test_pio
+# En ambos casos se compilan tambien los drivers de sw/niosv/drivers.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -29,9 +34,23 @@ mkdir -p "$OUT"
 echo ">> Generando BSP (HAL) ..."
 niosv-bsp --create --type=hal --sopcinfo="$SOPC" "$OUT/bsp/settings.bsp"
 
-echo ">> Generando proyecto de aplicacion (CMake) ..."
+APP="${APP:-}"
+if [ -n "$APP" ]; then
+    SRC="$HERE/sw/niosv/tests/$APP"
+    ELF="$APP.elf"
+else
+    SRC="$HERE/sw/niosv/src"
+    ELF="audio_player.elf"
+fi
+if [ ! -d "$SRC" ]; then
+    echo "ERROR: no existe $SRC" >&2
+    exit 1
+fi
+DRV="$HERE/sw/niosv/drivers"
+
+echo ">> Generando proyecto de aplicacion (CMake): $SRC ..."
 niosv-app --app-dir="$OUT/app" --bsp-dir="$OUT/bsp" \
-          --srcs="$HERE/sw/niosv/src" --elf-name=audio_player.elf
+          --srcs="$SRC,$DRV" --incs="$DRV" --elf-name="$ELF"
 
 echo ">> Compilando ..."
 cmake -G "Unix Makefiles" -S "$OUT/app" -B "$OUT/app/build" >/dev/null
@@ -45,4 +64,4 @@ if [ -d "$MENTOR" ]; then
     echo ">> ram.hex copiado a $MENTOR"
 fi
 
-echo ">> Listo. ELF en: $OUT/app/build/audio_player.elf"
+echo ">> Listo. ELF en: $OUT/app/build/$ELF"
