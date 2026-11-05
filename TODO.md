@@ -304,7 +304,7 @@ Puntos de contacto entre personas:
 - [ ] **CD-05** `B·1` Volumen: multiplicador en hardware (dentro del módulo propio) vs
       escalado en software. Considerar que el Nios V/m no tiene `mul` (dato 3). *§3-SIS p.5* ·
       #17 → decisión con ciclos medidos de `__mulsi3` o recursos estimados del multiplicador.
-- [ ] **CD-06** `A·2` Memoria: código y datos del Nios V en RAM on-chip (256 KB del Taller 9) vs
+- [x] **CD-06** Memoria: código y datos del Nios V en RAM on-chip (256 KB del Taller 9) vs
       SDRAM de 64 MB de la FPGA vs DDR3 del HPS por el bridge F2H; dónde vive el buffer
       compartido (RAM on-chip de doble puerto vs SDRAM). *§3-SW p.5 (gestión de memoria)*
       ⟵ CD-01, CD-03 · #4 → mapa de memoria preliminar.
