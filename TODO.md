@@ -740,7 +740,7 @@ Puntos de contacto entre personas:
       fijo, duración, volumen, presupuesto de latencia), scripts creados o modificados
       (incluye [docs/reutilizado-taller9.md](docs/reutilizado-taller9.md)). *§5 p.8 (3%)* ·
       #22 (OBL)
-- [ ] **DOC-06** `A·3` `README.md`: instalación, compilación con Platform Designer, entorno
+- [~] **DOC-06** `A·3` `README.md`: instalación, compilación con Platform Designer, entorno
       nativo ([docs/entorno-nativo.md](docs/entorno-nativo.md)) y contenedor (DK-20), uso del
       sistema (botones y switches), diagramas de arquitectura HW y SW, interfaz del módulo
       propio, mapas de memoria, evidencias de los filtros, resultados con capturas y videos.

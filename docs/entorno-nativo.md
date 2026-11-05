@@ -78,24 +78,34 @@ niosv-bsp --help                    # utilidades Nios V
 vsim -version                       # Questa
 ```
 
-## Flujo del SoC (heredado del Taller 9)
+## Flujo de trabajo
 
 ```bash
-scripts/build-soc.sh       # .qsys desde hw/soc/build_system.tcl + RTL + .sopcinfo + testbench
-scripts/build-niosv.sh     # BSP + app de sw/niosv/src + audio_player.elf + ram.hex
-scripts/sim-soc.sh         # Questa en consola: transcript con la salida de la JTAG UART
-scripts/sim-soc.sh gui     # Questa con GUI y waveform de los PIO (captura de evidencia)
+scripts/build-soc.sh        # .qsys desde hw/soc/build_system.tcl + RTL + .sopcinfo + testbench
+scripts/build-niosv.sh      # BSP (sw/niosv/bsp.tcl) + app de sw/niosv/src + ram.hex
+APP=test_pio scripts/build-niosv.sh   # un programa de prueba de sw/niosv/tests/
+scripts/build-quartus.sh    # proyecto Quartus completo: .sof + reportes + Timing Analyzer
+scripts/update-sw.sh        # solo cambia el software dentro del .sof (~20 s)
+scripts/program.sh          # programa la DE1-SoC por JTAG
+scripts/sim-soc.sh [gui]    # prueba de humo en Questa (printf por la JTAG UART)
+scripts/sim-tb.sh <nombre>  # testbench autoverificable: pio, audio, codec, adc, vga
+make -C tests               # pruebas en el PC de sw/common/
+python3 scripts/report-resources.py   # recursos por componente (Fitter)
+scripts/report-power.sh     # potencia (Power Analyzer)
 ```
 
 `build-soc.sh` regenera `hw/soc/audio_soc.qsys` cuando falta o cuando
 `build_system.tcl` es más nuevo; `REGEN_QSYS=1` lo fuerza. El `.qsys` no se versiona:
 la fuente del SoC es el Tcl, así que lo que se cambie en la GUI de Platform Designer
 hay que pasarlo al Tcl. Tampoco se versiona el resto de la salida generada
-(`hw/soc/gen/`, `build/`, `*.sopcinfo`).
+(`hw/soc/gen/`, `build/`, `*.sopcinfo`, `hw/quartus/output_files/`).
 
-Notas aprendidas en el Taller 9:
+Notas:
 
-- `sim-soc.sh` elabora con `ld_debug` (`-voptargs=+acc`); sin eso Questa optimiza los
-  puertos de los PIO y no se pueden forzar ni graficar.
-- La JTAG UART simulada es lenta: hacen falta ~6 ms de simulación (`SIM_TIME`) para
-  ver toda la salida del programa de prueba.
+- Los testbenches instancian `audio_soc` directamente (`sim/questa/tb_*.sv`); el
+  `audio_soc_tb` que genera Platform Designer no elabora con varios conduits.
+- La simulación del SoC completo corre a ~1 minuto por milisegundo simulado (los
+  modelos de los PLL dominan). `tb_codec` tarda ~15 min porque el I²C del IP va a 24 kHz.
+- `sim-soc.sh` elabora con `-voptargs=+acc` para poder graficar señales internas.
+- El BSP se crea con `--no-default` (ver `sw/niosv/bsp.tcl`): el driver HAL del IP de
+  Audio invalida el BSP del Nios V, y de todos modos no se usa ningún driver HAL.
