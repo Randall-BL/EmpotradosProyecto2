@@ -27,14 +27,14 @@ int main(void)
      * Acceso a los PIO por puntero directo (Christopher Rodriguez, 2022040771).
      *
      * Las bases salen de system.h del BSP:
-     *   PIO_OUT_BASE = 0x00040010  (8 bits, salida -> 8 LED)
-     *   PIO_IN_BASE  = 0x00040020  (4 bits, entrada <- 4 interruptores)
+     *   PIO_LED_BASE = 0x00040010  (10 bits, salida -> LEDR)
+     *   PIO_SW_BASE  = 0x00040030  (10 bits, entrada <- SW)
      * El registro de datos de cada PIO esta en el desplazamiento 0. Los
      * punteros son volatile para que el compilador no elimine ni reordene
      * los accesos. No se usan IOWR/IORD ni funciones alt_*.
      */
-    volatile uint32_t *pio_out = (volatile uint32_t *)PIO_OUT_BASE;
-    volatile uint32_t *pio_in  = (volatile uint32_t *)PIO_IN_BASE;
+    volatile uint32_t *pio_out = (volatile uint32_t *)PIO_LED_BASE;
+    volatile uint32_t *pio_in  = (volatile uint32_t *)PIO_SW_BASE;
 
     const uint32_t patrones[] = { 0x01, 0xA5, 0xFF };
     for (unsigned i = 0; i < sizeof patrones / sizeof patrones[0]; ++i) {
@@ -42,7 +42,7 @@ int main(void)
         printf("PIO_OUT <= 0x%02lx\n", (unsigned long)patrones[i]);
     }
 
-    uint32_t v = *pio_in & 0xF;                /* lee el registro de datos (4 bits) */
+    uint32_t v = *pio_in & 0x3FF;              /* lee el registro de datos (10 bits) */
     printf("PIO_IN  = 0x%08lx\n", (unsigned long)v);
 
     printf("Fin del programa.\n");
