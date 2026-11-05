@@ -377,7 +377,7 @@ Puntos de contacto entre personas:
 
 ### 3.3 Periféricos de catálogo — #6, #7
 
-- [~] **HW-07** `A·2` Audio: Audio PLL (frecuencia según CD-07), IP de Audio (Memory-Mapped o
+- [x] **HW-07** Audio: Audio PLL (frecuencia según CD-07), IP de Audio (Memory-Mapped o
       Streaming según CD-04) y Audio and Video Config (I2C al WM8731); exportar `AUD_*` y
       `FPGA_I2C_*`. *§3-HW p.4 (audio en la FPGA), §4 p.7* ⟵ CD-04, CD-07 · #6 (OBL)
 - [x] **HW-08** ADC: IP de ADC de la DE1-SoC con el chip de nuestra revisión (AD7928 o
@@ -509,7 +509,7 @@ Puntos de contacto entre personas:
 - [x] **NV-06** Driver del IP de Audio: espacio libre de la FIFO, escritura de canal
       izquierdo y derecho, limpieza de FIFOs; escritura no bloqueante de bloques de muestras.
       *§3-HW p.4* ⟵ HW-07 · #14 (OBL)
-- [ ] **NV-07** `A·2` Driver del Audio and Video Config: inicializar el códec (salida de
+- [x] **NV-07** Driver del Audio and Video Config: inicializar el códec (salida de
       línea, sin silencio, formato) y, si CD-07 = B, cambiar la frecuencia por canción. *§3-HW
       p.4* ⟵ HW-07, CD-07 · #14 (OBL)
 - [x] **NV-08** Driver del ADC (actualización automática, canal del potenciómetro) +

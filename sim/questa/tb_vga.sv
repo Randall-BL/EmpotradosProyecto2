@@ -69,9 +69,11 @@ module tb_vga;
     always @(led) $display("[%0t] LEDR = 0x%03h", $time, led);
 
     // ---- 1. Texto en el stream del Character Buffer ----
+    localparam int DUMP_LINES = (FIRST_ROW + NROWS) * 8;   // filas 0..12 de la pantalla
     int pix = -1;                        // indice del pixel en el cuadro (desde el SOP)
     int frame = 0;
     int lit [NROWS][80];
+    bit img [DUMP_LINES][W];             // captura de las lineas 0..103 del cuadro
     realtime t_rows_start = 0;           // cuando salio la primera linea de las filas
     bit rows_done = 0;                   // el cuadro actual ya paso las filas revisadas
 
@@ -90,6 +92,7 @@ module tb_vga;
                 if (pix == FIRST_ROW * 8 * W) t_rows_start = $realtime;
                 if (row >= FIRST_ROW && row < FIRST_ROW + NROWS && dut.char_buf.stream_data != 0)
                     lit[row - FIRST_ROW][col]++;
+                if (y < DUMP_LINES) img[y][x] = (dut.char_buf.stream_data != 0);
                 if (pix == (FIRST_ROW + NROWS) * 8 * W) rows_done = 1;
             end
         end
@@ -147,6 +150,19 @@ module tb_vga;
         disable fork;
         $display("[%0t] cuadro %0d del stream: filas %0d-%0d desde %.2f ms", $time, frame,
                  FIRST_ROW, FIRST_ROW + NROWS - 1, t_rows_start / 1.0e6);
+
+        // Evidencia: lineas 0..103 del cuadro como imagen PBM (build/sim/vga_pantalla.pbm;
+        // scripts/pbm2png.py la pasa a PNG para el README).
+        begin
+            automatic int fd = $fopen("../../vga_pantalla.pbm", "w");
+            $fwrite(fd, "P1\n%0d %0d\n", W, DUMP_LINES);
+            for (int yy = 0; yy < DUMP_LINES; yy++) begin
+                for (int xx = 0; xx < W; xx++) $fwrite(fd, "%0d", img[yy][xx]);
+                $fwrite(fd, "\n");
+            end
+            $fclose(fd);
+            $display("Captura de la pantalla: build/sim/vga_pantalla.pbm (%0d x %0d)", W, DUMP_LINES);
+        end
 
         for (int rr = 0; rr < NROWS; rr++) begin
             automatic int bad = 0;

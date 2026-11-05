@@ -152,11 +152,16 @@ make -C tests              # lógica portable en el PC
 |---|---|---|
 | `tb_pio` | Escritura de LEDR, lectura de SW, IRQ de cada KEY, pulsación simultánea, rebote, IRQ de SW | PASS; respuesta botón → LED **17 µs** (requisito < 200 ms) |
 | `tb_audio` | 240 pares seguidos (5 ms a 48 kHz) en Left Justified, canales sin cruzarse, sin muestras perdidas por sondeo ni por IRQ | PASS |
-| `tb_codec` | Las 57 transferencias I²C de la autoinicialización (10 al WM8731, 47 al ADV7180); R7 = 0x041 (maestro, LJ, 16 bits), R8 = 0x000 (48 kHz), R9 activo; `codec_init` quita la de-énfasis (R5 0x006 → 0x000) y `codec_mute` | PASS (~75 ms simulados) |
+| `tb_codec` | Las 57 transferencias I²C de la autoinicialización (10 al WM8731, 47 al ADV7180); R7 = 0x041 (maestro, LJ, 16 bits), R8 = 0x000 (48 kHz), R9 activo; `codec_init` quita la de-énfasis (R5 0x006 → 0x000) y `codec_mute` | PASS; todo listo a los 71.4 ms del reset |
 | `tb_adc` | Potenciómetro en CH0 con el modelo del **AD7928** y con el del **LTC2308** (las dos revisiones de la placa) | PASS en ambos |
 | `tb_shm` | Memoria compartida: bus de datos, bus de direcciones en 64 KB, March C-, accesos de 8/16 bits, sin solape con la RAM | PASS |
 | `tb_vga` | 640 × 480 @ 60 Hz (línea de 32.000 µs, HS de 3.840 µs, 640 píxeles activos) y texto: las filas 9–12 coinciden celda por celda con la pantalla de referencia | PASS |
 | `test_volume`, `test_screen`, `test_tone` | Curva de volumen, histéresis y saturación; pantalla del reproductor; tono de 440 Hz con SNR de 48.9 dB | PASS |
+
+Pantalla del reproductor tal como sale del Character Buffer en `tb_vga` (líneas 0–103
+del cuadro, a escala 2; `scripts/pbm2png.py`):
+
+![Pantalla VGA simulada](docs/img/vga-simulada.png)
 
 Hallazgos de la verificación que cambiaron el diseño:
 
