@@ -528,7 +528,7 @@ Puntos de contacto entre personas:
 - [ ] **NV-15** `B·1` Autoprueba del módulo propio en el arranque: escribe vectores conocidos y
       compara con la salida esperada (la "rutina de prueba en software" de §3-HW p.4).
       *§3-HW p.4* ⟵ NV-10 · #10 (EVID)
-- [ ] **NV-16** `A·1` Gestión de memoria: revisar el `.map` y `riscv32-unknown-elf-size`, ubicar
+- [~] **NV-16** `A·1` Gestión de memoria: revisar el `.map` y `riscv32-unknown-elf-size`, ubicar
       buffers en la memoria elegida y documentar el uso. *§3-SW p.5* ⟵ NV-14 · #15 (OBL, EVID)
 - [ ] **NV-17** `C·1` Auditoría sin HAL: `grep -rnE 'IOWR|IORD|alt_' sw/niosv/ sw/common/` solo
       muestra `alt_ic_isr_register` / `alt_ic_irq_enable` / `alt_ic_irq_disable`. *§3-SW p.5*
@@ -719,7 +719,7 @@ Puntos de contacto entre personas:
 - [ ] **RP-04** `B·2` Costo de mover un filtro de software a hardware: recursos y potencia del
       módulo frente a ciclos por muestra del mismo filtro en software (medidos con `mcycle`).
       *§3-REC p.6* ⟵ RP-02, CD-12
-- [ ] **RP-05** `A·1` Discusión de cómo la partición HW/SW afectó recursos y potencia. *§3-REC
+- [~] **RP-05** `A·1` Discusión de cómo la partición HW/SW afectó recursos y potencia. *§3-REC
       p.6, §5 p.8 (3%)* ⟵ RP-01..04 (OBL)
 
 ## 11. Documentación y entregables — #22 a #25
@@ -733,7 +733,7 @@ Puntos de contacto entre personas:
 - [ ] **DOC-03** `B·2` Diseño del hardware personalizado: diagrama de bloques, registros, mapa
       de memoria, diagramas de tiempo y justificación. *§5 p.7 (4%)* ⟵ HW-11, HW-18, HW-24 ·
       #22 (OBL)
-- [ ] **DOC-04** `A·1` Análisis de recursos y consumo (RP-01..05). *§5 p.8 (3%)* ⟵ RP-05 · #22
+- [~] **DOC-04** `A·1` Análisis de recursos y consumo (RP-01..05). *§5 p.8 (3%)* ⟵ RP-05 · #22
       (OBL)
 - [ ] **DOC-05** `B·2` Herramientas de ingeniería: herramientas usadas (Quartus, Platform
       Designer, Questa, Docker, cocotb, GitHub Actions), modelos y ecuaciones (FIR, punto
