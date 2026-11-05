@@ -175,6 +175,7 @@ Hallazgos de la verificación que cambiaron el diseño:
   documentados en `sim/questa/tb_vga.sv`: el `.mif` de la fuente con varios valores por
   línea y la salida X del `dcfifo` en modo *show-ahead*.
 
+Salida completa de cada testbench: [docs/verificacion/](docs/verificacion/README.md).
 Pruebas que faltan en la tarjeta y su procedimiento: [docs/pruebas-tarjeta.md](docs/pruebas-tarjeta.md).
 
 ## Programar la tarjeta

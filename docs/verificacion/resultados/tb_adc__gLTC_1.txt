@@ -1,0 +1,11 @@
+# tb_adc (elaboracion:   gLTC 1)
+# Transcript: build/sim/tb_adc__gLTC_1.log, 2026-11-05 17:21, commit d30841d
+
+TB_ADC: inicio, chip = LTC2308
+[200000] OK    pot = 0x000 -> CH0 >> 2 = 0x000 en LEDR
+[202610000] OK    pot = 0xfff -> CH0 >> 2 = 0x3ff en LEDR
+[233690000] OK    pot = 0x800 -> CH0 >> 2 = 0x200 en LEDR
+[264770000] OK    pot = 0x3a5 -> CH0 >> 2 = 0x0e9 en LEDR
+[295850000] OK    pot = 0xc3c -> CH0 >> 2 = 0x30f en LEDR
+Conversiones del chip: 49
+TB_ADC: PASS

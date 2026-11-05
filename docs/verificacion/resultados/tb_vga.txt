@@ -1,0 +1,22 @@
+# tb_vga
+# Transcript: build/sim/tb_vga.log, 2026-11-05 17:34, commit d30841d
+
+TB_VGA: inicio
+[10000] LEDR = 0x000
+[172750000] LEDR = 0x0a1
+[12286850000] LEDR = 0x0a2
+[15671290000] LEDR = 0x0a3
+[16769170000] LEDR = 0x0a4
+[17307930000] LEDR = 0x0b0
+[17307930000] OK    pantalla dibujada; resolucion reportada 80x60
+[27235310000] cuadro 3 del stream: filas 9-12 desde 26.42 ms
+Captura de la pantalla: build/sim/vga_pantalla.pbm (640 x 104)
+OK    fila 9: las 80 celdas coinciden con la referencia
+OK    fila 10: las 80 celdas coinciden con la referencia
+OK    fila 11: las 80 celdas coinciden con la referencia
+OK    fila 12: las 80 celdas coinciden con la referencia
+OK    periodo de linea 32.000 us (800 pixeles a 25 MHz)
+OK    pulso de HS 3.840 us (96 pixeles)
+OK    806 lineas con 640 pixeles activos
+OK    7034 pixeles encendidos llegaron a los pines VGA
+TB_VGA: PASS
