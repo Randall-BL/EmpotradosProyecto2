@@ -62,3 +62,24 @@ para 4 800 caracteres.
 El mapa exportado de Platform Designer (`python3 scripts/report-memory-map.py`) está en
 [mapa-memoria-generado.md](mapa-memoria-generado.md) y coincide con esta tabla. Cuando D
 agregue el HPS (HW-05), el mismo script lista también la vista desde su bridge (HW-24).
+
+## Uso de la RAM del Nios V por el programa (NV-16)
+
+Medido con `scripts/report-memory.sh <elf>` (`riscv32-unknown-elf-size`), BSP de
+`sw/niosv/bsp.tcl` (picolibc, sin `alt_load`, drivers HAL reducidos y sin drivers de
+los IP):
+
+| Programa | `.text` + `.rodata` + `.entry`/`.exceptions` | `.rwdata` | `.bss` | Total | % de 128 KB |
+|---|---|---|---|---|---|
+| `test_adc` | 7 044 | 516 | 312 | 7 872 | 6 % |
+| `test_pio` | 8 308 | 516 | 320 | 9 144 | 7 % |
+| `test_audio` | 8 444 | 516 | 316 | 9 276 | 7 % |
+| `test_tono` (drivers + pantalla + volumen + tono) | 19 004 | 516 | 328 | 19 848 | 15 % |
+| prueba de humo con `printf` (`sw/niosv/src`) | 20 684 | 516 | 312 | 21 512 | 16 % |
+
+- El `printf` de picolibc con soporte de punto flotante cuesta ~10 KB (`vfprintf`,
+  `__dtoa_engine`, `__udivdi3`): la aplicación final no lo usa en el lazo de audio y, si
+  hace falta para mediciones, conviene formatear enteros a mano como `sw/common/screen.c`.
+- La tabla de seno de `tone.c` (2 KB) y la de volumen (64 B) van en `.rodata`.
+- Quedan ~108 KB para pila, heap y el resto de la aplicación (C, NV-14). Los buffers de
+  audio grandes no van aquí sino en `shm` (CD-06).
