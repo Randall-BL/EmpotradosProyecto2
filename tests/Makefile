@@ -15,7 +15,8 @@ DATA    := $(BUILD)/data
 C       := ../sw/common/src
 HDRS    := $(wildcard ../sw/common/include/*.h) test.h
 
-TESTS   := test_volume test_screen test_tone test_dsp test_wav test_fsm test_input test_shm
+TESTS   := test_volume test_screen test_tone test_dsp \
+           test_wav test_fsm test_input test_shm test_app
 
 # Fuentes de sw/common que usa cada prueba.
 SRC_test_volume := volume.c
