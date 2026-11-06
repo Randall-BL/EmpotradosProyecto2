@@ -4,7 +4,8 @@
 #   - modulos HDL propios aislados (sim-rtl.sh): filtro_audio, seg7_time
 #   - testbenches rapidos del SoC: pio, audio, adc (AD7928 y LTC2308), shm
 #   - con --all ademas los lentos: filtro (co-simulacion, ~10 min), vga (~15 min),
-#     codec (~35 min) y la respuesta en frecuencia del filtro
+#     codec (~35 min), player (reproductor completo con el modelo del HPS) y la
+#     respuesta en frecuencia del filtro
 # Los testbenches corren de a JOBS en paralelo (por defecto 2).
 #
 # Uso:  scripts/test-all.sh [--all]
@@ -19,7 +20,7 @@ mkdir -p "$OUT"
 TESTS=("pio" "audio" "adc" "adc:-gLTC=1" "shm")
 RTL=("filtro_audio" "seg7_time")
 if [ "${1:-}" = "--all" ]; then
-    TESTS+=("filtro" "vga" "codec")
+    TESTS+=("filtro" "vga" "codec" "player")
     RTL+=("filtro_respuesta")
 fi
 
