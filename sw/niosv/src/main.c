@@ -1,50 +1,78 @@
 /*
- * Prueba de humo del Nios V/m sobre el SoC base del proyecto.
+ * Aplicacion del reproductor de audio en el Nios V/m (NV-14).
  *
- * Origen: Taller 9, sw/src/hello_world.c (ver docs/reutilizado-taller9.md).
- * Imprime por la JTAG UART (STDOUT del BSP) y verifica que el procesador
- * arranca y ejecuta codigo C en simulacion RTL (Questa), sin tarjeta fisica.
- * Luego escribe y lee los PIO con punteros directos a sus direcciones (ver
- * system.h del BSP generado), SIN usar las funciones del driver HAL (alt_*)
- * ni las macros IOWR/IORD.
+ * Arranque: drivers sin HAL -> autoprueba del modulo propio (NV-15) -> codec ->
+ * botones por IRQ (NV-03) -> fuente sobre la memoria compartida con el HPS (NV-13) ->
+ * lazo principal portable (sw/common/src/app.c), que se llama sin fin.
  *
- * Se reemplaza por el lazo principal del reproductor (TODO.md, NV-*); hasta
- * entonces sirve para comprobar que el flujo build-soc/build-niosv/sim-soc
- * funciona con la estructura del proyecto.
+ * Toda la logica (FSM, playlist, flujo de audio, filtros, volumen, pantalla) esta en
+ * sw/common y se prueba en el PC (tests/test_app.c). Aqui solo se conectan los
+ * puertos con los drivers (ports_niosv.c). Mapa de controles y LEDs: app.h y CD-08.
  */
-
-#include <stdio.h>
 #include <stdint.h>
-#include "system.h"   /* generado por el BSP: define las bases (XXX_BASE) */
+#include "system.h"
+#include "adc.h"
+#include "app.h"
+#include "audio.h"
+#include "codec.h"
+#include "evq.h"
+#include "filtro.h"
+#include "keys.h"
+#include "pio.h"
+#include "ports_niosv.h"
+#include "seg7.h"
+#include "shm_source.h"
+#include "timebase.h"
+#include "vga_text.h"
+
+#define CODEC_TIMEOUT 20000000u              /* ~0.4 s de espera del I2C */
+
+/* Estado global en .bss (sin malloc): ~10 KB, casi todo la reverberacion. */
+static app_t app;
+static evq_t events;
+static shm_source_t source;
+static vga_text_t vga;
+static int16_t rev_l[APP_REVERB_FRAMES], rev_r[APP_REVERB_FRAMES];
+
+/* Falla que impide reproducir: se muestra y se queda con LEDR9 parpadeando. */
+static void fatal(const char *msg)
+{
+    vga_text_print(&vga, 2, 7, msg, 76);
+    for (uint32_t n = 0;; ++n) {
+        pio_write(PIO_LED_BASE, (n & 0x40000u) ? APP_LED_ALERT : 0u);
+    }
+}
 
 int main(void)
 {
-    for (int i = 0; i < 5; ++i) {
-        printf("Hola mundo, aqui el Nios V/m reportandose %d...\n", i);
-    }
+    pio_write(PIO_LED_BASE, 0);
+    timebase_init(0);
+    vga_text_init(&vga, CHAR_BUF_AVALON_CHAR_CONTROL_SLAVE_BASE,
+                  CHAR_BUF_AVALON_CHAR_BUFFER_SLAVE_BASE);
+    vga_text_clear(&vga);
+    seg7_init(SEG7_BASE);
+    adc_init(ADC_BASE);
+    audio_init(AUDIO_BASE);
 
-    /*
-     * Acceso a los PIO por puntero directo (Christopher Rodriguez, 2022040771).
-     *
-     * Las bases salen de system.h del BSP:
-     *   PIO_LED_BASE = 0x00040010  (10 bits, salida -> LEDR)
-     *   PIO_SW_BASE  = 0x00040030  (10 bits, entrada <- SW)
-     * El registro de datos de cada PIO esta en el desplazamiento 0. Los
-     * punteros son volatile para que el compilador no elimine ni reordene
-     * los accesos. No se usan IOWR/IORD ni funciones alt_*.
-     */
-    volatile uint32_t *pio_out = (volatile uint32_t *)PIO_LED_BASE;
-    volatile uint32_t *pio_in  = (volatile uint32_t *)PIO_SW_BASE;
+    /* NV-15: rutina de prueba del modulo propio antes de usarlo. */
+    filtro_init(FILTRO_BASE);
+    uint32_t bad = filtro_selftest(FILTRO_BASE);
+    filtro_init(FILTRO_BASE);
+    if (codec_init(AV_CONFIG_BASE, CODEC_TIMEOUT) != CODEC_OK)
+        fatal("ERROR: el codec WM8731 no respondio por I2C");
 
-    const uint32_t patrones[] = { 0x01, 0xA5, 0xFF };
-    for (unsigned i = 0; i < sizeof patrones / sizeof patrones[0]; ++i) {
-        *pio_out = patrones[i];                /* escribe el registro de datos */
-        printf("PIO_OUT <= 0x%02lx\n", (unsigned long)patrones[i]);
-    }
+    evq_init(&events);
+    if (keys_init(PIO_KEY_BASE, PIO_KEY_IRQ_INTERRUPT_CONTROLLER_ID, PIO_KEY_IRQ, &events) != 0)
+        fatal("ERROR: no se pudo registrar la interrupcion de los botones");
 
-    uint32_t v = *pio_in & 0x3FF;              /* lee el registro de datos (10 bits) */
-    printf("PIO_IN  = 0x%08lx\n", (unsigned long)v);
+    shm_source_init(&source, (volatile shm_t *)SHM_BASE);
+    app_ports_t ports;
+    ports_niosv_init(&ports, &vga);
+    shm_source_port(&source, &ports.source);
+    app_init(&app, &ports, &events, rev_l, rev_r);
+    if (bad)
+        vga_text_print(&vga, 0, SCREEN_ROWS + 1u, "AVISO: la autoprueba del filtro fallo (NV-15)", 60);
 
-    printf("Fin del programa.\n");
-    return 0;
+    for (;;)
+        app_step(&app);
 }

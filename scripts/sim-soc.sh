@@ -16,14 +16,16 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$HERE/scripts/env.sh"
 
-# Compila la prueba de humo (sw/niosv/src): sim-tb.sh deja en la RAM simulada el
-# programa de su testbench. NOBUILD=1 reusa el ram.hex que ya este copiado.
+# Compila la prueba de humo (sw/niosv/tests/test_smoke; sw/niosv/src es la aplicacion
+# del reproductor desde NV-14) y deja su imagen en la RAM simulada. sim-tb.sh deja ahi
+# el programa de su testbench. NOBUILD=1 reusa el ram.hex que ya este copiado.
+MENTOR="$HERE/hw/soc/gen/simulation/mentor"
 if [ "${NOBUILD:-0}" != "1" ]; then
-    "$HERE/scripts/build-niosv.sh" > "$HERE/build/niosv-smoke.log" 2>&1 \
+    APP=test_smoke "$HERE/scripts/build-niosv.sh" > "$HERE/build/niosv-smoke.log" 2>&1 \
         || { echo "ERROR: fallo build-niosv.sh, ver build/niosv-smoke.log" >&2; exit 1; }
+    cp "$HERE/build/niosv-test_smoke/app/build/ram.hex" "$MENTOR/ram.hex"
 fi
 
-MENTOR="$HERE/hw/soc/gen/simulation/mentor"
 DO_DIR="$HERE/sim/questa"
 if [ ! -f "$MENTOR/msim_setup.tcl" ]; then
     echo "ERROR: falta el modelo de simulacion. Corra primero scripts/build-soc.sh" >&2
