@@ -1,0 +1,7 @@
+# Pruebas en el PC (make -C tests)
+# 2026-11-05 17:53, commit d30841d
+
+test_volume: PASS
+test_screen: PASS
+tono 440 Hz: 439 cruces/s, SNR de la tabla 48.9 dB
+test_tone: PASS

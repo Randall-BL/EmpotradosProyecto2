@@ -1,0 +1,8 @@
+# tb_audio
+# Transcript: build/sim/tb_audio.log, 2026-11-05 17:22, commit d30841d
+
+TB_AUDIO: inicio
+[234049000] primer par recibido: L = 0x0123 R = 0xfedc
+Pares verificados: 240 (5.00 ms de audio a 48 kHz)
+Relleno por sondeo y por IRQ de escritura: sin huecos
+TB_AUDIO: PASS
