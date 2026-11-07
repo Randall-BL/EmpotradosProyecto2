@@ -778,7 +778,7 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
       #22 (OBL)
 - [~] **DOC-04** `A·1` Análisis de recursos y consumo (RP-01..05). *§5 p.8 (3%)* ⟵ RP-05 · #22
       (OBL)
-- [ ] **DOC-05** `B·2` Herramientas de ingeniería: herramientas usadas (Quartus, Platform
+- [~] **DOC-05** `B·2` Herramientas de ingeniería: herramientas usadas (Quartus, Platform
       Designer, Questa, Docker, cocotb, GitHub Actions), modelos y ecuaciones (FIR, punto
       fijo, duración, volumen, presupuesto de latencia), scripts creados o modificados
       (incluye [docs/reutilizado-taller9.md](docs/reutilizado-taller9.md)). *§5 p.8 (3%)* ·
