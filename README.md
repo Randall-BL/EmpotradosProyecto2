@@ -77,24 +77,38 @@ procesador, respectivamente (medido con `tb_ciclos`).
 ```mermaid
 flowchart TB
   subgraph NIOS["Nios V (sw/niosv)"]
-    APP["Aplicación / lazo principal<br/>(sw/niosv/src)"]
+    MAIN["main.c: arranque y conexión de puertos<br/>(sw/niosv/src)"]
     subgraph COMMON["Lógica portable (sw/common), probada en el PC"]
-      VOL["volume: ADC → ganancia log"]
-      SCR["screen: pantalla del reproductor"]
+      APPL["app: lazo principal"]
+      FSM["fsm + playlist"]
+      EVQ["evq: cola ISR → lazo"]
+      SRC["shm_source: canal con el HPS"]
+      AUX["switches · debounce · clock<br/>volume · dsp · screen"]
+      APPL --> FSM
+      APPL --> EVQ
+      APPL --> SRC
+      APPL --> AUX
     end
     subgraph DRV["Drivers por puntero directo (sw/niosv/drivers)"]
-      DPIO["pio"] 
-      DAUD["audio"]
-      DCOD["codec"]
-      DADC["adc"]
-      DVGA["vga_text"]
+      DPORT["ports_niosv: puertos → drivers"]
+      DKEY["keys (IRQ)"]
+      DTB["timebase (mtime)"]
+      DOTH["audio · codec · adc · filtro<br/>seg7 · vga_text · pio"]
       DIRQ["irq (única excepción al HAL)"]
     end
-    APP --> COMMON
-    APP --> DRV
+    MAIN --> APPL
+    MAIN --> DPORT
+    DPORT --> DOTH
+    DKEY --> EVQ
+    DKEY --> DIRQ
   end
-  HPSAPP["HPS (sw/hps): SD, FAT32, WAV → shm"] -.-> APP
+  HPSAPP["HPS (sw/hps): SD, FAT32, wav.c → tabla de pistas y ring en shm"] -.->|shm_proto.h| SRC
 ```
+
+La lógica no llama a los drivers: recibe *puertos* (structs de punteros a función,
+`sw/common/include/ports.h`). En el Nios V los implementa `ports_niosv.c`; en el PC, mocks
+que permiten probar el reproductor completo sin tarjeta (`tests/test_app.c`). Diseño
+completo del software: [docs/software/diseno-software.md](docs/software/diseno-software.md).
 
 **Restricción del enunciado (§3-SW):** los drivers acceden a los periféricos con
 punteros `volatile` a las bases de `system.h`; no se usan funciones `alt_*` ni las
@@ -102,7 +116,7 @@ macros `IOWR`/`IORD`. La única excepción es `sw/niosv/drivers/irq.c`, que regi
 habilita interrupciones (`alt_ic_isr_register`, `alt_ic_irq_enable`).
 
 ```bash
-grep -rnE 'IOWR|IORD|alt_' sw/niosv/ sw/common/    # solo aparece irq.c
+scripts/audit-hal.sh       # NV-17 (también en make lint): solo aparece irq.c
 ```
 
 ## Estructura del repositorio
@@ -111,15 +125,17 @@ grep -rnE 'IOWR|IORD|alt_' sw/niosv/ sw/common/    # solo aparece irq.c
 |---|---|
 | `hw/soc/build_system.tcl` | **Única fuente del SoC** (Platform Designer) |
 | `hw/quartus/` | Top-level `DE1_SoC_top.v`, pines (`.qsf`) y restricciones (`.sdc`) |
-| `hw/rtl/` | HDL propio: módulo de filtro y `seg7_time` *(pendiente, B)* |
+| `hw/rtl/` | HDL propio: módulo de filtro y `seg7_time`; `lint.vlt` (exenciones de Verilator) |
 | `sw/niosv/drivers/` | Drivers sin HAL del Nios V |
 | `sw/niosv/tests/` | Programas de prueba de cada periférico (PR-05) |
-| `sw/niosv/src/` | Aplicación del reproductor |
+| `sw/niosv/src/` | Aplicación del reproductor (NV-14) |
 | `sw/niosv/bsp.tcl` | Ajustes del BSP |
-| `sw/common/` | Lógica portable (sin `system.h`) |
+| `sw/common/include/`, `sw/common/src/` | Lógica portable (sin `system.h`): WAV, playlist, FSM, cola, protocolo con el HPS, lazo principal ([README](sw/common/README.md)) |
 | `sw/hps/` | Software del HPS *(pendiente, D)* |
 | `sim/questa/` | Testbenches autoverificables y modelos del códec y del ADC |
-| `tests/` | Pruebas en el PC (`make -C tests`) |
+| `tests/` | Pruebas en el PC (`make test`) y generador de WAV de prueba (`tests/data/gen_wavs.py`) |
+| `docker/`, `Makefile` | Contenedor de desarrollo y objetivos `make test/sim/lint/hps/ci` |
+| `.github/workflows/` | CI: lint, pruebas y compilación para el HPS en el contenedor |
 | `scripts/` | Generar, compilar, simular, programar y reportar |
 | `docs/` | Decisiones (`docs/decisiones/`), hardware (`docs/hw/`) y entorno |
 
@@ -135,6 +151,29 @@ Cada máquina define sus rutas en `scripts/env.local.sh` (no se versiona):
 export ALTERA_ROOT=$HOME/altera_lite/25.1std
 export SALT_LICENSE_SERVER=$HOME/ruta/a/LR-XXXXXX_License.dat
 ```
+
+### Contenedor
+
+Lo que no necesita Quartus corre en un contenedor Docker con versiones fijas (Ubuntu
+24.04 por digest, gcc 13, Icarus 12, Verilator 5.020, cocotb 1.9.2, toolchain
+`arm-linux-gnueabihf`); la CI usa la misma imagen. Detalle y versiones:
+[docker/README.md](docker/README.md).
+
+```bash
+make docker-build    # construir la imagen (999 MB; 252 MB comprimida)
+make docker-ci       # lint + pruebas en C + cocotb + compilación para el HPS
+make docker-shell    # terminal con el repositorio en /work
+```
+
+| Dentro del contenedor | Fuera, nativo |
+|---|---|
+| Pruebas en C de `sw/common` con sanitizers (`make test`) | Platform Designer y Quartus |
+| cocotb + Icarus del HDL propio (`make sim`) | BSP y compilación del Nios V |
+| Verilator y auditoría sin HAL (`make lint`) | Questa (co-simulación del SoC) |
+| Toolchain ARM del HPS (`make hps`) e imagen de la SD | Programación por JTAG |
+
+Quartus queda fuera porque necesita el USB-Blaster (JTAG) y herramientas gráficas,
+ocupa más de 20 GB y la licencia de Questa está atada a la MAC del equipo.
 
 ## Compilación
 
@@ -163,7 +202,8 @@ scripts/test-all.sh        # PC + modulos propios + testbenches rapidos (~4 min)
 scripts/sim-rtl.sh filtro_audio           # un modulo propio aislado (filtro_audio, seg7_time, filtro_respuesta)
 scripts/sim-tb.sh pio      # un testbench del SoC: pio, audio, codec, adc, shm, vga, filtro, ciclos
 ELAB_OPTS=-gLTC=1 scripts/sim-tb.sh adc   # ADC con LTC2308 en vez de AD7928
-make -C tests              # lógica portable en el PC
+make test                  # lógica portable en el PC (o make docker-test)
+make lint                  # Verilator + auditoría sin HAL
 ```
 
 | Prueba | Qué verifica | Resultado |
@@ -179,7 +219,12 @@ make -C tests              # lógica portable en el PC
 | `rtl_filtro_respuesta` | Respuesta en frecuencia medida con 30 senos por banco | Error ≤ 0.83 dB en la banda de paso, rechazo ≥ 55.7 dB |
 | `tb_filtro` | **Co-simulación HW/SW**: el Nios V carga coeficientes y corre la autoprueba del módulo (431 pares contra el modelo en C) dentro del SoC; displays | PASS, 0 diferencias; `03 02:05` en HEX |
 | `tb_ciclos` | Costo por muestra en el Nios V/m (`-O2`): volumen 271, FIR 8 181, biquad 2 404, reverberación 54 ciclos | Base de CD-04, CD-05 y CD-12 |
+| `tb_player` | **Reproductor completo en el Nios V**: lógica real (`app.c`), botones por IRQ, switches, LEDs, displays y la memoria compartida real con un modelo del HPS (10 pistas): navegación con vuelta, avance automático durante **dos vueltas**, pausa, stop, filtros por switches y combinación inválida | PASS; respuesta botón → LED ≤ **2.2 ms**, 0 subdesbordes |
 | `test_volume`, `test_screen`, `test_tone`, `test_dsp` | Curva de volumen, histéresis y saturación; pantalla; tono de 440 Hz con SNR de 48.9 dB; filtros en software y modelo del FIR igual a los vectores dorados | PASS |
+| `test_wav` | Parser con 26 WAV generados: 8/16/44.1/48 kHz, mono/estéreo, `LIST/INFO` antes y después de `data`, ID3, `WAVE_FORMAT_EXTENSIBLE`, chunks impares, truncados en cada byte de la cabecera, 8/24 bits, float, 3 canales | PASS, 163 comprobaciones |
+| `test_fsm` | Playlist con vuelta y avance automático; tabla de transiciones; errores seguidos; 10 000 eventos aleatorios | PASS |
+| `test_input`, `test_shm` | Cola de eventos (también con los índices dando la vuelta), switches, antirrebote, reloj sin división; protocolo con el HPS: flujo de 24 699 cuadros sin pérdidas, cambio de pista sin restos | PASS |
+| `test_app` | Lazo principal con mocks y el modelo del HPS: dos vueltas a 10 pistas sin subdesbordes, respuesta a botones en el mismo ms, cambio de filtro ≤ 41 ms, cambio de canción < 2 s, pistas ilegibles, subdesbordes, SD ausente | PASS |
 
 Pantalla del reproductor tal como sale del Character Buffer en `tb_vga` (líneas 0–103
 del cuadro, a escala 2; `scripts/pbm2png.py`):
@@ -216,7 +261,8 @@ niosv-download -g -r build/niosv/app/build/audio_player.elf   # solo el programa
 | KEY1 | Stop |
 | KEY2 | Canción anterior |
 | KEY3 | Canción siguiente |
-| SW[1:0] | Filtro: 00 bypass, 01 pasa-bajos, 10 pasa-banda, 11 reverberación *(provisional; CD-08 de C)* |
+| SW0 / SW1 / SW2 | Filtro: pasa-bajos 1 kHz / pasa-banda 1–4 kHz / reverberación; todos abajo = bypass; dos o más = inválido (bypass y LEDR9) ([CD-08](docs/decisiones/CD-08.md)) |
+| LEDR[2:0] · 5 · 6 · 7 · 8 · 9 | Filtro activo · hubo subdesborde · cambia con cada botón · reproduciendo · pausado · alerta |
 | Potenciómetro (ADC CH0) | Volumen (32 escalones de 2 dB), aplicado por la ganancia del módulo propio |
 | HEX3..HEX0 / HEX5..HEX4 | Tiempo transcurrido MM:SS / número de canción (`seg7_time`) |
 | VGA | Título, artista, álbum, duración, canción n/total, estado, filtro y volumen |
@@ -254,6 +300,9 @@ Sistema completo (con el módulo propio; sin el HPS todavía), de
 | [CD-12](docs/decisiones/CD-12.md) Filtros | Pasa-bajos y pasa-banda FIR en hardware; reverberación en el Nios V |
 | [CD-13](docs/decisiones/CD-13.md) HDL | Verilog-2005 sintetizable; testbenches SystemVerilog en Questa |
 | [CD-14](docs/decisiones/CD-14.md) Punto fijo | Q1.15, acumulador de 40 bits, redondeo y saturación |
+| [CD-08](docs/decisiones/CD-08.md) Switches | Encuesta cada 20 ms con confirmación; un switch por filtro, combinación inválida = bypass |
+| [CD-10](docs/decisiones/CD-10.md) Tiempo | Cuadros enviados al códec / 48 000: sincronizado con el audio y se detiene solo en pausa |
+| [CD-11](docs/decisiones/CD-11.md) Máquina de reproducción | Tabla de transiciones en software (`sw/common`), probada en el PC |
 
 ## Equipo
 

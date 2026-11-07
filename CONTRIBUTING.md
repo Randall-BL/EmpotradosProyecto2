@@ -163,9 +163,10 @@ Todos los issues están en el proyecto **Reproductor de Audio - Proyecto II** co
 | `hw/soc/` | `build_system.tcl` del SoC |
 | `hw/quartus/` | Top-level, `.qsf` y `.sdc` del proyecto Quartus |
 | `sw/niosv/`, `sw/hps/` | Drivers y aplicación de cada procesador |
-| `sw/common/` | Lógica portable (sin `system.h`), probada en el PC |
+| `sw/common/` | Lógica portable (sin `system.h`), probada en el PC: `include/` (API) y `src/` |
 | `sim/` | Testbenches: cocotb y `.do`/testbenches de Questa |
-| `tests/` | Pruebas en C y datos de prueba |
+| `tests/` | Pruebas en C (`make test`) y generador de datos de prueba |
+| `docker/` | Contenedor de desarrollo y CI (`make docker-ci`) |
 | `scripts/` | Flujo nativo: generar SoC, compilar, simular, programar |
 | `docs/` | Documentación y decisiones (`docs/decisiones/CD-xx.md`) |
 
@@ -181,7 +182,8 @@ Todos los issues están en el proyecto **Reproductor de Audio - Proyecto II** co
 ## 6. Antes de abrir un PR
 
 - [ ] El diseño compila en Quartus y el software compila sin warnings nuevos.
-- [ ] `grep -rnE 'IOWR|IORD|alt_' sw/niosv/ sw/common/` solo muestra llamadas de interrupciones.
+- [ ] `make lint` pasa (Verilator y `scripts/audit-hal.sh`: `IOWR`/`IORD`/`alt_*` solo en las
+      llamadas de interrupciones) y `make test` pasa (o `make docker-ci`, lo mismo que la CI).
 - [ ] Los commits siguen Conventional Commits y referencian su issue.
 - [ ] La rama está al día con `develop`.
 - [ ] Nada de `db/`, `output_files/`, `.sof`, BSP generado ni binarios en el diff.
