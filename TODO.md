@@ -743,7 +743,7 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
 - [ ] **PR-09** `B·1` Calidad en bypass: grabar el line-out en un PC y comparar espectro y
       nivel con el archivo original (sin recorte ni distorsión audible). *§3-F p.4* ⟵ IN-06 ·
       #16 (EVID)
-- [ ] **PR-10** `B·2` Evidencias de los filtros: respuesta en frecuencia medida con un barrido
+- [~] **PR-10** `B·2` Evidencias de los filtros: respuesta en frecuencia medida con un barrido
       (chirp) desde la SD frente a la teórica, espectrogramas y audio antes/después.
       *§3-F p.4, §5 p.8 (README)* ⟵ IN-08 · #16 (OBL, EVID)
 - [ ] **PR-11** `Todos` Regresión antes de cada PR a `develop`: `make lint sim test`,

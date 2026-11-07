@@ -44,6 +44,19 @@ documentados. Este reporte es esa evidencia. Fecha: 7 de noviembre de 2026.
 
 ![Respuesta al impulso](../img/filtro-impulso.png)
 
+## Respuesta en frecuencia medida (`tb_filtro_respuesta`, evidencia de PR-10)
+
+Senos de 30 frecuencias (50 Hz – 20 kHz, amplitud 0.5) por el módulo, solo por Avalon-MM,
+en los dos bancos; amplitud RMS de la salida tras el transitorio
+(`scripts/sim-rtl.sh filtro_respuesta && python3 scripts/plot_respuesta.py`):
+
+| Banco | Error máximo en la banda de paso | Atenuación mínima medida fuera de banda |
+|---|---|---|
+| 0 — pasa-bajos 1 kHz | 0.83 dB (en 50–110 Hz la ventana de 480 muestras cubre menos de un periodo) | 67.4 dB |
+| 1 — pasa-banda 1–4 kHz | 0.08 dB | 55.7 dB |
+
+![Respuesta medida frente a la teórica](../img/filtro-respuesta-medida.png)
+
 ## Casos y resultados — `seg7_time` (`tb_seg7_time`)
 
 | Caso | Displays (HEX5..HEX0) | Resultado |
