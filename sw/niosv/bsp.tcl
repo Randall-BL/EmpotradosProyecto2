@@ -45,3 +45,7 @@ set_setting hal.enable_reduced_device_drivers true
 set_setting hal.linker.use_picolibc true
 set_setting hal.enable_exit false
 set_setting hal.enable_clean_exit false
+
+# Sin -fstack-protector-strong: agrega un chequeo en cada funcion con arreglos locales
+# (ciclos en el lazo de audio) y la RAM es on-chip sin otros procesos que la corrompan.
+set_setting hal.make.enable_cflag_fstack_protector_strong false
