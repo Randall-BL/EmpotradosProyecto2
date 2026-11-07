@@ -77,3 +77,6 @@ hw/quartus/update_mif.log
 
 # Captura de pantalla que escribe tb_vga (se convierte a PNG en docs/img)
 *.pbm
+
+# Coeficientes del RTL propio: los genera scripts/design_fir.py y se versionan
+!hw/rtl/*.hex
