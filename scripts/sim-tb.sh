@@ -64,7 +64,7 @@ vsim -c -do "set TOP_LEVEL_NAME tb_$NAME; set USER_DEFINED_ELAB_OPTIONS {${ELAB_
 vlog -sv -work work $MODELS $TB; elab; run -all; quit -f" > "$LOG" 2>&1 || true
 
 grep -E "^# (TB_|\[|Respuesta|Pares|Relleno|Escrituras|OK |FILTRO |CICLOS |\*\* (Error|Fatal))|FALLO" "$LOG" | sed 's/^# //'
-if grep -q "TB_[A-Z_]*: PASS" "$LOG"; then
+if grep -q "TB_[A-Z0-9_]*: PASS" "$LOG"; then
     exit 0
 fi
 echo "Ver transcript completo: $LOG" >&2

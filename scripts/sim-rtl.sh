@@ -27,4 +27,4 @@ if [ "${2:-}" = "gui" ]; then
 fi
 vsim -c -do "$DO; run -all; quit -f" > "$LOG" 2>&1 || true
 grep -E "^# (TB_|OK |Latencia|Comprobaciones|\*\* (Error|Fatal))" "$LOG" | sed 's/^# //'
-grep -q "TB_[A-Z_]*: PASS" "$LOG"
+grep -q "TB_[A-Z0-9_]*: PASS" "$LOG"
