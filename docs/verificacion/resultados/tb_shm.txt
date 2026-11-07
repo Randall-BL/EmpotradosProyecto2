@@ -1,5 +1,5 @@
 # tb_shm
-# Transcript: build/sim/tb_shm.log, 2026-11-05 17:21, commit d30841d
+# Transcript: build/sim/tb_shm.log, 2026-11-07 11:23, commit 793cc3f
 
 TB_SHM: inicio
 [1001170000] OK    shm: bus de datos, bus de direcciones (64 KB), March C-, sin solape con la RAM, accesos de 8/16 bits

@@ -1,5 +1,5 @@
 # tb_vga
-# Transcript: build/sim/tb_vga.log, 2026-11-05 17:34, commit d30841d
+# Transcript: build/sim/tb_vga.log, 2026-11-05 17:34, commit 793cc3f
 
 TB_VGA: inicio
 [10000] LEDR = 0x000

@@ -1,0 +1,19 @@
+# rtl_seg7_time
+# Transcript: build/sim/rtl_seg7_time.log, 2026-11-07 11:40, commit 793cc3f
+
+TB_SEG7_TIME: inicio
+OK    reset -> '   00:00'
+OK    TIME =    0 s -> '   00:00'
+OK    TIME =   59 s -> '   00:59'
+OK    TIME =  125 s -> '   02:05'
+OK    TIME =  599 s -> '   09:59'
+OK    TIME = 3599 s -> '   59:59'
+OK    TIME = 5999 s -> '   99:59'
+OK    TIME = 6000 s -> '   99:59'
+OK    TIME = 8191 s -> '   99:59'
+OK    cancion 7 en HEX5..4 -> '07 99:59'
+OK    cancion 150 se satura a 99 -> '99 99:59'
+OK    CTRL.ON = 0: apagado (el : lo pone el tb) -> '     :  '
+OK    encendido sin cancion -> '   99:59'
+Comprobaciones: 14
+TB_SEG7_TIME: PASS

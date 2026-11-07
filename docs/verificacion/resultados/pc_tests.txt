@@ -1,7 +1,8 @@
 # Pruebas en el PC (make -C tests)
-# 2026-11-05 17:53, commit d30841d
+# 2026-11-07 11:42, commit 793cc3f
 
 test_volume: PASS
 test_screen: PASS
 tono 440 Hz: 439 cruces/s, SNR de la tabla 48.9 dB
 test_tone: PASS
+test_dsp: PASS (FIR igual bit a bit a los 8 casos de sim/vectors)

@@ -1,0 +1,16 @@
+# rtl_filtro_audio
+# Transcript: build/sim/rtl_filtro_audio.log, 2026-11-07 11:39, commit 793cc3f
+
+TB_FILTRO_AUDIO: inicio (vectores en /home/randall/Escritorio/EMpotrados/EmpotradosProyecto2/sim/vectors)
+OK    registros: reset, R/W, limites, coeficientes (17 comprobaciones)
+OK    fir_impulso       140 muestras iguales bit a bit (banco 0, 127 taps, ganancia 0x8000, bypass 0), SAT = 0
+OK    fir_escalon       200 muestras iguales bit a bit (banco 0, 127 taps, ganancia 0x8000, bypass 0), SAT = 0
+OK    fir_senos         200 muestras iguales bit a bit (banco 0, 127 taps, ganancia 0x8000, bypass 0), SAT = 0
+OK    fir_saturacion    200 muestras iguales bit a bit (banco 0, 127 taps, ganancia 0x8000, bypass 0), SAT = 1
+OK    fir_ruido_banco1  200 muestras iguales bit a bit (banco 1, 127 taps, ganancia 0x8000, bypass 0), SAT = 0
+OK    fir_bypass_gain    64 muestras iguales bit a bit (banco 0, 127 taps, ganancia 0x4000, bypass 1), SAT = 0
+OK    fir_taps16         64 muestras iguales bit a bit (banco 0,  16 taps, ganancia 0x8000, bypass 0), SAT = 0
+OK    fir_ganancia_alta 160 muestras iguales bit a bit (banco 0, 127 taps, ganancia 0xc000, bypass 0), SAT = 1
+Latencia maxima escritura de DATA_IN -> lectura de DATA_OUT: 136 ciclos (2.72 us a 50 MHz)
+Comprobaciones: 1253
+TB_FILTRO_AUDIO: PASS

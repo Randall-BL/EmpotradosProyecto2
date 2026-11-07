@@ -1,5 +1,5 @@
 # tb_adc
-# Transcript: build/sim/tb_adc.log, 2026-11-05 17:20, commit d30841d
+# Transcript: build/sim/tb_adc.log, 2026-11-07 11:22, commit 793cc3f
 
 TB_ADC: inicio, chip =  AD7928
 [200000] OK    pot = 0x000 -> CH0 >> 2 = 0x000 en LEDR
