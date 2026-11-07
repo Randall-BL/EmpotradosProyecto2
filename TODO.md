@@ -510,7 +510,7 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
       SC-07 · #14 (OBL)
 - [ ] **SC-09** `C·1` Cola de eventos de un productor y un consumidor (ISR → lazo principal),
       sin bloqueo. *§3-SW p.5 (interrupciones)* ⟵ SC-01 · #13
-- [ ] **SC-10** `B·3` Filtros en software en punto fijo (biquad forma directa I, ecualizador
+- [~] **SC-10** `B·3` Filtros en software en punto fijo (biquad forma directa I, ecualizador
       de 3 bandas o notch/pasa-banda) y modelo del FIR igual bit a bit al HDL. *§3-SIS p.5* ⟵
       CD-14 · #16 (OBL)
 - [x] **SC-11** Volumen: lectura del ADC de 12 bits → ganancia (curva logarítmica) y
