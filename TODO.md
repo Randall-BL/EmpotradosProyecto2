@@ -2,7 +2,7 @@
 
 **Curso:** CE-1113 Sistemas Empotrados — TEC · **Profesor:** Dr.-Ing. Jeferson González Gómez
 **Plataforma:** Altera DE1-SoC · Platform Designer · Quartus Prime Lite 25.1std
-**Fecha de entrega:** 2 de diciembre de 2026 · **Última revisión de este plan:** 5 de noviembre de 2026
+**Fecha de entrega:** 2 de diciembre de 2026 · **Última revisión de este plan:** 7 de noviembre de 2026
 
 ## Cómo leer este plan
 
@@ -270,6 +270,45 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
 - **D:** el HPS remuestrea todo a 48 kHz estéreo (CD-07). `shm.s2` queda libre para su
   bridge. La autoinicialización del códec tarda ~71 ms tras el reset (cuenta para el
   arranque < 10 s).
+
+---
+
+## Estado de la persona B (hardware propio y DSP) — 7 de noviembre de 2026
+
+> Trabajo hecho por Randall Bolaños mientras se asigna la persona B (OR-02).
+
+El módulo propio (`filtro_audio`: FIR estéreo de 2 bancos + ganancia) y `seg7_time` están
+diseñados, **verificados aislados** (puerta HW-16), integrados al SoC, compilados en Quartus
+cumpliendo tiempos y **co-simulados con el Nios V** (`tb_filtro`: autoprueba con 0
+diferencias). Reporte: [docs/hw/verificacion-filtro.md](docs/hw/verificacion-filtro.md).
+
+**Hecho:** CD-04, CD-05, CD-12, CD-13, CD-14, HW-10..18, SC-10, NV-09, NV-10, NV-15,
+PR-02, PR-03, PR-04, RP-02, RP-04.
+
+**Pendiente de B**, con lo que lo bloquea y el siguiente paso:
+
+| Tarea | Estado | Bloqueo | Siguiente paso |
+|---|---|---|---|
+| IN-08, PR-09, PR-10 | `test_filtros` listo (3 filtros con SW, volumen en GAIN, tiempo en HEX); respuesta en frecuencia ya medida en el RTL | La tarjeta (y IN-06 de D para hacerlo desde la SD) | Correr `docs/pruebas-tarjeta.md`, grabar el line-out y comparar con `docs/img/filtro-respuesta-medida.png` |
+| DK-09, DK-11..13 | Equivalentes hechos en Questa (`sim/questa/rtl/`); vectores en `sim/vectors/` listos para cocotb | DK-05 (C, contenedor) | Escribir los tests cocotb leyendo los mismos vectores |
+| DOC-03 | Filtro y `seg7_time` documentados (`docs/hw/`) | HW-24 (vista desde el HPS, D) | Agregar la dirección del módulo vista desde el HPS si aplica |
+| DOC-05 | `docs/herramientas.md` | DK-* (C) | Agregar Docker, cocotb y CI cuando existan |
+| DOC-07 | Diagramas en Mermaid dentro de los `.md` y WaveDrom en `docs/img/filtro-tiempos.json` | — | Exportar el WaveDrom a imagen (wavedrom-cli) |
+| DOC-10 | — | IN-09 (sistema completo), P15 | Guion y ensayo de la presentación |
+| OPC-01 | — | OPC-00 (aprobación del profesor) | Ecualizador de ≥ 5 bandas reutilizando el MAC (quedan ~900 ciclos libres por muestra) |
+
+**Hallazgos que afectan a otras personas:**
+
+- **C:** la asignación de switches de `test_filtros` (SW[1:0]: bypass, pasa-bajos,
+  pasa-banda, reverberación) es provisional hasta CD-08. El volumen ya no se escala en
+  software: se escribe `vol.gain_q15` en `GAIN` con `filtro_set_gain` (CD-05). Para no
+  esperar al filtro, intercalar `filtro_write` / `audio_write_frame` / `filtro_read` (CD-04).
+  La reverberación (`dsp_reverb`, 54 ciclos por muestra) necesita ~9.4 KB de RAM para el
+  buffer de 50 ms.
+- **Todos:** el software se compila con `-O2` desde `build-niosv.sh` (antes salía sin
+  optimizar); el Nios V/m no implementa `mcycle`: para medir, leer `mtime`
+  (`ALT_CPU_MTIME_OFFSET`), que cuenta a 50 MHz.
+- **D:** el HPS debe entregar audio a 48 kHz (CD-07); el filtro asume esa frecuencia.
 
 ---
 
