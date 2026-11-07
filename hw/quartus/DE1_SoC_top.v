@@ -85,19 +85,19 @@ module DE1_SoC_top (
         .vga_SYNC       (VGA_SYNC_N),
         .vga_R          (VGA_R),
         .vga_G          (VGA_G),
-        .vga_B          (VGA_B)
+        .vga_B          (VGA_B),
+
+        // Displays: tiempo MM:SS y cancion (seg7_time, HW-10)
+        .hex_hex0       (HEX0),
+        .hex_hex1       (HEX1),
+        .hex_hex2       (HEX2),
+        .hex_hex3       (HEX3),
+        .hex_hex4       (HEX4),
+        .hex_hex5       (HEX5)
     );
 
     // El codec es maestro: BCLK y DACLRCK son entradas para la FPGA. La entrada de
     // grabacion (ADC del codec) no se usa: el IP de Audio es solo de salida.
     assign AUD_ADCLRCK = 1'bz;
-
-    // ---- Displays: apagados (activos en bajo) hasta integrar seg7_time (HW-10) ----
-    assign HEX0 = 7'h7F;
-    assign HEX1 = 7'h7F;
-    assign HEX2 = 7'h7F;
-    assign HEX3 = 7'h7F;
-    assign HEX4 = 7'h7F;
-    assign HEX5 = 7'h7F;
 
 endmodule

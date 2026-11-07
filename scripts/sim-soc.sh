@@ -23,10 +23,10 @@ if [ "${NOBUILD:-0}" != "1" ]; then
         || { echo "ERROR: fallo build-niosv.sh, ver build/niosv-smoke.log" >&2; exit 1; }
 fi
 
-MENTOR="$HERE/hw/soc/gen/testbench/mentor"
+MENTOR="$HERE/hw/soc/gen/simulation/mentor"
 DO_DIR="$HERE/sim/questa"
 if [ ! -f "$MENTOR/msim_setup.tcl" ]; then
-    echo "ERROR: falta el testbench. Corra primero scripts/build-soc.sh" >&2
+    echo "ERROR: falta el modelo de simulacion. Corra primero scripts/build-soc.sh" >&2
     exit 1
 fi
 cd "$MENTOR"

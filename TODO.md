@@ -455,7 +455,7 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
 - [x] **HW-16** Verificación aislada documentada **antes de integrar** (puerta de paso):
       DK-11, DK-12 y PR-02 en verde, reporte PR-03 escrito. *§3-HW p.4* ⟵ DK-11, DK-12, PR-02,
       PR-03 · #10 (OBL, EVID)
-- [ ] **HW-17** `B·1` Empaquetar el módulo como componente de Platform Designer (`*_hw.tcl` en
+- [x] **HW-17** Empaquetar el módulo como componente de Platform Designer (`*_hw.tcl` en
       `hw/rtl/`) y agregarlo a `build_system.tcl`. *§3-HW p.4* ⟵ HW-16 · #8 (OBL)
 - [x] **HW-18** Diagrama de bloques y diagramas de tiempo (escritura de registro, muestra
       entrando y saliendo, recarga de coeficientes), p. ej. con WaveDrom. *§5 p.7 (4%)* ⟵ HW-14

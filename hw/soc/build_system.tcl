@@ -154,9 +154,17 @@ set_instance_parameter_value vga device {VGA Connector}
 set_instance_parameter_value vga resolution {VGA 640x480}
 
 # ============================================================================
+#  Hardware propio (B): filtro FIR con ganancia y displays MM:SS (HW-17)
+# ============================================================================
+# Componentes en hw/rtl/*_hw.tcl (build-soc.sh agrega hw/rtl a la ruta de busqueda).
+# Verificados aislados antes de integrarse: docs/hw/verificacion-filtro.md (HW-16).
+add_instance filtro filtro_audio
+add_instance seg7 seg7_time
+
+# ============================================================================
 #  Conexiones de reloj y reset
 # ============================================================================
-foreach inst {audio av_config adc char_buf} {
+foreach inst {audio av_config adc char_buf filtro seg7} {
     add_connection clk.clk $inst.clk
     add_connection clk.clk_reset $inst.reset
 }
@@ -207,6 +215,8 @@ map cpu.data_manager        av_config.avalon_av_config_slave 0x00040090
 map cpu.data_manager        adc.adc_slave          0x000400A0
 map cpu.data_manager        char_buf.avalon_char_control_slave 0x000400C0
 map cpu.data_manager        char_buf.avalon_char_buffer_slave  0x00042000
+map cpu.data_manager        filtro.s1              0x00040100
+map cpu.data_manager        seg7.s1                0x00040120
 map cpu.data_manager        cpu.dm_agent           0x00050000
 
 # ============================================================================
@@ -248,5 +258,7 @@ add_interface adc conduit end
 set_interface_property adc EXPORT_OF adc.external_interface
 add_interface vga conduit end
 set_interface_property vga EXPORT_OF vga.external_interface
+add_interface hex conduit end
+set_interface_property hex EXPORT_OF seg7.hex
 
 save_system audio_soc.qsys

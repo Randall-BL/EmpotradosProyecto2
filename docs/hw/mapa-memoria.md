@@ -17,7 +17,8 @@ que genera el BSP en `system.h` (`<INSTANCIA>_BASE`). Decisiones: [CD-06](../dec
 | `0x0004_0090` | `0x0004_009F` | 16 B | `av_config` | Audio and Video Config | I²C de configuración del códec *(HW-07)* |
 | `0x0004_00A0` | `0x0004_00BF` | 32 B | `adc` | DE1-SoC ADC Controller | Potenciómetro de volumen *(HW-08)* |
 | `0x0004_00C0` | `0x0004_00C7` | 8 B | `char_buf` (control) | Character Buffer | Limpiar pantalla, resolución *(HW-09)* |
-| `0x0004_0100` | `0x0004_01FF` | 256 B | — | reservado para B | Módulo de filtro y `seg7_time` *(HW-10, HW-17)* |
+| `0x0004_0100` | `0x0004_011F` | 32 B | `filtro` | `filtro_audio` (propio) | Filtro FIR estéreo + ganancia ([modulo-filtro.md](modulo-filtro.md)) |
+| `0x0004_0120` | `0x0004_012F` | 16 B | `seg7` | `seg7_time` (propio) | Tiempo MM:SS y canción en HEX5..HEX0 |
 | `0x0004_2000` | `0x0004_3FFF` | 8 KB | `char_buf` (caracteres) | Character Buffer | Texto 80 × 60: `base + (y << 7) + x` *(HW-09)* |
 | `0x0005_0000` | `0x0005_FFFF` | 64 KB | `cpu.dm_agent` | Módulo de depuración del Nios V | JTAG debug |
 
