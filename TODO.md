@@ -754,12 +754,12 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
 - [x] **RP-01** Utilización del sistema completo (ALMs, registros, bits y bloques M10K,
       bloques DSP) desde el reporte del Fitter; script que extrae la tabla. *§3-REC p.6* ⟵ HW-21
       (OBL, EVID)
-- [ ] **RP-02** `A·1` *(bloqueada por HW-17; script listo: `report-resources.py --entity`)* Utilización del módulo propio por separado ("Resource Utilization by
+- [x] **RP-02** *(bloqueada por HW-17; script listo: `report-resources.py --entity`)* Utilización del módulo propio por separado ("Resource Utilization by
       Entity"). *§3-REC p.6* ⟵ HW-17, HW-21 (OBL, EVID)
 - [x] **RP-03** Potencia del sistema completo con el Power Analyzer de Quartus
       (`quartus_pow`); documentar las tasas de conmutación supuestas o usar un VCD de
       simulación. *§3-REC p.6* ⟵ HW-21 (OBL, EVID)
-- [ ] **RP-04** `B·2` Costo de mover un filtro de software a hardware: recursos y potencia del
+- [x] **RP-04** Costo de mover un filtro de software a hardware: recursos y potencia del
       módulo frente a ciclos por muestra del mismo filtro en software (medidos con `mcycle`).
       *§3-REC p.6* ⟵ RP-02, CD-12
 - [~] **RP-05** `A·1` Discusión de cómo la partición HW/SW afectó recursos y potencia. *§3-REC

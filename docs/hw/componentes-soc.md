@@ -24,8 +24,8 @@ que cubre y lo que cuesta. Recursos medidos en la compilación de Quartus
 | `juart` | JTAG UART | stdout de depuración y **mediciones de tiempos** (PR-07) | §3-F (rendimiento, medir) | 60 | 2 |
 | `cpu.timer_sw_agent` | Timer del Nios V (`mtime`) | Base de tiempo para mediciones y antirrebote | §3-F (rendimiento) | dentro de `cpu` | — |
 | `cpu.dm_agent` | Módulo de depuración | Carga del programa y depuración por JTAG (`niosv-download`) | Desarrollo | dentro de `cpu` | — |
-| *(B)* filtro propio | Módulo personalizado con filtro DSP en HDL | Filtro obligatorio en hardware | §3-HW, §3-SIS | *HW-17* | |
-| *(B)* `seg7_time` | Displays de 7 segmentos | Tiempo MM:SS | §3-HW (7 segmentos) | *HW-10* | |
+| `filtro` | `filtro_audio` (propio, HDL) | FIR estéreo de 2 bancos (pasa-bajos y pasa-banda) + ganancia del volumen | §3-HW (módulo propio), §3-SIS (filtro en HDL, volumen), CD-05, CD-12 | 250 (4 DSP) | 3 |
+| `seg7` | `seg7_time` (propio, HDL) | Tiempo MM:SS y canción en HEX5..HEX0 | §3-HW (7 segmentos), §3-F (MM:SS) | 115 | 0 |
 | *(D)* HPS | Cyclone V HPS | SD, FAT32 y parseo de WAV | §3-SW | *HW-05* | |
 
 Componentes que agrega Platform Designer solos: `mm_interconnect_0` (buses Avalon,
