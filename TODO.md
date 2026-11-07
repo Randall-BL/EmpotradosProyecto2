@@ -623,7 +623,7 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
       *§3-F p.3–4* ⟵ IN-02, IN-05
 - [ ] **IN-07** `C·2` Botones + FSM + playlist + avance automático con ≥ 10 canciones. *§3-F
       p.3* ⟵ IN-06, NV-03, NV-14
-- [ ] **IN-08** `B·1` Filtros 1–3 seleccionables con switches durante la reproducción. *§3-F
+- [~] **IN-08** `B·1` Filtros 1–3 seleccionables con switches durante la reproducción. *§3-F
       p.4, §3-SIS p.5* ⟵ IN-06, NV-05, NV-10
 - [ ] **IN-09** `D·2` Sistema completo arrancando solo desde reset, sin PC conectado. *§3-F
       p.4* ⟵ HP-04, IN-07, IN-08
@@ -740,7 +740,7 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
       ⟵ IN-09 · #20 (OBL, EVID)
 - [ ] **PR-08** `C·1` Estabilidad: la lista completa al menos dos vueltas sin reinicios y con el
       contador de underruns en 0. *§3-F p.4* ⟵ IN-09 · #20 (OBL, EVID)
-- [ ] **PR-09** `B·1` Calidad en bypass: grabar el line-out en un PC y comparar espectro y
+- [~] **PR-09** `B·1` Calidad en bypass: grabar el line-out en un PC y comparar espectro y
       nivel con el archivo original (sin recorte ni distorsión audible). *§3-F p.4* ⟵ IN-06 ·
       #16 (EVID)
 - [~] **PR-10** `B·2` Evidencias de los filtros: respuesta en frecuencia medida con un barrido
