@@ -1,5 +1,7 @@
 # Módulo de hardware personalizado: `filtro_audio` (HW-11, HW-18, DOC-03)
 
+> El otro módulo propio, `seg7_time` (displays MM:SS), está en [seg7-time.md](seg7-time.md).
+
 Filtro FIR estéreo con dos bancos de coeficientes y etapa de ganancia (volumen),
 descrito en HDL propio y accesible por mapeo a memoria (§3-HW p.4, §3-SIS p.5).
 

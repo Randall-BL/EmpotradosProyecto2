@@ -773,7 +773,7 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
 - [ ] **DOC-02** `D·2` Metodología de diseño del sistema: análisis del problema, investigación,
       propuestas, comparación, evaluación y justificación del co-diseño (CD-01..16). *§5 p.7 (7%)*
       ⟵ CD-15 · #22 (OBL)
-- [ ] **DOC-03** `B·2` Diseño del hardware personalizado: diagrama de bloques, registros, mapa
+- [~] **DOC-03** `B·2` Diseño del hardware personalizado: diagrama de bloques, registros, mapa
       de memoria, diagramas de tiempo y justificación. *§5 p.7 (4%)* ⟵ HW-11, HW-18, HW-24 ·
       #22 (OBL)
 - [~] **DOC-04** `A·1` Análisis de recursos y consumo (RP-01..05). *§5 p.8 (3%)* ⟵ RP-05 · #22
@@ -788,7 +788,7 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
       sistema (botones y switches), diagramas de arquitectura HW y SW, interfaz del módulo
       propio, mapas de memoria, evidencias de los filtros, resultados con capturas y videos.
       *§5 p.8 (10%)* ⟵ CD-16, HW-24, PR-10 · #23 (OBL, EVID)
-- [ ] **DOC-07** `B·1` Fuentes de los diagramas versionadas (draw.io o Mermaid) y exportadas en
+- [~] **DOC-07** `B·1` Fuentes de los diagramas versionadas (draw.io o Mermaid) y exportadas en
       `docs/img/`. *§5 p.8* ⟵ CD-16, HW-18
 - [ ] **DOC-08** `D·2` Videos demostrativos (arranque, controles, filtros, volumen, cambio de
       canción) enlazados desde el README. *§5 p.8* ⟵ IN-09 · #23 (EVID)
