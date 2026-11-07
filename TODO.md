@@ -428,7 +428,7 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
 
 ### 3.4 Displays de 7 segmentos — #18
 
-- [ ] **HW-10** `B·2` Módulo HDL `seg7_time` (en `hw/rtl/`) con esclavo Avalon-MM: registro
+- [x] **HW-10** Módulo HDL `seg7_time` (en `hw/rtl/`) con esclavo Avalon-MM: registro
       con el tiempo (segundos o BCD MM:SS), registro de control (encendido, blanking) y salida
       a HEX3..HEX0 (HEX5..HEX4 libres para el número de canción). Testbench propio (DK-13).
       *§3-HW p.4, §3-F p.3 (MM:SS)* ⟵ P6 (OBL) → el testbench verifica 00:00, 09:59, 59:59 y
