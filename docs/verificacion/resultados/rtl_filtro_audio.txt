@@ -1,5 +1,5 @@
 # rtl_filtro_audio
-# Transcript: build/sim/rtl_filtro_audio.log, 2026-11-07 11:39, commit 793cc3f
+# Transcript: build/sim/rtl_filtro_audio.log, 2026-11-07 12:08, commit 536bb49
 
 TB_FILTRO_AUDIO: inicio (vectores en /home/randall/Escritorio/EMpotrados/EmpotradosProyecto2/sim/vectors)
 OK    registros: reset, R/W, limites, coeficientes (17 comprobaciones)

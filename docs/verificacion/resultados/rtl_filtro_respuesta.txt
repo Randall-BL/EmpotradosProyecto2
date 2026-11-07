@@ -1,0 +1,7 @@
+# rtl_filtro_respuesta
+# Transcript: build/sim/rtl_filtro_respuesta.log, 2026-11-07 12:08, commit 536bb49
+
+TB_FILTRO_RESPUESTA: inicio
+OK    banco 0: 30 frecuencias medidas
+OK    banco 1: 30 frecuencias medidas
+TB_FILTRO_RESPUESTA: PASS

@@ -1,17 +1,17 @@
 # tb_pio
-# Transcript: build/sim/tb_pio.log, 2026-11-07 11:22, commit 793cc3f
+# Transcript: build/sim/tb_pio.log, 2026-11-07 12:10, commit 536bb49
 
 TB_PIO: inicio
-[172170000] OK    etapa 1, escritura de LEDR: LEDR = 0x2aa (171.97 us)
-[174750000] OK    etapa 2, lectura de SW = 0x155: LEDR = 0x155 (2.58 us)
-[195190000] OK    etapa 3, IRQ registradas: LEDR = 0x300 (20.44 us)
-[212390000] OK    KEY0 por IRQ: LEDR = 0x101 (17.20 us)
-[252190000] OK    KEY1 por IRQ: LEDR = 0x102 (17.00 us)
-[292410000] OK    KEY2 por IRQ: LEDR = 0x104 (17.22 us)
-[332190000] OK    KEY3 por IRQ: LEDR = 0x108 (17.00 us)
-[372410000] OK    KEY0 + KEY2 simultaneos: LEDR = 0x105 (17.22 us)
-[412190000] OK    KEY1 con rebote: LEDR = 0x102 (17.00 us)
-[451150000] OK    IRQ de SW4 al subir: LEDR = 0x210 (14.46 us)
-[465930000] OK    IRQ de SW3 al subir: LEDR = 0x218 (14.78 us)
-Respuesta maxima boton -> LED: 17.22 us (requisito < 200000 us)
+[56230000] OK    etapa 1, escritura de LEDR: LEDR = 0x2aa (56.03 us)
+[56630000] OK    etapa 2, lectura de SW = 0x155: LEDR = 0x155 (0.40 us)
+[59950000] OK    etapa 3, IRQ registradas: LEDR = 0x300 (3.32 us)
+[68130000] OK    KEY0 por IRQ: LEDR = 0x101 (8.18 us)
+[107830000] OK    KEY1 por IRQ: LEDR = 0x102 (7.88 us)
+[147970000] OK    KEY2 por IRQ: LEDR = 0x104 (8.02 us)
+[188110000] OK    KEY3 por IRQ: LEDR = 0x108 (8.16 us)
+[227830000] OK    KEY0 + KEY2 simultaneos: LEDR = 0x105 (7.88 us)
+[267970000] OK    KEY1 con rebote: LEDR = 0x102 (8.02 us)
+[308650000] OK    IRQ de SW4 al subir: LEDR = 0x210 (7.20 us)
+[315750000] OK    IRQ de SW3 al subir: LEDR = 0x218 (7.10 us)
+Respuesta maxima boton -> LED: 8.18 us (requisito < 200000 us)
 TB_PIO: PASS
