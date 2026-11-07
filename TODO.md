@@ -510,7 +510,7 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
       SC-07 · #14 (OBL)
 - [ ] **SC-09** `C·1` Cola de eventos de un productor y un consumidor (ISR → lazo principal),
       sin bloqueo. *§3-SW p.5 (interrupciones)* ⟵ SC-01 · #13
-- [~] **SC-10** `B·3` Filtros en software en punto fijo (biquad forma directa I, ecualizador
+- [x] **SC-10** Filtros en software en punto fijo (biquad forma directa I, ecualizador
       de 3 bandas o notch/pasa-banda) y modelo del FIR igual bit a bit al HDL. *§3-SIS p.5* ⟵
       CD-14 · #16 (OBL)
 - [x] **SC-11** Volumen: lectura del ADC de 12 bits → ganancia (curva logarítmica) y
@@ -554,9 +554,9 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
       p.4* ⟵ HW-07, CD-07 · #14 (OBL)
 - [x] **NV-08** Driver del ADC (actualización automática, canal del potenciómetro) +
       volumen (SC-11 o registro de HW-15). *§3-SIS p.5* ⟵ HW-08 · #17 (OBL)
-- [ ] **NV-09** `B·1` Driver de 7 segmentos (registro de HW-10) que muestra MM:SS del tiempo
+- [x] **NV-09** Driver de 7 segmentos (registro de HW-10) que muestra MM:SS del tiempo
       transcurrido. *§3-F p.3* ⟵ HW-10, CD-10 · #18 (OBL)
-- [ ] **NV-10** `B·1` Driver del módulo de filtro (modo, coeficientes, muestras o
+- [x] **NV-10** Driver del módulo de filtro (modo, coeficientes, muestras o
       configuración del flujo). *§3-HW p.4* ⟵ HW-17 · #9 (OBL)
 - [x] **NV-11** Driver de video (p. ej. escribir texto en (x, y) del Character Buffer) y
       pantalla con título, artista, álbum, duración, "n/total", estado y filtro activo.
@@ -568,7 +568,7 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
 - [ ] **NV-14** `C·3` Lazo principal: eventos → FSM (SC-08) → acciones; bombeo de audio sin
       cortes; refresco de pantalla y 7 segmentos limitado (p. ej. 10 Hz); contador de
       underruns. *§3-SW p.5 (interfaz de usuario)* ⟵ NV-03..13 · #15 (OBL)
-- [ ] **NV-15** `B·1` Autoprueba del módulo propio en el arranque: escribe vectores conocidos y
+- [x] **NV-15** Autoprueba del módulo propio en el arranque: escribe vectores conocidos y
       compara con la salida esperada (la "rutina de prueba en software" de §3-HW p.4).
       *§3-HW p.4* ⟵ NV-10 · #10 (EVID)
 - [~] **NV-16** `A·1` Gestión de memoria: revisar el `.map` y `riscv32-unknown-elf-size`, ubicar
@@ -725,7 +725,7 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
 - [x] **PR-03** Reporte de verificación del módulo (casos, resultados, capturas de
       formas de onda) en `docs/hw/verificacion-filtro.md`, terminado antes de integrar. *§3-HW
       p.4* ⟵ PR-02 · #10 (OBL, EVID)
-- [ ] **PR-04** `B·3` Co-simulación del SoC en Questa con el flujo del Taller 9
+- [x] **PR-04** Co-simulación del SoC en Questa con el flujo del Taller 9
       (`scripts/sim-soc.sh`): el Nios V escribe muestras al módulo propio y compara con
       vectores dorados. Es la verificación conjunta HW/SW de §2. *§2 p.2, §3-HW p.4* ⟵ HW-17,
       NV-15 (EVID)
