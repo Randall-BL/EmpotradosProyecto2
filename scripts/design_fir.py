@@ -14,9 +14,9 @@ fijo de CD-14:
 
 Bancos de coeficientes (hasta 128 taps cada uno):
   0  pasa-bajos FIR, fc = 1 kHz, 127 taps, ventana de Kaiser   (filtro obligatorio en HDL)
-  1  pasa-altos FIR, fc = 2 kHz, 127 taps                          (segundo filtro, mismo HW)
-     Con 127 taps a 48 kHz la transicion es de ~1.4 kHz: un pasa-banda de 300 Hz no se
-     puede realizar (dejaba pasar 31 % en continua), por eso el corte esta en 2 kHz.
+  1  pasa-banda FIR "voz", 1-4 kHz, 127 taps                      (segundo filtro, mismo HW)
+     Con 127 taps a 48 kHz la transicion es de ~1.4 kHz: un borde inferior en 300 Hz no
+     se puede realizar (dejaba pasar 31 % en continua), por eso empieza en 1 kHz.
 
 Salidas (con --out, por defecto en el repositorio):
   hw/rtl/fir_coefs.hex         256 coeficientes (banco 0 y 1) para $readmemh del RTL
@@ -43,8 +43,8 @@ Q = 15
 # ---------------------------------------------------------------- diseno
 def design():
     lp = signal.firwin(NTAPS, 1000, window=("kaiser", 6.0), fs=FS)
-    hp = signal.firwin(NTAPS, 2000, pass_zero=False, window=("kaiser", 6.0), fs=FS)
-    return {"pasa-bajos 1 kHz": lp, "pasa-altos 2 kHz": hp}
+    bp = signal.firwin(NTAPS, [1000, 4000], pass_zero=False, window=("kaiser", 6.0), fs=FS)
+    return {"pasa-bajos 1 kHz": lp, "pasa-banda 1-4 kHz": bp}
 
 
 def quantize(h):
@@ -86,7 +86,10 @@ def analysis(name, h, hq):
     w, H = signal.freqz(h, worN=8192, fs=FS)
     _, Hq = signal.freqz(hq / (1 << Q), worN=8192, fs=FS)
     err_db = 20 * np.log10(np.abs(H - Hq).max() + 1e-12)
-    sb = np.abs(Hq)[(w > 2400) & (w < 24000)] if "bajos" in name else np.abs(Hq)[w < 600]
+    if "bajos" in name:
+        sb = np.abs(Hq)[(w > 2400) & (w < 24000)]
+    else:
+        sb = np.abs(Hq)[(w < 250) | (w > 5600)]
     print(f"  {name}:")
     print(f"    suma de coeficientes (ganancia DC) = {hq.sum() / (1 << Q):.5f}")
     print(f"    suma |h| (ganancia maxima posible) = {np.abs(hq).sum() / (1 << Q):.4f}"
@@ -127,7 +130,7 @@ def vectors(outdir, banks):
          list((16000 * np.sin(2 * np.pi * 8000 * n / FS)).astype(int))),
         ("saturacion", "entrada con el signo de cada coeficiente: satura", 0, NTAPS, 32768, False,
          list(worst), list(-worst)),
-        ("ruido_banco1", "ruido blanco por el pasa-altos (banco 1)", 1, NTAPS, 32768, False,
+        ("ruido_banco1", "ruido blanco por el pasa-banda (banco 1)", 1, NTAPS, 32768, False,
          list(rng.integers(-20000, 20000, 200)), list(rng.integers(-20000, 20000, 200))),
         ("bypass_gain", "bypass con ganancia 0.5", 0, NTAPS, 16384, True,
          list(rng.integers(-32768, 32767, 64)), list(rng.integers(-32768, 32767, 64))),
@@ -162,7 +165,7 @@ def export(banks_q, rtl_hex, c_header):
              "#include <stdint.h>", "",
              f"#define FIR_MAX_TAPS {MAX_TAPS}u", f"#define FIR_NTAPS {NTAPS}u",
              "#define FIR_BANK_LOWPASS  0u   /* pasa-bajos 1 kHz */",
-             "#define FIR_BANK_HIGHPASS 1u   /* pasa-altos 2 kHz */", "",
+             "#define FIR_BANK_BANDPASS 1u   /* pasa-banda 1-4 kHz */", "",
              f"static const int16_t fir_coefs[2][FIR_NTAPS] = {{"]
     for q in banks_q:
         lines.append("    {")
