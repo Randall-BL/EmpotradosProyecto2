@@ -338,11 +338,11 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
       §3-F p.4) y el buffer previo debe cubrir el peor caso de lectura de la SD (sin cortes,
       §3-F p.4). *§3-F p.4, §3-SIS p.5* ⟵ CD-01 · #3 → tabla de buffers con duración en ms
       para 8/16/44.1 kHz.
-- [ ] **CD-04** `B·2` Conexión del filtro propio: mapeado a memoria (la CPU escribe la muestra
+- [x] **CD-04** Conexión del filtro propio: mapeado a memoria (la CPU escribe la muestra
       y lee el resultado) vs en línea por Avalon-ST antes del IP de Audio. Estimar la carga de
       CPU con la frecuencia de muestreo máxima (accesos por segundo × ciclos por acceso).
       *§3-HW p.4, §3-SIS p.5* ⟵ CD-03 · #3 → decisión con la estimación.
-- [ ] **CD-05** `B·1` Volumen: multiplicador en hardware (dentro del módulo propio) vs
+- [x] **CD-05** Volumen: multiplicador en hardware (dentro del módulo propio) vs
       escalado en software. Considerar que el Nios V/m no tiene `mul` (dato 3). *§3-SIS p.5* ·
       #17 → decisión con ciclos medidos de `__mulsi3` o recursos estimados del multiplicador.
 - [x] **CD-06** Memoria: código y datos del Nios V en RAM on-chip (256 KB del Taller 9) vs
@@ -367,7 +367,7 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
       → decisión.
 - [ ] **CD-11** `C·1` Máquina de reproducción: software (en `sw/common/`, probada en el PC) vs
       FSM en hardware. *§3-SIS p.6* · #14 → decisión.
-- [ ] **CD-12** `B·2` Ubicación de los filtros 2 y 3: Nios V (sin multiplicador), HPS (ARM con
+- [x] **CD-12** Ubicación de los filtros 2 y 3: Nios V (sin multiplicador), HPS (ARM con
       NEON) o hardware. Medir ciclos por muestra del filtro en software antes de decidir.
       *§3-SIS p.5* ⟵ CD-01, SC-10 · #16 → tabla de ciclos/muestra vs presupuesto
       (ciclos de reloj / fs).
