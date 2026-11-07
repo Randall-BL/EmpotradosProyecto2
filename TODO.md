@@ -444,13 +444,13 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
       `scripts/design_fir.py` que calcula y cuantiza los coeficientes según CD-14 y exporta la
       tabla para HDL, C y cocotb. *§3-SIS p.5, §5 p.8 (herramientas)* ⟵ CD-14 · #9 (OBL) →
       gráfico de respuesta ideal vs cuantizada.
-- [ ] **HW-13** `B·3` Núcleo del filtro en HDL propio (`hw/rtl/`): registros de retardo,
+- [x] **HW-13** Núcleo del filtro en HDL propio (`hw/rtl/`): registros de retardo,
       multiplicador-acumulador (secuencial con un bloque DSP, compartido entre canales, o
       paralelo, justificado), redondeo y saturación, banco de coeficientes recargable. Sin IP
       de filtrado del catálogo. *§3-SIS p.5* ⟵ HW-12 · #9 (OBL)
-- [ ] **HW-14** `B·2` Esclavo Avalon-MM del módulo según HW-11 (y Avalon-ST si CD-04 = en
+- [x] **HW-14** Esclavo Avalon-MM del módulo según HW-11 (y Avalon-ST si CD-04 = en
       línea). *§3-HW p.4* ⟵ HW-11, HW-13 · #8 (OBL)
-- [ ] **HW-15** `B·1` Volumen en hardware si CD-05 = HW: multiplicador de ganancia con
+- [x] **HW-15** Volumen en hardware si CD-05 = HW: multiplicador de ganancia con
       saturación dentro del módulo, antes del IP de Audio. *§3-SIS p.5* ⟵ CD-05 · #17
 - [ ] **HW-16** `B·1` Verificación aislada documentada **antes de integrar** (puerta de paso):
       DK-11, DK-12 y PR-02 en verde, reporte PR-03 escrito. *§3-HW p.4* ⟵ DK-11, DK-12, PR-02,
