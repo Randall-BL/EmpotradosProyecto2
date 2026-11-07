@@ -436,7 +436,7 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
 
 ### 3.5 Módulo de hardware personalizado y filtro DSP propio — #8, #9, #10
 
-- [ ] **HW-11** `B·1` Mapa de registros con registros de control (habilitar, bypass, selección,
+- [x] **HW-11** Mapa de registros con registros de control (habilitar, bypass, selección,
       limpiar), estado (listo, ocupado, saturación, versión) y datos (muestra de entrada y
       de salida, dirección y dato de coeficiente, número de taps, ganancia si CD-05 = HW), en
       `docs/hw/modulo-filtro.md`. *§3-HW p.4* ⟵ CD-04, CD-05 · #8 (OBL)
@@ -452,12 +452,12 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
       línea). *§3-HW p.4* ⟵ HW-11, HW-13 · #8 (OBL)
 - [x] **HW-15** Volumen en hardware si CD-05 = HW: multiplicador de ganancia con
       saturación dentro del módulo, antes del IP de Audio. *§3-SIS p.5* ⟵ CD-05 · #17
-- [ ] **HW-16** `B·1` Verificación aislada documentada **antes de integrar** (puerta de paso):
+- [x] **HW-16** Verificación aislada documentada **antes de integrar** (puerta de paso):
       DK-11, DK-12 y PR-02 en verde, reporte PR-03 escrito. *§3-HW p.4* ⟵ DK-11, DK-12, PR-02,
       PR-03 · #10 (OBL, EVID)
 - [ ] **HW-17** `B·1` Empaquetar el módulo como componente de Platform Designer (`*_hw.tcl` en
       `hw/rtl/`) y agregarlo a `build_system.tcl`. *§3-HW p.4* ⟵ HW-16 · #8 (OBL)
-- [ ] **HW-18** `B·1` Diagrama de bloques y diagramas de tiempo (escritura de registro, muestra
+- [x] **HW-18** Diagrama de bloques y diagramas de tiempo (escritura de registro, muestra
       entrando y saliendo, recarga de coeficientes), p. ej. con WaveDrom. *§5 p.7 (4%)* ⟵ HW-14
       · #8 (EVID)
 
@@ -718,11 +718,11 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
 - [ ] **PR-01** `D·2` Plan de pruebas en `docs/plan-pruebas.md`: por cada requisito del PDF,
       método (simulación, prueba unitaria, tarjeta), criterio de aceptación y responsable. *§5
       p.7 (lista de chequeo)* ⟵ OR-01
-- [ ] **PR-02** `B·2` Verificación aislada del módulo propio en Questa (lo que pide §3-HW p.4
+- [x] **PR-02** Verificación aislada del módulo propio en Questa (lo que pide §3-HW p.4
       al pie de la letra): los mismos tests de DK-11/12 con `SIM=questa` de forma nativa si la
       edición Starter lo permite, o un testbench SystemVerilog equivalente. *§3-HW p.4* ⟵
       DK-11, DK-12, P11 · #10 (OBL, EVID)
-- [ ] **PR-03** `B·1` Reporte de verificación del módulo (casos, resultados, capturas de
+- [x] **PR-03** Reporte de verificación del módulo (casos, resultados, capturas de
       formas de onda) en `docs/hw/verificacion-filtro.md`, terminado antes de integrar. *§3-HW
       p.4* ⟵ PR-02 · #10 (OBL, EVID)
 - [ ] **PR-04** `B·3` Co-simulación del SoC en Questa con el flujo del Taller 9
