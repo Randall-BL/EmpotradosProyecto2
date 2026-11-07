@@ -12,7 +12,8 @@ DST="$HERE/docs/verificacion/resultados"
 mkdir -p "$DST"
 COMMIT="$(git -C "$HERE" rev-parse --short HEAD)"
 
-for log in "$HERE"/build/sim/tb_*.log; do
+for log in "$HERE"/build/sim/tb_*.log "$HERE"/build/sim/rtl_*.log; do
+    [ -f "$log" ] || continue
     name="$(basename "$log" .log)"
     tb="${name%%__*}"
     opts="${name#"$tb"}"
@@ -21,9 +22,9 @@ for log in "$HERE"/build/sim/tb_*.log; do
         echo "# $tb${opts:+ (elaboracion: ${opts//_/ })}"
         echo "# Transcript: build/sim/$name.log, $(date -r "$log" '+%Y-%m-%d %H:%M'), commit $COMMIT"
         echo
-        sed -n '/TB_[A-Z]*: inicio/,/TB_[A-Z]*: \(PASS\|FAIL\)/p' "$log" | sed 's/^# //'
+        sed -n '/TB_[A-Z0-9_]*: inicio/,/TB_[A-Z0-9_]*: \(PASS\|FAIL\)/p' "$log" | sed 's/^# //'
     } > "$out"
-    grep -q 'TB_[A-Z]*: PASS' "$out" && r=PASS || r=FAIL
+    grep -q 'TB_[A-Z0-9_]*: PASS' "$out" && r=PASS || r=FAIL
     echo "$name: $r"
 done
 

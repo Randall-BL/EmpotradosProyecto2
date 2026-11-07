@@ -1,11 +1,11 @@
 # tb_adc
-# Transcript: build/sim/tb_adc.log, 2026-11-05 17:20, commit d30841d
+# Transcript: build/sim/tb_adc.log, 2026-11-07 12:10, commit 536bb49
 
 TB_ADC: inicio, chip =  AD7928
 [200000] OK    pot = 0x000 -> CH0 >> 2 = 0x000 en LEDR
-[175970000] OK    pot = 0xfff -> CH0 >> 2 = 0x3ff en LEDR
-[200390000] OK    pot = 0x800 -> CH0 >> 2 = 0x200 en LEDR
-[224810000] OK    pot = 0x3a5 -> CH0 >> 2 = 0x0e9 en LEDR
-[249230000] OK    pot = 0xc3c -> CH0 >> 2 = 0x30f en LEDR
+[60030000] OK    pot = 0xfff -> CH0 >> 2 = 0x3ff en LEDR
+[84410000] OK    pot = 0x800 -> CH0 >> 2 = 0x200 en LEDR
+[108790000] OK    pot = 0x3a5 -> CH0 >> 2 = 0x0e9 en LEDR
+[133170000] OK    pot = 0xc3c -> CH0 >> 2 = 0x30f en LEDR
 Conversiones del chip: 73
 TB_ADC: PASS

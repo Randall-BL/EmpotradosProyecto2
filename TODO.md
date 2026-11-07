@@ -2,7 +2,7 @@
 
 **Curso:** CE-1113 Sistemas Empotrados — TEC · **Profesor:** Dr.-Ing. Jeferson González Gómez
 **Plataforma:** Altera DE1-SoC · Platform Designer · Quartus Prime Lite 25.1std
-**Fecha de entrega:** 2 de diciembre de 2026 · **Última revisión de este plan:** 5 de noviembre de 2026
+**Fecha de entrega:** 2 de diciembre de 2026 · **Última revisión de este plan:** 7 de noviembre de 2026
 
 ## Cómo leer este plan
 
@@ -273,6 +273,45 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
 
 ---
 
+## Estado de la persona B (hardware propio y DSP) — 7 de noviembre de 2026
+
+> Trabajo hecho por Randall Bolaños mientras se asigna la persona B (OR-02).
+
+El módulo propio (`filtro_audio`: FIR estéreo de 2 bancos + ganancia) y `seg7_time` están
+diseñados, **verificados aislados** (puerta HW-16), integrados al SoC, compilados en Quartus
+cumpliendo tiempos y **co-simulados con el Nios V** (`tb_filtro`: autoprueba con 0
+diferencias). Reporte: [docs/hw/verificacion-filtro.md](docs/hw/verificacion-filtro.md).
+
+**Hecho:** CD-04, CD-05, CD-12, CD-13, CD-14, HW-10..18, SC-10, NV-09, NV-10, NV-15,
+PR-02, PR-03, PR-04, RP-02, RP-04.
+
+**Pendiente de B**, con lo que lo bloquea y el siguiente paso:
+
+| Tarea | Estado | Bloqueo | Siguiente paso |
+|---|---|---|---|
+| IN-08, PR-09, PR-10 | `test_filtros` listo (3 filtros con SW, volumen en GAIN, tiempo en HEX); respuesta en frecuencia ya medida en el RTL | La tarjeta (y IN-06 de D para hacerlo desde la SD) | Correr `docs/pruebas-tarjeta.md`, grabar el line-out y comparar con `docs/img/filtro-respuesta-medida.png` |
+| DK-09, DK-11..13 | Equivalentes hechos en Questa (`sim/questa/rtl/`); vectores en `sim/vectors/` listos para cocotb | DK-05 (C, contenedor) | Escribir los tests cocotb leyendo los mismos vectores |
+| DOC-03 | Filtro y `seg7_time` documentados (`docs/hw/`) | HW-24 (vista desde el HPS, D) | Agregar la dirección del módulo vista desde el HPS si aplica |
+| DOC-05 | `docs/herramientas.md` | DK-* (C) | Agregar Docker, cocotb y CI cuando existan |
+| DOC-07 | Diagramas en Mermaid dentro de los `.md` y WaveDrom en `docs/img/filtro-tiempos.json` | — | Exportar el WaveDrom a imagen (wavedrom-cli) |
+| DOC-10 | — | IN-09 (sistema completo), P15 | Guion y ensayo de la presentación |
+| OPC-01 | — | OPC-00 (aprobación del profesor) | Ecualizador de ≥ 5 bandas reutilizando el MAC (quedan ~900 ciclos libres por muestra) |
+
+**Hallazgos que afectan a otras personas:**
+
+- **C:** la asignación de switches de `test_filtros` (SW[1:0]: bypass, pasa-bajos,
+  pasa-banda, reverberación) es provisional hasta CD-08. El volumen ya no se escala en
+  software: se escribe `vol.gain_q15` en `GAIN` con `filtro_set_gain` (CD-05). Para no
+  esperar al filtro, intercalar `filtro_write` / `audio_write_frame` / `filtro_read` (CD-04).
+  La reverberación (`dsp_reverb`, 54 ciclos por muestra) necesita ~9.4 KB de RAM para el
+  buffer de 50 ms.
+- **Todos:** el software se compila con `-O2` desde `build-niosv.sh` (antes salía sin
+  optimizar); el Nios V/m no implementa `mcycle`: para medir, leer `mtime`
+  (`ALT_CPU_MTIME_OFFSET`), que cuenta a 50 MHz.
+- **D:** el HPS debe entregar audio a 48 kHz (CD-07); el filtro asume esa frecuencia.
+
+---
+
 ## 0. Arranque y organización — #30
 
 - [ ] **OR-01** `D·1` Leer el enunciado completo y enviar P1–P15 al profesor; registrar las
@@ -338,11 +377,11 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
       §3-F p.4) y el buffer previo debe cubrir el peor caso de lectura de la SD (sin cortes,
       §3-F p.4). *§3-F p.4, §3-SIS p.5* ⟵ CD-01 · #3 → tabla de buffers con duración en ms
       para 8/16/44.1 kHz.
-- [ ] **CD-04** `B·2` Conexión del filtro propio: mapeado a memoria (la CPU escribe la muestra
+- [x] **CD-04** Conexión del filtro propio: mapeado a memoria (la CPU escribe la muestra
       y lee el resultado) vs en línea por Avalon-ST antes del IP de Audio. Estimar la carga de
       CPU con la frecuencia de muestreo máxima (accesos por segundo × ciclos por acceso).
       *§3-HW p.4, §3-SIS p.5* ⟵ CD-03 · #3 → decisión con la estimación.
-- [ ] **CD-05** `B·1` Volumen: multiplicador en hardware (dentro del módulo propio) vs
+- [x] **CD-05** Volumen: multiplicador en hardware (dentro del módulo propio) vs
       escalado en software. Considerar que el Nios V/m no tiene `mul` (dato 3). *§3-SIS p.5* ·
       #17 → decisión con ciclos medidos de `__mulsi3` o recursos estimados del multiplicador.
 - [x] **CD-06** Memoria: código y datos del Nios V en RAM on-chip (256 KB del Taller 9) vs
@@ -367,14 +406,14 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
       → decisión.
 - [ ] **CD-11** `C·1` Máquina de reproducción: software (en `sw/common/`, probada en el PC) vs
       FSM en hardware. *§3-SIS p.6* · #14 → decisión.
-- [ ] **CD-12** `B·2` Ubicación de los filtros 2 y 3: Nios V (sin multiplicador), HPS (ARM con
+- [x] **CD-12** Ubicación de los filtros 2 y 3: Nios V (sin multiplicador), HPS (ARM con
       NEON) o hardware. Medir ciclos por muestra del filtro en software antes de decidir.
       *§3-SIS p.5* ⟵ CD-01, SC-10 · #16 → tabla de ciclos/muestra vs presupuesto
       (ciclos de reloj / fs).
-- [ ] **CD-13** `B·1` HDL: Verilog-2005/SystemVerilog sintetizable (subconjunto que entiende
+- [x] **CD-13** HDL: Verilog-2005/SystemVerilog sintetizable (subconjunto que entiende
       Icarus) vs VHDL (GHDL). Define el simulador del contenedor. *GRUPO → §5 p.8
       herramientas* → decisión.
-- [ ] **CD-14** `B·2` Formato de punto fijo: muestras Q1.15, coeficientes (Q1.15 o Q2.14), ancho
+- [x] **CD-14** Formato de punto fijo: muestras Q1.15, coeficientes (Q1.15 o Q2.14), ancho
       del acumulador (16 + 16 + ⌈log2 N⌉ bits), redondeo y saturación. *§3-SIS p.5* · #9 →
       documento con el análisis de error.
 - [ ] **CD-15** `D·2` Comparar al menos dos arquitecturas completas (p. ej. A con filtros en
@@ -428,7 +467,7 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
 
 ### 3.4 Displays de 7 segmentos — #18
 
-- [ ] **HW-10** `B·2` Módulo HDL `seg7_time` (en `hw/rtl/`) con esclavo Avalon-MM: registro
+- [x] **HW-10** Módulo HDL `seg7_time` (en `hw/rtl/`) con esclavo Avalon-MM: registro
       con el tiempo (segundos o BCD MM:SS), registro de control (encendido, blanking) y salida
       a HEX3..HEX0 (HEX5..HEX4 libres para el número de canción). Testbench propio (DK-13).
       *§3-HW p.4, §3-F p.3 (MM:SS)* ⟵ P6 (OBL) → el testbench verifica 00:00, 09:59, 59:59 y
@@ -436,28 +475,28 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
 
 ### 3.5 Módulo de hardware personalizado y filtro DSP propio — #8, #9, #10
 
-- [ ] **HW-11** `B·1` Mapa de registros con registros de control (habilitar, bypass, selección,
+- [x] **HW-11** Mapa de registros con registros de control (habilitar, bypass, selección,
       limpiar), estado (listo, ocupado, saturación, versión) y datos (muestra de entrada y
       de salida, dirección y dato de coeficiente, número de taps, ganancia si CD-05 = HW), en
       `docs/hw/modulo-filtro.md`. *§3-HW p.4* ⟵ CD-04, CD-05 · #8 (OBL)
-- [ ] **HW-12** `B·2` Diseñar el filtro obligatorio (p. ej. FIR pasa-bajos de N taps): script
+- [x] **HW-12** Diseñar el filtro obligatorio (p. ej. FIR pasa-bajos de N taps): script
       `scripts/design_fir.py` que calcula y cuantiza los coeficientes según CD-14 y exporta la
       tabla para HDL, C y cocotb. *§3-SIS p.5, §5 p.8 (herramientas)* ⟵ CD-14 · #9 (OBL) →
       gráfico de respuesta ideal vs cuantizada.
-- [ ] **HW-13** `B·3` Núcleo del filtro en HDL propio (`hw/rtl/`): registros de retardo,
+- [x] **HW-13** Núcleo del filtro en HDL propio (`hw/rtl/`): registros de retardo,
       multiplicador-acumulador (secuencial con un bloque DSP, compartido entre canales, o
       paralelo, justificado), redondeo y saturación, banco de coeficientes recargable. Sin IP
       de filtrado del catálogo. *§3-SIS p.5* ⟵ HW-12 · #9 (OBL)
-- [ ] **HW-14** `B·2` Esclavo Avalon-MM del módulo según HW-11 (y Avalon-ST si CD-04 = en
+- [x] **HW-14** Esclavo Avalon-MM del módulo según HW-11 (y Avalon-ST si CD-04 = en
       línea). *§3-HW p.4* ⟵ HW-11, HW-13 · #8 (OBL)
-- [ ] **HW-15** `B·1` Volumen en hardware si CD-05 = HW: multiplicador de ganancia con
+- [x] **HW-15** Volumen en hardware si CD-05 = HW: multiplicador de ganancia con
       saturación dentro del módulo, antes del IP de Audio. *§3-SIS p.5* ⟵ CD-05 · #17
-- [ ] **HW-16** `B·1` Verificación aislada documentada **antes de integrar** (puerta de paso):
+- [x] **HW-16** Verificación aislada documentada **antes de integrar** (puerta de paso):
       DK-11, DK-12 y PR-02 en verde, reporte PR-03 escrito. *§3-HW p.4* ⟵ DK-11, DK-12, PR-02,
       PR-03 · #10 (OBL, EVID)
-- [ ] **HW-17** `B·1` Empaquetar el módulo como componente de Platform Designer (`*_hw.tcl` en
+- [x] **HW-17** Empaquetar el módulo como componente de Platform Designer (`*_hw.tcl` en
       `hw/rtl/`) y agregarlo a `build_system.tcl`. *§3-HW p.4* ⟵ HW-16 · #8 (OBL)
-- [ ] **HW-18** `B·1` Diagrama de bloques y diagramas de tiempo (escritura de registro, muestra
+- [x] **HW-18** Diagrama de bloques y diagramas de tiempo (escritura de registro, muestra
       entrando y saliendo, recarga de coeficientes), p. ej. con WaveDrom. *§5 p.7 (4%)* ⟵ HW-14
       · #8 (EVID)
 
@@ -510,7 +549,7 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
       SC-07 · #14 (OBL)
 - [ ] **SC-09** `C·1` Cola de eventos de un productor y un consumidor (ISR → lazo principal),
       sin bloqueo. *§3-SW p.5 (interrupciones)* ⟵ SC-01 · #13
-- [ ] **SC-10** `B·3` Filtros en software en punto fijo (biquad forma directa I, ecualizador
+- [x] **SC-10** Filtros en software en punto fijo (biquad forma directa I, ecualizador
       de 3 bandas o notch/pasa-banda) y modelo del FIR igual bit a bit al HDL. *§3-SIS p.5* ⟵
       CD-14 · #16 (OBL)
 - [x] **SC-11** Volumen: lectura del ADC de 12 bits → ganancia (curva logarítmica) y
@@ -554,9 +593,9 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
       p.4* ⟵ HW-07, CD-07 · #14 (OBL)
 - [x] **NV-08** Driver del ADC (actualización automática, canal del potenciómetro) +
       volumen (SC-11 o registro de HW-15). *§3-SIS p.5* ⟵ HW-08 · #17 (OBL)
-- [ ] **NV-09** `B·1` Driver de 7 segmentos (registro de HW-10) que muestra MM:SS del tiempo
+- [x] **NV-09** Driver de 7 segmentos (registro de HW-10) que muestra MM:SS del tiempo
       transcurrido. *§3-F p.3* ⟵ HW-10, CD-10 · #18 (OBL)
-- [ ] **NV-10** `B·1` Driver del módulo de filtro (modo, coeficientes, muestras o
+- [x] **NV-10** Driver del módulo de filtro (modo, coeficientes, muestras o
       configuración del flujo). *§3-HW p.4* ⟵ HW-17 · #9 (OBL)
 - [x] **NV-11** Driver de video (p. ej. escribir texto en (x, y) del Character Buffer) y
       pantalla con título, artista, álbum, duración, "n/total", estado y filtro activo.
@@ -568,7 +607,7 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
 - [ ] **NV-14** `C·3` Lazo principal: eventos → FSM (SC-08) → acciones; bombeo de audio sin
       cortes; refresco de pantalla y 7 segmentos limitado (p. ej. 10 Hz); contador de
       underruns. *§3-SW p.5 (interfaz de usuario)* ⟵ NV-03..13 · #15 (OBL)
-- [ ] **NV-15** `B·1` Autoprueba del módulo propio en el arranque: escribe vectores conocidos y
+- [x] **NV-15** Autoprueba del módulo propio en el arranque: escribe vectores conocidos y
       compara con la salida esperada (la "rutina de prueba en software" de §3-HW p.4).
       *§3-HW p.4* ⟵ NV-10 · #10 (EVID)
 - [~] **NV-16** `A·1` Gestión de memoria: revisar el `.map` y `riscv32-unknown-elf-size`, ubicar
@@ -623,7 +662,7 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
       *§3-F p.3–4* ⟵ IN-02, IN-05
 - [ ] **IN-07** `C·2` Botones + FSM + playlist + avance automático con ≥ 10 canciones. *§3-F
       p.3* ⟵ IN-06, NV-03, NV-14
-- [ ] **IN-08** `B·1` Filtros 1–3 seleccionables con switches durante la reproducción. *§3-F
+- [~] **IN-08** `B·1` Filtros 1–3 seleccionables con switches durante la reproducción. *§3-F
       p.4, §3-SIS p.5* ⟵ IN-06, NV-05, NV-10
 - [ ] **IN-09** `D·2` Sistema completo arrancando solo desde reset, sin PC conectado. *§3-F
       p.4* ⟵ HP-04, IN-07, IN-08
@@ -718,14 +757,14 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
 - [ ] **PR-01** `D·2` Plan de pruebas en `docs/plan-pruebas.md`: por cada requisito del PDF,
       método (simulación, prueba unitaria, tarjeta), criterio de aceptación y responsable. *§5
       p.7 (lista de chequeo)* ⟵ OR-01
-- [ ] **PR-02** `B·2` Verificación aislada del módulo propio en Questa (lo que pide §3-HW p.4
+- [x] **PR-02** Verificación aislada del módulo propio en Questa (lo que pide §3-HW p.4
       al pie de la letra): los mismos tests de DK-11/12 con `SIM=questa` de forma nativa si la
       edición Starter lo permite, o un testbench SystemVerilog equivalente. *§3-HW p.4* ⟵
       DK-11, DK-12, P11 · #10 (OBL, EVID)
-- [ ] **PR-03** `B·1` Reporte de verificación del módulo (casos, resultados, capturas de
+- [x] **PR-03** Reporte de verificación del módulo (casos, resultados, capturas de
       formas de onda) en `docs/hw/verificacion-filtro.md`, terminado antes de integrar. *§3-HW
       p.4* ⟵ PR-02 · #10 (OBL, EVID)
-- [ ] **PR-04** `B·3` Co-simulación del SoC en Questa con el flujo del Taller 9
+- [x] **PR-04** Co-simulación del SoC en Questa con el flujo del Taller 9
       (`scripts/sim-soc.sh`): el Nios V escribe muestras al módulo propio y compara con
       vectores dorados. Es la verificación conjunta HW/SW de §2. *§2 p.2, §3-HW p.4* ⟵ HW-17,
       NV-15 (EVID)
@@ -740,10 +779,10 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
       ⟵ IN-09 · #20 (OBL, EVID)
 - [ ] **PR-08** `C·1` Estabilidad: la lista completa al menos dos vueltas sin reinicios y con el
       contador de underruns en 0. *§3-F p.4* ⟵ IN-09 · #20 (OBL, EVID)
-- [ ] **PR-09** `B·1` Calidad en bypass: grabar el line-out en un PC y comparar espectro y
+- [~] **PR-09** `B·1` Calidad en bypass: grabar el line-out en un PC y comparar espectro y
       nivel con el archivo original (sin recorte ni distorsión audible). *§3-F p.4* ⟵ IN-06 ·
       #16 (EVID)
-- [ ] **PR-10** `B·2` Evidencias de los filtros: respuesta en frecuencia medida con un barrido
+- [~] **PR-10** `B·2` Evidencias de los filtros: respuesta en frecuencia medida con un barrido
       (chirp) desde la SD frente a la teórica, espectrogramas y audio antes/después.
       *§3-F p.4, §5 p.8 (README)* ⟵ IN-08 · #16 (OBL, EVID)
 - [ ] **PR-11** `Todos` Regresión antes de cada PR a `develop`: `make lint sim test`,
@@ -754,12 +793,12 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
 - [x] **RP-01** Utilización del sistema completo (ALMs, registros, bits y bloques M10K,
       bloques DSP) desde el reporte del Fitter; script que extrae la tabla. *§3-REC p.6* ⟵ HW-21
       (OBL, EVID)
-- [ ] **RP-02** `A·1` *(bloqueada por HW-17; script listo: `report-resources.py --entity`)* Utilización del módulo propio por separado ("Resource Utilization by
+- [x] **RP-02** *(bloqueada por HW-17; script listo: `report-resources.py --entity`)* Utilización del módulo propio por separado ("Resource Utilization by
       Entity"). *§3-REC p.6* ⟵ HW-17, HW-21 (OBL, EVID)
 - [x] **RP-03** Potencia del sistema completo con el Power Analyzer de Quartus
       (`quartus_pow`); documentar las tasas de conmutación supuestas o usar un VCD de
       simulación. *§3-REC p.6* ⟵ HW-21 (OBL, EVID)
-- [ ] **RP-04** `B·2` Costo de mover un filtro de software a hardware: recursos y potencia del
+- [x] **RP-04** Costo de mover un filtro de software a hardware: recursos y potencia del
       módulo frente a ciclos por muestra del mismo filtro en software (medidos con `mcycle`).
       *§3-REC p.6* ⟵ RP-02, CD-12
 - [~] **RP-05** `A·1` Discusión de cómo la partición HW/SW afectó recursos y potencia. *§3-REC
@@ -773,12 +812,12 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
 - [ ] **DOC-02** `D·2` Metodología de diseño del sistema: análisis del problema, investigación,
       propuestas, comparación, evaluación y justificación del co-diseño (CD-01..16). *§5 p.7 (7%)*
       ⟵ CD-15 · #22 (OBL)
-- [ ] **DOC-03** `B·2` Diseño del hardware personalizado: diagrama de bloques, registros, mapa
+- [~] **DOC-03** `B·2` Diseño del hardware personalizado: diagrama de bloques, registros, mapa
       de memoria, diagramas de tiempo y justificación. *§5 p.7 (4%)* ⟵ HW-11, HW-18, HW-24 ·
       #22 (OBL)
 - [~] **DOC-04** `A·1` Análisis de recursos y consumo (RP-01..05). *§5 p.8 (3%)* ⟵ RP-05 · #22
       (OBL)
-- [ ] **DOC-05** `B·2` Herramientas de ingeniería: herramientas usadas (Quartus, Platform
+- [~] **DOC-05** `B·2` Herramientas de ingeniería: herramientas usadas (Quartus, Platform
       Designer, Questa, Docker, cocotb, GitHub Actions), modelos y ecuaciones (FIR, punto
       fijo, duración, volumen, presupuesto de latencia), scripts creados o modificados
       (incluye [docs/reutilizado-taller9.md](docs/reutilizado-taller9.md)). *§5 p.8 (3%)* ·
@@ -788,7 +827,7 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
       sistema (botones y switches), diagramas de arquitectura HW y SW, interfaz del módulo
       propio, mapas de memoria, evidencias de los filtros, resultados con capturas y videos.
       *§5 p.8 (10%)* ⟵ CD-16, HW-24, PR-10 · #23 (OBL, EVID)
-- [ ] **DOC-07** `B·1` Fuentes de los diagramas versionadas (draw.io o Mermaid) y exportadas en
+- [~] **DOC-07** `B·1` Fuentes de los diagramas versionadas (draw.io o Mermaid) y exportadas en
       `docs/img/`. *§5 p.8* ⟵ CD-16, HW-18
 - [ ] **DOC-08** `D·2` Videos demostrativos (arranque, controles, filtros, volumen, cambio de
       canción) enlazados desde el README. *§5 p.8* ⟵ IN-09 · #23 (EVID)

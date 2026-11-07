@@ -1,0 +1,14 @@
+# tb_filtro
+# Transcript: build/sim/tb_filtro.log, 2026-11-07 12:08, commit 536bb49
+
+TB_FILTRO: inicio
+[10000] LEDR = 0x000
+[83210000] LEDR = 0x0d1
+[163430000] LEDR = 0x0d2
+[6916850000] LEDR = 0x0d3
+FILTRO autoprueba_diferencias 0
+FILTRO ciclos_por_par 163
+FILTRO seg7_bcd 0205
+OK    autoprueba: hardware igual bit a bit al modelo en C
+OK    displays muestran '03 02:05'
+TB_FILTRO: PASS

@@ -54,9 +54,23 @@ flowchart LR
   SD[("microSD")] --- HPS
 ```
 
-Las piezas en cursiva del plan aún no están en el SoC: el módulo de filtro propio
-(HW-17), `seg7_time` (HW-10) y el HPS con su bridge (HW-05). El resto está en
-`hw/soc/build_system.tcl`, compila en Quartus y está verificado por simulación.
+Todo lo anterior está en `hw/soc/build_system.tcl`, compila en Quartus y está verificado
+por simulación, incluidos los dos módulos de hardware propio (`filtro_audio` y
+`seg7_time`, en `hw/rtl/`). Falta el HPS con su bridge (HW-05, D).
+
+### Hardware propio
+
+| Módulo | Qué hace | Documento |
+|---|---|---|
+| `filtro_audio` (`0x0004_0100`) | FIR estéreo de 127 taps y 2 bancos (pasa-bajos 1 kHz, pasa-banda 1–4 kHz), dos MAC en paralelo, acumulador de 40 bits, redondeo y saturación, y ganancia del volumen. Esclavo Avalon-MM con `waitrequest`. 250 ALMs, 4 DSP, 3 M10K, 4.4 mW; 136 ciclos por muestra | [docs/hw/modulo-filtro.md](docs/hw/modulo-filtro.md) |
+| `seg7_time` (`0x0004_0120`) | Tiempo MM:SS (conversión por restas en hardware) y canción en HEX5..HEX0 | [docs/hw/seg7-time.md](docs/hw/seg7-time.md) |
+
+Los tres filtros ([CD-12](docs/decisiones/CD-12.md)): **pasa-bajos FIR** y **pasa-banda
+FIR** en el hardware propio, y **reverberación** en el Nios V (sumas y desplazamientos).
+Un FIR o un biquad en el Nios V/m (sin multiplicador) costarían 16 y 5 veces el
+procesador, respectivamente (medido con `tb_ciclos`).
+
+![Respuesta en frecuencia medida en el RTL](docs/img/filtro-respuesta-medida.png)
 
 ### Software
 
@@ -133,17 +147,21 @@ scripts/build-quartus.sh   # 3. Quartus: síntesis, fitter, .sof y Timing Analyz
 Para cambiar solo el software sin recompilar el hardware: `scripts/update-sw.sh` (~20 s).
 
 Resultado actual de la compilación: sin errores ni warnings críticos, tiempos cumplidos en
-las cuatro esquinas del Timing Analyzer (slack mínimo de setup **+7.55 ns** a 50 MHz, hold +0.05 ns).
+las cuatro esquinas del Timing Analyzer (slack mínimo de setup **+7.18 ns** a 50 MHz, hold +0.06 ns).
 
 ## Verificación sin tarjeta
 
 Cada periférico se verifica con un **testbench autoverificable** que simula el SoC
 completo en Questa con el Nios V ejecutando un programa de prueba, y con modelos de los
-chips externos hechos a partir de sus datasheets. Cada uno termina en `PASS` o `FAIL`.
+chips externos hechos a partir de sus datasheets. Los módulos de hardware propio se
+verifican además **aislados**, antes de integrarlos (§3-HW), contra vectores dorados de
+un modelo bit a bit ([reporte](docs/hw/verificacion-filtro.md)). Cada prueba termina en
+`PASS` o `FAIL`.
 
 ```bash
-scripts/test-all.sh        # PC + testbenches rapidos (~3 min); --all agrega vga y codec
-scripts/sim-tb.sh pio      # un testbench: pio, audio, codec, adc, shm, vga
+scripts/test-all.sh        # PC + modulos propios + testbenches rapidos (~4 min); --all agrega los lentos
+scripts/sim-rtl.sh filtro_audio           # un modulo propio aislado (filtro_audio, seg7_time, filtro_respuesta)
+scripts/sim-tb.sh pio      # un testbench del SoC: pio, audio, codec, adc, shm, vga, filtro, ciclos
 ELAB_OPTS=-gLTC=1 scripts/sim-tb.sh adc   # ADC con LTC2308 en vez de AD7928
 make -C tests              # lógica portable en el PC
 ```
@@ -156,7 +174,12 @@ make -C tests              # lógica portable en el PC
 | `tb_adc` | Potenciómetro en CH0 con el modelo del **AD7928** y con el del **LTC2308** (las dos revisiones de la placa) | PASS en ambos |
 | `tb_shm` | Memoria compartida: bus de datos, bus de direcciones en 64 KB, March C-, accesos de 8/16 bits, sin solape con la RAM | PASS |
 | `tb_vga` | 640 × 480 @ 60 Hz (línea de 32.000 µs, HS de 3.840 µs, 640 píxeles activos) y texto: las filas 9–12 coinciden celda por celda con la pantalla de referencia | PASS |
-| `test_volume`, `test_screen`, `test_tone` | Curva de volumen, histéresis y saturación; pantalla del reproductor; tono de 440 Hz con SNR de 48.9 dB | PASS |
+| `rtl_filtro_audio` | Módulo propio **aislado**, solo por Avalon-MM: registros y 8 casos dorados comparados bit a bit (impulso, escalón, senos, saturación, banco 1, bypass, 16 taps, ganancia alta) | PASS, 1 253 comprobaciones; 136 ciclos por muestra |
+| `rtl_seg7_time` | `seg7_time` aislado: 00:00 … 99:59, saturación, canción, apagado | PASS |
+| `rtl_filtro_respuesta` | Respuesta en frecuencia medida con 30 senos por banco | Error ≤ 0.83 dB en la banda de paso, rechazo ≥ 55.7 dB |
+| `tb_filtro` | **Co-simulación HW/SW**: el Nios V carga coeficientes y corre la autoprueba del módulo (431 pares contra el modelo en C) dentro del SoC; displays | PASS, 0 diferencias; `03 02:05` en HEX |
+| `tb_ciclos` | Costo por muestra en el Nios V/m (`-O2`): volumen 271, FIR 8 181, biquad 2 404, reverberación 54 ciclos | Base de CD-04, CD-05 y CD-12 |
+| `test_volume`, `test_screen`, `test_tone`, `test_dsp` | Curva de volumen, histéresis y saturación; pantalla; tono de 440 Hz con SNR de 48.9 dB; filtros en software y modelo del FIR igual a los vectores dorados | PASS |
 
 Pantalla del reproductor tal como sale del Character Buffer en `tb_vga` (líneas 0–103
 del cuadro, a escala 2; `scripts/pbm2png.py`):
@@ -193,30 +216,31 @@ niosv-download -g -r build/niosv/app/build/audio_player.elf   # solo el programa
 | KEY1 | Stop |
 | KEY2 | Canción anterior |
 | KEY3 | Canción siguiente |
-| SW | Selección del filtro *(asignación en CD-08)* |
-| Potenciómetro (ADC CH0) | Volumen (32 escalones de 2 dB) |
-| HEX3..HEX0 | Tiempo transcurrido MM:SS *(HW-10)* |
+| SW[1:0] | Filtro: 00 bypass, 01 pasa-bajos, 10 pasa-banda, 11 reverberación *(provisional; CD-08 de C)* |
+| Potenciómetro (ADC CH0) | Volumen (32 escalones de 2 dB), aplicado por la ganancia del módulo propio |
+| HEX3..HEX0 / HEX5..HEX4 | Tiempo transcurrido MM:SS / número de canción (`seg7_time`) |
 | VGA | Título, artista, álbum, duración, canción n/total, estado, filtro y volumen |
 
 ## Mapa de memoria e interfaces
 
 - Mapa de memoria e interrupciones: [docs/hw/mapa-memoria.md](docs/hw/mapa-memoria.md).
 - Justificación de cada componente: [docs/hw/componentes-soc.md](docs/hw/componentes-soc.md).
-- Interfaz del módulo de hardware propio *(pendiente, HW-11)*.
+- Interfaz del módulo de hardware propio: [docs/hw/modulo-filtro.md](docs/hw/modulo-filtro.md)
+  (registros, tiempos, diagrama de bloques) y [docs/hw/seg7-time.md](docs/hw/seg7-time.md).
 
 ## Recursos y potencia
 
-Sistema completo (sin el módulo propio ni el HPS todavía), de
+Sistema completo (con el módulo propio; sin el HPS todavía), de
 `python3 scripts/report-resources.py` y `scripts/report-power.sh`:
 
 | Recurso | Uso |
 |---|---|
-| Lógica | 3 292 / 32 070 ALMs (10 %) |
-| Registros | 4 671 |
-| Memoria embebida | 1 648 768 bits (41 %), 207 / 397 M10K (52 %) |
-| DSP | 0 / 87 |
+| Lógica | 3 773 / 32 070 ALMs (12 %) |
+| Registros | 5 304 |
+| Memoria embebida | 1 661 056 bits (41 %), 210 / 397 M10K (53 %) |
+| DSP | 4 / 87 (el filtro propio) |
 | PLL | 2 / 6 |
-| Potencia total estimada | 547.8 mW (dinámica del núcleo 94.7 mW, estática 421.6 mW, E/S 31.5 mW; estimación sin vectores) |
+| Potencia total estimada | 557.0 mW (dinámica del núcleo 99.3 mW, estática 421.7 mW, E/S 36.0 mW; estimación sin vectores); el filtro propio, 4.4 mW |
 
 ## Decisiones de diseño
 
@@ -225,12 +249,17 @@ Sistema completo (sin el módulo propio ni el HPS todavía), de
 | [CD-06](docs/decisiones/CD-06.md) Memoria | Todo en on-chip: 128 KB para el Nios V y 64 KB de doble puerto compartidos con el HPS; sin SDRAM |
 | [CD-07](docs/decisiones/CD-07.md) Frecuencias | Códec fijo a 48 kHz; el HPS remuestrea 8/16/44.1 kHz |
 | [CD-09](docs/decisiones/CD-09.md) Visualización | VGA con Character Buffer 80 × 60 |
+| [CD-04](docs/decisiones/CD-04.md) Conexión del filtro | Mapeado a memoria con *pipelining* en software |
+| [CD-05](docs/decisiones/CD-05.md) Volumen | Ganancia en el módulo propio (en software costaba el 52 % del CPU) |
+| [CD-12](docs/decisiones/CD-12.md) Filtros | Pasa-bajos y pasa-banda FIR en hardware; reverberación en el Nios V |
+| [CD-13](docs/decisiones/CD-13.md) HDL | Verilog-2005 sintetizable; testbenches SystemVerilog en Questa |
+| [CD-14](docs/decisiones/CD-14.md) Punto fijo | Q1.15, acumulador de 40 bits, redondeo y saturación |
 
 ## Equipo
 
 | Persona | Área |
 |---|---|
 | A — Randall Bolaños | SoC y plataforma: Platform Designer, Quartus, periféricos de catálogo y sus drivers |
-| B | Hardware propio y DSP |
+| B | Hardware propio y DSP *(trabajo hecho por Randall Bolaños; persona por asignar)* |
 | C | Software de aplicación |
 | D | HPS y arranque |

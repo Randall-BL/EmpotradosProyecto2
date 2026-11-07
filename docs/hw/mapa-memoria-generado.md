@@ -17,6 +17,8 @@ Generado por `scripts/report-memory-map.py` desde `hw/soc/audio_soc.sopcinfo` (t
 | `0x00040090` | `0x0004009F` | 16 B | `av_config.avalon_av_config_slave` | altera_up_avalon_audio_and_video_config |
 | `0x000400A0` | `0x000400BF` | 32 B | `adc.adc_slave` | altera_up_avalon_de1_soc_adc |
 | `0x000400C0` | `0x000400C7` | 8 B | `char_buf.avalon_char_control_slave` | altera_up_avalon_video_character_buffer_with_dma |
+| `0x00040100` | `0x0004011F` | 32 B | `filtro.s1` | filtro_audio |
+| `0x00040120` | `0x0004012F` | 16 B | `seg7.s1` | seg7_time |
 | `0x00042000` | `0x00043FFF` | 8 KB | `char_buf.avalon_char_buffer_slave` | altera_up_avalon_video_character_buffer_with_dma |
 | `0x00050000` | `0x0005FFFF` | 64 KB | `cpu.dm_agent` | intel_niosv_m |
 

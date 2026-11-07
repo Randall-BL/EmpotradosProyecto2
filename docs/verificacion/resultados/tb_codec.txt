@@ -1,9 +1,9 @@
 # tb_codec
-# Transcript: build/sim/tb_codec.log, 2026-11-05 17:36, commit d30841d
+# Transcript: build/sim/tb_codec.log, 2026-11-07 12:47, commit 536bb49
 
 TB_CODEC: inicio
 [10000] LEDR = 0x000
-[171770000] LEDR = 0x0c1
+[55470000] LEDR = 0x0c1
 [1178010000] I2C: R0 <= 0x01a
 [2365850000] I2C: R1 <= 0x01a
 [3553690000] I2C: R2 <= 0x07b
@@ -17,7 +17,7 @@ TB_CODEC: inicio
 [67676610000] AIS: autoinicializacion completa
 [68884890000] I2C: R5 <= 0x000
 [70072730000] I2C: R5 <= 0x008
-[71243230000] LEDR = 0x0c0
+[71240750000] LEDR = 0x0c0
 [71260570000] I2C: R5 <= 0x000
 OK    R7 = 0x041  formato: maestro, Left Justified, 16 bits
 OK    R8 = 0x000  muestreo: modo normal, BOSR 256fs, 48 kHz con 12.288 MHz

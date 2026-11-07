@@ -58,12 +58,14 @@ niosv-app --app-dir="$OUT/app" --bsp-dir="$OUT/bsp" \
           --srcs="$SRC,$DRV,$COMMON" --incs="$DRV,$COMMON" --elf-name="$ELF"
 
 echo ">> Compilando ..."
-cmake -G "Unix Makefiles" -S "$OUT/app" -B "$OUT/app/build" >/dev/null
+# Release (-O2): el CMake que genera niosv-app usa Debug por defecto (solo -g, sin
+# optimizar) y el codigo corria varias veces mas lento (medido con tb_ciclos).
+cmake -G "Unix Makefiles" -S "$OUT/app" -B "$OUT/app/build" -DCMAKE_BUILD_TYPE=Release >/dev/null
 make -C "$OUT/app/build"
 
 # La RAM on-chip en simulacion lee "ram.hex" desde el directorio donde corre
-# vsim (hw/soc/gen/testbench/mentor). Copiamos la imagen recien generada ahi.
-MENTOR="$HERE/hw/soc/gen/testbench/mentor"
+# vsim (hw/soc/gen/simulation/mentor). Copiamos la imagen recien generada ahi.
+MENTOR="$HERE/hw/soc/gen/simulation/mentor"
 if [ -z "$APP" ] && [ -d "$MENTOR" ]; then
     cp "$OUT/app/build/ram.hex" "$MENTOR/ram.hex"
     echo ">> ram.hex copiado a $MENTOR"

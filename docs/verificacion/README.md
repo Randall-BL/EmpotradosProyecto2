@@ -1,12 +1,14 @@
 # Resultados de la verificación (testbenches)
 
-Evidencia de la verificación **sin tarjeta** de la plataforma del SoC (persona A). Cada
+Evidencia de la verificación **sin tarjeta** de la plataforma del SoC (persona A) y del
+hardware propio (persona B). Cada
 testbench simula en Questa el **SoC completo** (`audio_soc` generado por Platform
 Designer, con el Nios V/m ejecutando un programa de prueba de `sw/niosv/tests/`) y hace de
 "tarjeta" con modelos de los chips externos escritos a partir de sus datasheets. Todos
 se verifican solos y terminan en `PASS` o `FAIL`.
 
-- Fecha de la corrida: 5 de noviembre de 2026 (commit `d30841d`).
+- Fecha de la corrida: 7 de noviembre de 2026, con el SoC que ya incluye el hardware propio
+  y el software compilado con `-O2`.
 - Salida de cada prueba: carpeta [resultados/](resultados/), extraída de los transcripts
   de Questa con `scripts/export-results.sh`.
 
@@ -21,7 +23,16 @@ se verifican solos y terminan en `PASS` o `FAIL`.
 | [`tb_adc` LTC](resultados/tb_adc__gLTC_1.txt) | `test_adc` | `adc_model` con **LTC2308** (`-gLTC=1`) | Lo mismo con el chip de las revisiones nuevas de la placa | LEDR = CH0 >> 2 en los 5 casos | PASS |
 | [`tb_shm`](resultados/tb_shm.txt) | `test_shm` | — | Memoria compartida de 64 KB: bus de datos, bus de direcciones, March C- en los extremos, sin solape con la RAM, accesos de 8/16 bits | Sin errores | PASS |
 | [`tb_vga`](resultados/tb_vga.txt) | `test_vga` | Monitor VGA | Temporización 640 × 480 @ 60 Hz y texto de las filas 9–12 comparado **celda por celda** con la pantalla de referencia del PC | Línea 32.000 µs, HS 3.840 µs, 640 px activos, 320/320 celdas correctas | PASS |
-| [Pruebas en el PC](resultados/pc_tests.txt) | — | — | `volume.c`, `screen.c`, `tone.c` compilados con `gcc -Wall -Wextra -Werror` | Tono de 440 Hz con SNR de **48.9 dB** | PASS |
+| [`rtl_filtro_audio`](resultados/rtl_filtro_audio.txt) | — (módulo aislado) | Maestro Avalon-MM | Módulo propio **aislado**: registros (reset, R/W, límites, coeficientes con autoincremento, SAT) y 8 casos dorados bit a bit | 1 253 comprobaciones; 136 ciclos por muestra | PASS |
+| [`rtl_seg7_time`](resultados/rtl_seg7_time.txt) | — (módulo aislado) | Decodificador de segmentos | 00:00 … 99:59, saturación de tiempo y canción, apagado | 14 comprobaciones | PASS |
+| [`rtl_filtro_respuesta`](resultados/rtl_filtro_respuesta.txt) | — (módulo aislado) | Generador de senos | Respuesta en frecuencia con 30 senos por banco | Error ≤ 0.83 dB en banda de paso; rechazo ≥ 55.7 dB | PASS |
+| [`tb_filtro`](resultados/tb_filtro.txt) | `test_filtro` | — | **Co-simulación HW/SW**: driver, autoprueba del módulo (431 pares contra el modelo en C), ciclos por par, displays | **0 diferencias**; 163 ciclos por par; HEX = `03 02:05` | PASS |
+| [`tb_ciclos`](resultados/tb_ciclos.txt) | `test_ciclos` | — | Ciclos por muestra en el Nios V/m (`-O2`, leyendo `mtime`) | Volumen 271, FIR 8 181, biquad 2 404, reverb 54 | PASS |
+| [Pruebas en el PC](resultados/pc_tests.txt) | — | — | `volume.c`, `screen.c`, `tone.c`, `dsp.c` compilados con `gcc -Wall -Wextra -Werror`; el modelo del FIR reproduce los 8 casos dorados | Tono de 440 Hz con SNR de **48.9 dB** | PASS |
+
+Respuesta en frecuencia del módulo propio medida en el RTL frente a la teórica:
+
+![Respuesta medida](../img/filtro-respuesta-medida.png)
 
 Captura de la pantalla tomada del stream de píxeles en `tb_vga` (líneas 0–103):
 
@@ -31,11 +42,12 @@ Captura de la pantalla tomada del stream de píxeles en `tb_vga` (líneas 0–10
 
 ```bash
 scripts/build-soc.sh
-scripts/test-all.sh --all        # todas las pruebas (~40 min: codec y vga son lentas)
+scripts/test-all.sh --all        # todas las pruebas (~50 min: codec, vga y filtro son lentas)
 scripts/export-results.sh        # actualiza docs/verificacion/resultados/
 ```
 
-Una sola prueba: `scripts/sim-tb.sh <pio|audio|codec|adc|shm|vga>`; el ADC con LTC2308:
+Una sola prueba: `scripts/sim-tb.sh <pio|audio|codec|adc|shm|vga|filtro|ciclos>` o
+`scripts/sim-rtl.sh <filtro_audio|seg7_time|filtro_respuesta>`; el ADC con LTC2308:
 `ELAB_OPTS=-gLTC=1 scripts/sim-tb.sh adc`; el códec en modo rápido de depuración (salta
 las escrituras al ADV7180, no vale como evidencia): `ELAB_OPTS=-gFAST=1 scripts/sim-tb.sh codec`.
 
@@ -47,6 +59,10 @@ las escrituras al ADV7180, no vale como evidencia): `ELAB_OPTS=-gFAST=1 scripts/
 | `tb_codec` | La ROM de autoinicialización deja R5 = 0x006 (de-énfasis de 48 kHz, atenúa agudos) y además configura el ADV7180 (47 transferencias): el códec está listo a los ~71 ms | `codec_init` pone R5 = 0x000; el tiempo cuenta para el arranque < 10 s |
 | `tb_vga` | El borrado del Character Buffer tarda un cuadro de video (16.7–33 ms, no "5000 ciclos") y lo que se escribe mientras tanto se pierde; las lecturas del esclavo de caracteres devuelven el dato anterior | `vga_text_init` espera el borrado; el driver no ofrece lectura |
 | `tb_shm` | Un acceso a memoria en un lazo cuesta ~30 ciclos en el Nios V/m | Se tiene en cuenta en el presupuesto del lazo de audio (CD-04, CD-05) |
+| `tb_ciclos` | El software se compilaba sin optimizar (CMake en Debug) y el Nios V/m no implementa `mcycle` | `build-niosv.sh` compila con `-O2` (respuesta botón → LED de 17.2 a 8.2 µs); las mediciones usan `mtime` |
+| `tb_ciclos` | Un FIR o un biquad en el Nios V/m cuestan 16 y 5 veces el procesador; el volumen, el 52 % | FIR y ganancia en el hardware propio, reverberación en software (CD-05, CD-12) |
+| `rtl_filtro_audio` | El pulso de saturación salía un ciclo antes que `done` y `STATUS.SAT` nunca se levantaba | `sat` y `done` en el mismo ciclo (antes de integrar) |
+| `rtl_seg7_time` | La canción y el tiempo se truncaban antes de compararse con el máximo (150 → "22") | Se compara el valor completo |
 
 ## Artefactos de simulación (no son del diseño)
 

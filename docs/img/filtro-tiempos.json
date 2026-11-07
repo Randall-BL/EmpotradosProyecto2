@@ -1,0 +1,12 @@
+{ "signal": [
+  { "name": "clk",         "wave": "p..........|...." },
+  { "name": "address",     "wave": "x3.4.......|..x.", "data": ["DATA_IN", "DATA_OUT"] },
+  { "name": "write",       "wave": "01.0.......|...." },
+  { "name": "read",        "wave": "0..1.......|..0." },
+  { "name": "waitrequest", "wave": "0..1.......|.0.." },
+  { "name": "busy",        "wave": "0..1.......|0..." },
+  { "name": "state",       "wave": "x=.=.=.....|===.", "data": ["IDLE", "LOAD", "MAC k=0..N-1", "ROUND", "GAIN", "IDLE"] },
+  { "name": "readdata",    "wave": "x..........|.5x.", "data": ["{R,L}"] }
+],
+  "head": { "text": "filtro_audio: DATA_IN -> DATA_OUT (NTAPS + 9 ciclos)" }
+}

@@ -31,6 +31,10 @@ potenciómetro de 10 kΩ entre 0 V y 5 V del conector del ADC con el cursor en *
 | IN-02 | `test_tono` | Escuchar con SW0 = 0 y luego SW0 = 1. KEY0 silencia y vuelve a sonar. | Tono limpio de 440 Hz y de 1 kHz (sin chasquidos ni cortes). La pantalla muestra el tono y el estado. Si el códec no responde: mensaje de error y todos los LEDs encendidos. | |
 | IN-03 | `test_tono` | Girar el potenciómetro. | El volumen cambia de forma pareja (escalones de 2 dB, silencio en un extremo); la barra de LEDs y el porcentaje en pantalla siguen al potenciómetro; no tiembla en reposo. | |
 | IN-04 | `test_tono` | Mirar el monitor. | Marco, título de la aplicación, metadatos fijos, estado, filtro (tono) y barra de volumen como en el boceto de CD-09. | |
+| PR-04 / NV-15 | `test_filtro` | Programar y mirar LEDR y los displays. | LEDR = 0x0D0 (autoprueba del módulo propio: 0 diferencias) y HEX5..HEX0 = `03 02:05`. Con 0x0DF falló la autoprueba. | |
+| IN-08 | `test_filtros` | Escuchar con SW[1:0] = 00, 01, 10 y 11; cambiar los switches mientras suena. | 00: los tres tonos (300 Hz, 2.5 kHz, 8 kHz). 01: solo el grave. 10: solo el medio. 11: los tres con eco (con KEY1 se oyen pulsos y sus ecos cada 50 ms). El cambio es inmediato, sin chasquidos. HEX3..HEX0 cuenta MM:SS; la pantalla muestra el filtro; LEDR[1:0] = SW[1:0]; LEDR9 encendido si falló la autoprueba. | |
+| PR-09 | `test_filtros` | SW = 00 y el potenciómetro al máximo; grabar el line-out en un PC. | Espectro con solo las tres líneas (sin armónicos de distorsión por encima de −60 dB respecto a las líneas). | |
+| PR-10 | `test_filtros` | Repetir la grabación con SW = 01 y 10. | La línea de 8 kHz cae > 55 dB con el pasa-bajos; con el pasa-banda caen las de 300 Hz y 8 kHz. Comparar con `docs/img/filtro-respuesta-medida.png` (medida en simulación). | |
 
 ## Si algo falla
 
