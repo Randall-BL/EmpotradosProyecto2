@@ -371,10 +371,10 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
       NEON) o hardware. Medir ciclos por muestra del filtro en software antes de decidir.
       *§3-SIS p.5* ⟵ CD-01, SC-10 · #16 → tabla de ciclos/muestra vs presupuesto
       (ciclos de reloj / fs).
-- [ ] **CD-13** `B·1` HDL: Verilog-2005/SystemVerilog sintetizable (subconjunto que entiende
+- [x] **CD-13** HDL: Verilog-2005/SystemVerilog sintetizable (subconjunto que entiende
       Icarus) vs VHDL (GHDL). Define el simulador del contenedor. *GRUPO → §5 p.8
       herramientas* → decisión.
-- [ ] **CD-14** `B·2` Formato de punto fijo: muestras Q1.15, coeficientes (Q1.15 o Q2.14), ancho
+- [x] **CD-14** Formato de punto fijo: muestras Q1.15, coeficientes (Q1.15 o Q2.14), ancho
       del acumulador (16 + 16 + ⌈log2 N⌉ bits), redondeo y saturación. *§3-SIS p.5* · #9 →
       documento con el análisis de error.
 - [ ] **CD-15** `D·2` Comparar al menos dos arquitecturas completas (p. ej. A con filtros en
@@ -440,7 +440,7 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
       limpiar), estado (listo, ocupado, saturación, versión) y datos (muestra de entrada y
       de salida, dirección y dato de coeficiente, número de taps, ganancia si CD-05 = HW), en
       `docs/hw/modulo-filtro.md`. *§3-HW p.4* ⟵ CD-04, CD-05 · #8 (OBL)
-- [ ] **HW-12** `B·2` Diseñar el filtro obligatorio (p. ej. FIR pasa-bajos de N taps): script
+- [x] **HW-12** Diseñar el filtro obligatorio (p. ej. FIR pasa-bajos de N taps): script
       `scripts/design_fir.py` que calcula y cuantiza los coeficientes según CD-14 y exporta la
       tabla para HDL, C y cocotb. *§3-SIS p.5, §5 p.8 (herramientas)* ⟵ CD-14 · #9 (OBL) →
       gráfico de respuesta ideal vs cuantizada.
