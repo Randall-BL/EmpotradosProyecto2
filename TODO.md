@@ -290,7 +290,7 @@ PR-02, PR-03, PR-04, RP-02, RP-04.
 | Tarea | Estado | Bloqueo | Siguiente paso |
 |---|---|---|---|
 | IN-08, PR-09, PR-10 | `test_filtros` listo (3 filtros con SW, volumen en GAIN, tiempo en HEX); respuesta en frecuencia ya medida en el RTL | La tarjeta (y IN-06 de D para hacerlo desde la SD) | Correr `docs/pruebas-tarjeta.md`, grabar el line-out y comparar con `docs/img/filtro-respuesta-medida.png` |
-| DK-09, DK-11..13 | Equivalentes hechos en Questa (`sim/questa/rtl/`); vectores en `sim/vectors/` listos para cocotb | DK-05 (C, contenedor) | Escribir los tests cocotb leyendo los mismos vectores |
+| DK-09, DK-11..13 | Equivalentes hechos en Questa (`sim/questa/rtl/`); vectores en `sim/vectors/` listos para cocotb | — (DK-05 de C listo el 4 de noviembre) | Escribir los tests cocotb en `sim/cocotb/<modulo>/` leyendo los mismos vectores; `make docker-sim` |
 | DOC-03 | Filtro y `seg7_time` documentados (`docs/hw/`) | HW-24 (vista desde el HPS, D) | Agregar la dirección del módulo vista desde el HPS si aplica |
 | DOC-05 | `docs/herramientas.md` | DK-* (C) | Agregar Docker, cocotb y CI cuando existan |
 | DOC-07 | Diagramas en Mermaid dentro de los `.md` y WaveDrom en `docs/img/filtro-tiempos.json` | — | Exportar el WaveDrom a imagen (wavedrom-cli) |
@@ -309,6 +309,51 @@ PR-02, PR-03, PR-04, RP-02, RP-04.
   optimizar); el Nios V/m no implementa `mcycle`: para medir, leer `mtime`
   (`ALT_CPU_MTIME_OFFSET`), que cuenta a 50 MHz.
 - **D:** el HPS debe entregar audio a 48 kHz (CD-07); el filtro asume esa frecuencia.
+
+---
+
+## Estado de la persona C (software de aplicación, contenedor y CI) — 7 de noviembre de 2026
+
+Todo lo de C que no necesita la tarjeta ni el HPS real está hecho y **verificado sin
+tarjeta**: 9 pruebas en el PC con ASan/UBSan (`make test`), la co-simulación del
+reproductor completo en el Nios V (`tb_player`) y `make docker-ci` en el contenedor.
+
+**Hecho:** CD-08, CD-10, CD-11, SC-01..09, SC-14, NV-02..05, NV-12, NV-14, NV-17, DK-01..07,
+DK-10, DK-14, DK-16..18, DK-20. Además el borrador de SC-13 (protocolo con el HPS, de D)
+porque NV-13 y NV-14 lo necesitaban.
+
+**Pendiente de C**, con lo que lo bloquea y el siguiente paso:
+
+| Tarea | Estado | Bloqueo | Siguiente paso |
+|---|---|---|---|
+| NV-13 | `shm_source.c` probado con el modelo del HPS (PC y `shm` real en `tb_player`) | HP-07 (D, productor real) | IN-05 con D: el HPS escribe un WAV y el Nios V lo recibe completo |
+| IN-07, PR-07, PR-08 | Aplicación lista; medido en simulación; procedimiento en `docs/pruebas-tarjeta.md` | La tarjeta e IN-06/IN-09 (D) | Correr el procedimiento con la SD y grabar video (60 fps) |
+| DK-19 | Pasos escritos en `docker/README.md` | Quien administra el repositorio | Activar el check `lint, test, sim, hps` en `main` y `develop` tras la primera corrida |
+| DOC-01 | `docs/software/diseno-software.md` | HP-07 (D) | Agregar el software del HPS |
+| NV-14 (medición) | `tb_player` mide la lógica pero con el modelo del HPS corriendo en el mismo Nios V | — | Medir en `tb_ciclos` los ciclos por cuadro del camino real (ring → reverberación → filtro → FIFO) contra el presupuesto de 1 041 ciclos a 48 kHz |
+| OPC-02 | — | OPC-00 | Solo si el profesor aprueba crédito extra |
+
+**Hallazgos que afectan a otras personas:**
+
+- **A:** la aplicación (`sw/niosv/src`) ocupa 31 708 B de 128 KB (24 %; 9.6 KB son la
+  reverberación): dato para NV-16. La prueba de humo pasó a `sw/niosv/tests/test_smoke`
+  y `scripts/sim-soc.sh` la sigue usando. `sw/common` ahora es `include/` + `src/`
+  (`build-niosv.sh`, `tests/Makefile` y las rutas de los docs ya están ajustados).
+  `screen.c` tiene `screen_draw_message()` para la fila 7.
+- **B:** el contenedor está listo (DK-05): `make docker-shell`, cocotb 1.9.2 + Icarus 12;
+  cada `sim/cocotb/<modulo>/Makefile` que se agregue lo corre `make sim` y la CI, con
+  resultados en `build/sim/cocotb/<modulo>/` (DK-09, DK-11..13). `make lint` pasa
+  Verilator `-Wall` sobre el HDL propio; la única advertencia (truncamiento intencional
+  en `seg7_time.v`) quedó exenta en `hw/rtl/lint.vlt` con su justificación. Para DOC-05:
+  Docker, cocotb y CI están en `docker/README.md` y `docker/versions.md`. La aplicación
+  usa SW0/SW1/SW2 uno por filtro (CD-08), no la codificación de `test_filtros`.
+- **D:** borrador del protocolo en `sw/common/include/shm_proto.h` (control de 64 B,
+  tabla de 32 pistas de 160 B, ring de 8 192 cuadros estéreo a 48 kHz en `0x8000`), con
+  las funciones del productor (`shm_hps_*`) ya probadas y un modelo de referencia
+  (`hps_model.c`). El parser WAV (`wav_parse` con un lector por desplazamiento, para
+  FatFs o `FILE*`) y `wav_meta_fallback` sirven tal cual para HP-06. `make hps` ya compila
+  `sw/common` con `arm-linux-gnueabihf-gcc` (única toolchain ARM del contenedor; sirve
+  para U-Boot y para las dos opciones de CD-02) hasta que exista `sw/hps/Makefile`.
 
 ---
 
@@ -395,17 +440,21 @@ PR-02, PR-03, PR-04, RP-02, RP-04.
         Config: 8k nativo; 16k → 32k (×2); 44.1k con MCLK de 11.2896 MHz o modo USB a 12 MHz.
       → prototipo en tarjeta de B con un tono a 44.1 kHz antes de decidir. Mono → duplicar
       en ambos canales.
-- [ ] **CD-08** `C·1` Switches: lectura periódica (≤ 20 ms) vs interrupción por flanco;
+- [x] **CD-08** Switches: lectura periódica (≤ 20 ms) vs interrupción por flanco;
       asignación de switches a filtros y qué pasa con combinaciones inválidas. *§3-F p.4,
       §3-SIS p.5* · #16 → tabla SW → filtro.
+      [docs/decisiones/CD-08.md](docs/decisiones/CD-08.md): encuesta cada 20 ms con
+      confirmación; SW0 pasa-bajos, SW1 pasa-banda, SW2 reverberación; inválida = bypass + LEDR9.
 - [x] **CD-09** Visualización: VGA con IP del University Program (Character Buffer 80×60)
       vs controlador VGA propio en HDL vs LCD/TFT externo. *§3-F p.4, §3-SIS p.6* ⟵ P9 · #19
       → decisión y boceto de la pantalla.
-- [ ] **CD-10** `C·1` Tiempo de reproducción: timer de hardware vs contar muestras enviadas al
+- [x] **CD-10** Tiempo de reproducción: timer de hardware vs contar muestras enviadas al
       códec (queda sincronizado con el audio y se detiene solo en pausa). *§3-SIS p.6* · #18
       → decisión.
-- [ ] **CD-11** `C·1` Máquina de reproducción: software (en `sw/common/`, probada en el PC) vs
+      [CD-10](docs/decisiones/CD-10.md): cuadros enviados al códec / 48 000.
+- [x] **CD-11** Máquina de reproducción: software (en `sw/common/`, probada en el PC) vs
       FSM en hardware. *§3-SIS p.6* · #14 → decisión.
+      [CD-11](docs/decisiones/CD-11.md): tabla de transiciones en `sw/common/src/fsm.c`.
 - [x] **CD-12** Ubicación de los filtros 2 y 3: Nios V (sin multiplicador), HPS (ARM con
       NEON) o hardware. Medir ciclos por muestra del filtro en software antes de decidir.
       *§3-SIS p.5* ⟵ CD-01, SC-10 · #16 → tabla de ciclos/muestra vs presupuesto
@@ -526,28 +575,31 @@ PR-02, PR-03, PR-04, RP-02, RP-04.
 > Sin `system.h`, sin registros, sin `malloc`. Compila con gcc del PC (pruebas),
 > `riscv32-unknown-elf-gcc` (Nios V) y la toolchain ARM (HPS). C11, `-Wall -Wextra`.
 
-- [ ] **SC-01** `C·1` Estructura `sw/common/include/` y `sw/common/src/`, prefijos de módulo y
+- [x] **SC-01** Estructura `sw/common/include/` y `sw/common/src/`, prefijos de módulo y
       códigos de error comunes. *GRUPO → §5 p.7 (documento de SW)* ⟵ GIT-02
-- [ ] **SC-02** `C·1` Lectura little-endian segura (`le16`, `le32`) con comprobación de límites.
+      [sw/common/README.md](sw/common/README.md) (prefijos) y `err.h` (códigos de error).
+- [x] **SC-02** Lectura little-endian segura (`le16`, `le32`) con comprobación de límites.
       *§3-SW p.5* ⟵ SC-01
-- [ ] **SC-03** `C·2` Parser RIFF/WAVE: `fmt ` (PCM = 1, 16 bits, 1–2 canales, 8000/16000/44100
+- [x] **SC-03** Parser RIFF/WAVE: `fmt ` (PCM = 1, 16 bits, 1–2 canales, 8000/16000/44100
       Hz), `data`, saltar chunks desconocidos respetando el relleno a tamaño par, rechazar
       formatos no soportados con código de error. *§3-F p.3* ⟵ SC-02 · #12 (OBL) → pruebas
       DK-14 en verde.
-- [ ] **SC-04** `C·1` Metadatos `LIST/INFO`: `INAM` (título), `IART` (artista), `IPRD`
+- [x] **SC-04** Metadatos `LIST/INFO`: `INAM` (título), `IART` (artista), `IPRD`
       (álbum), con recorte y terminación segura; valor de respaldo si faltan (según P7). *§3-F
       p.3, §3-SW p.5* ⟵ SC-03 · #12 (OBL)
-- [ ] **SC-05** `C·1` ID3 dentro del WAV (`TIT2`, `TPE1`, `TALB`), solo si P7 lo pide. *§3-F
+- [x] **SC-05** ID3 dentro del WAV (`TIT2`, `TPE1`, `TALB`), solo si P7 lo pide. *§3-F
       p.3* ⟵ P7, SC-03 · #12
-- [ ] **SC-06** `C·1` Duración total = bytes de datos / byte rate, y formateo MM:SS. *§3-F
+      Hecho sin esperar P7 (es barato): ID3v2.3/2.4 en un chunk `id3 `; `LIST/INFO` tiene
+      prioridad y ID3 completa lo que falte.
+- [x] **SC-06** Duración total = bytes de datos / byte rate, y formateo MM:SS. *§3-F
       p.3* ⟵ SC-03 · #12 (OBL)
-- [ ] **SC-07** `C·1` Playlist: ≥ 10 pistas, siguiente/anterior con vuelta al inicio, avance
+- [x] **SC-07** Playlist: ≥ 10 pistas, siguiente/anterior con vuelta al inicio, avance
       automático al terminar, índice "n/total". *§3-F p.3* ⟵ SC-01 · #14 (OBL)
-- [ ] **SC-08** `C·2` Máquina de estados de reproducción (detenido, reproduciendo, pausado;
+- [x] **SC-08** Máquina de estados de reproducción (detenido, reproduciendo, pausado;
       eventos play/pausa, stop, siguiente, anterior, fin de pista, error) como tabla de
       transiciones que devuelve acciones, sin tocar hardware. *§3-F p.3, §3-SIS p.6* ⟵ CD-11,
       SC-07 · #14 (OBL)
-- [ ] **SC-09** `C·1` Cola de eventos de un productor y un consumidor (ISR → lazo principal),
+- [x] **SC-09** Cola de eventos de un productor y un consumidor (ISR → lazo principal),
       sin bloqueo. *§3-SW p.5 (interrupciones)* ⟵ SC-01 · #13
 - [x] **SC-10** Filtros en software en punto fijo (biquad forma directa I, ecualizador
       de 3 bandas o notch/pasa-banda) y modelo del FIR igual bit a bit al HDL. *§3-SIS p.5* ⟵
@@ -555,11 +607,14 @@ PR-02, PR-03, PR-04, RP-02, RP-04.
 - [x] **SC-11** Volumen: lectura del ADC de 12 bits → ganancia (curva logarítmica) y
       escalado con saturación. *§3-SIS p.5* ⟵ CD-05 · #17 (OBL)
 - [ ] **SC-12** `D·2` Remuestreo, si CD-07 lo pide. *§3-F p.3* ⟵ CD-07
-- [ ] **SC-13** `D·2` Protocolo HPS ↔ Nios V en un header común (`shm_proto.h`): versión,
+- [~] **SC-13** `D·2` Protocolo HPS ↔ Nios V en un header común (`shm_proto.h`): versión,
       tabla de pistas con metadatos, ring buffer con índices de productor y consumidor,
       comandos; `_Static_assert` de tamaños y alineación (ambos son de 32 bits little-endian).
       *§3-SW p.5* ⟵ CD-01, CD-06 (OBL)
-- [ ] **SC-14** `C·1` Interfaces de "puerto" (structs de punteros a función: salida de audio,
+      **Borrador de C** en `sw/common/include/shm_proto.h` (lo necesitaban NV-13 y NV-14),
+      con productor y consumidor probados en `test_shm` y un modelo del HPS (`hps_model.c`).
+      D lo revisa y lo ajusta al escribir HP-06/HP-07.
+- [x] **SC-14** Interfaces de "puerto" (structs de punteros a función: salida de audio,
       display, reloj) para que la lógica no dependa del hardware y se pueda probar con mocks.
       *GRUPO → §5 p.7* ⟵ SC-01
 
@@ -573,16 +628,20 @@ PR-02, PR-03, PR-04, RP-02, RP-04.
       `scripts/build-niosv.sh` (biblioteca C reducida, drivers reducidos, stdout por JTAG UART
       solo para depuración, tamaño de pila, regiones de memoria según CD-06). *§3-SW p.5
       (gestión de memoria)* ⟵ CD-06, P5 · #15
-- [ ] **NV-02** `C·1` Compilar `sw/common/` dentro de la aplicación del Nios V (`--srcs` de
+- [x] **NV-02** Compilar `sw/common/` dentro de la aplicación del Nios V (`--srcs` de
       `niosv-app` o `CMakeLists.txt` propio) con `-std=c11 -Wall -Wextra`. *GRUPO* ⟵ SC-01 →
       `scripts/build-niosv.sh` compila sin warnings.
-- [ ] **NV-03** `C·2` Driver de botones: `interruptmask` y `edgecapture` (se limpia
+      `WERROR=1 scripts/build-niosv.sh` compila la aplicación y las pruebas sin warnings
+      (los headers del BSP se tratan como de sistema).
+- [x] **NV-03** Driver de botones: `interruptmask` y `edgecapture` (se limpia
       escribiendo 1) por puntero, ISR registrada con `alt_ic_isr_register` que solo limpia la
       fuente y encola el evento (SC-09). *§3-F p.3, §3-SW p.5* ⟵ HW-02 · #13 (OBL)
-- [ ] **NV-04** `C·1` Antirrebote: verificar en el manual de la DE1-SoC si KEY[3:0] ya traen
+- [x] **NV-04** Antirrebote: verificar en el manual de la DE1-SoC si KEY[3:0] ya traen
       antirrebote; si no, ventana en software con la base de tiempo NV-12. *§3-F p.4
       (< 200 ms)* ⟵ NV-03 · #13
-- [ ] **NV-05** `C·1` Switches (lectura periódica o IRQ según CD-08) → selección de filtro;
+      KEY[3:0] traen antirrebote por hardware (disparador de Schmitt, manual de la DE1-SoC);
+      además, ventana de 50 ms por botón (`debounce.c`) que no agrega latencia.
+- [x] **NV-05** Switches (lectura periódica o IRQ según CD-08) → selección de filtro;
       LEDs para el estado y el filtro activo. *§3-F p.4, §3-SIS p.5* ⟵ HW-02, CD-08 · #16
       (OBL)
 - [x] **NV-06** Driver del IP de Audio: espacio libre de la FIFO, escritura de canal
@@ -600,21 +659,28 @@ PR-02, PR-03, PR-04, RP-02, RP-04.
 - [x] **NV-11** Driver de video (p. ej. escribir texto en (x, y) del Character Buffer) y
       pantalla con título, artista, álbum, duración, "n/total", estado y filtro activo.
       *§3-F p.4* ⟵ HW-09 · #19 (OBL)
-- [ ] **NV-12** `C·1` Base de tiempo por puntero a `mtime` del `timer_sw_agent` (milisegundos) y
+- [x] **NV-12** Base de tiempo por puntero a `mtime` del `timer_sw_agent` (milisegundos) y
       `mcycle` para medir ciclos. *§3-SIS p.6* ⟵ HW-03 · #18
-- [ ] **NV-13** `C·2` Lado Nios V del canal con el HPS (consumir el ring buffer, enviar
+- [~] **NV-13** `C·2` Lado Nios V del canal con el HPS (consumir el ring buffer, enviar
       comandos de pista). *§3-SW p.5* ⟵ HW-06, SC-13 (OBL)
-- [ ] **NV-14** `C·3` Lazo principal: eventos → FSM (SC-08) → acciones; bombeo de audio sin
+      `shm_source.c` sobre el borrador de SC-13, verificado con el modelo del HPS en el PC
+      (`test_app`) y en la `shm` real del SoC (`tb_player`). Falta probarlo con el productor
+      real del HPS (IN-05, D).
+- [x] **NV-14** Lazo principal: eventos → FSM (SC-08) → acciones; bombeo de audio sin
       cortes; refresco de pantalla y 7 segmentos limitado (p. ej. 10 Hz); contador de
       underruns. *§3-SW p.5 (interfaz de usuario)* ⟵ NV-03..13 · #15 (OBL)
+      Lógica portable en `sw/common/src/app.c` (`test_app`), aplicación en
+      `sw/niosv/src/main.c`, co-simulada en el Nios V con `tb_player`. La prueba de humo
+      pasó a `sw/niosv/tests/test_smoke`.
 - [x] **NV-15** Autoprueba del módulo propio en el arranque: escribe vectores conocidos y
       compara con la salida esperada (la "rutina de prueba en software" de §3-HW p.4).
       *§3-HW p.4* ⟵ NV-10 · #10 (EVID)
 - [~] **NV-16** `A·1` Gestión de memoria: revisar el `.map` y `riscv32-unknown-elf-size`, ubicar
       buffers en la memoria elegida y documentar el uso. *§3-SW p.5* ⟵ NV-14 · #15 (OBL, EVID)
-- [ ] **NV-17** `C·1` Auditoría sin HAL: `grep -rnE 'IOWR|IORD|alt_' sw/niosv/ sw/common/` solo
+- [x] **NV-17** Auditoría sin HAL: `grep -rnE 'IOWR|IORD|alt_' sw/niosv/ sw/common/` solo
       muestra `alt_ic_isr_register` / `alt_ic_irq_enable` / `alt_ic_irq_disable`. *§3-SW p.5*
       (OBL) → agregar el chequeo a `make lint` (DK-10).
+      `scripts/audit-hal.sh`, en `make lint` y en la CI.
 
 ## 6. Software HPS `sw/hps/` — #32
 
@@ -660,8 +726,11 @@ PR-02, PR-03, PR-04, RP-02, RP-04.
       recibe completo (checksum). *§3-SW p.5* ⟵ HP-07, NV-13
 - [ ] **IN-06** `D·2` Reproducción de un WAV completo desde la SD, en bypass y sin cortes.
       *§3-F p.3–4* ⟵ IN-02, IN-05
-- [ ] **IN-07** `C·2` Botones + FSM + playlist + avance automático con ≥ 10 canciones. *§3-F
+- [~] **IN-07** `C·2` Botones + FSM + playlist + avance automático con ≥ 10 canciones. *§3-F
       p.3* ⟵ IN-06, NV-03, NV-14
+      Verificado sin tarjeta: `tb_player` (Nios V, 10 pistas, dos vueltas) y `test_app`.
+      Falta en la tarjeta con la SD (bloqueado por IN-06, D); procedimiento en
+      [docs/pruebas-tarjeta.md](docs/pruebas-tarjeta.md).
 - [~] **IN-08** `B·1` Filtros 1–3 seleccionables con switches durante la reproducción. *§3-F
       p.4, §3-SIS p.5* ⟵ IN-06, NV-05, NV-10
 - [ ] **IN-09** `D·2` Sistema completo arrancando solo desde reset, sin PC conectado. *§3-F
@@ -676,29 +745,34 @@ PR-02, PR-03, PR-04, RP-02, RP-04.
 
 ### 8.1 Definición
 
-- [ ] **DK-01** `C·1` Imagen base: `ubuntu:24.04` o `debian:bookworm-slim`, fijada por digest.
+- [x] **DK-01** Imagen base: `ubuntu:24.04` o `debian:bookworm-slim`, fijada por digest.
       *GRUPO → §5 p.8* → decisión en `docker/README.md`.
-- [ ] **DK-02** `C·2` Herramientas y versiones fijas (`apt` con `paquete=versión`, `pip` con
+      `ubuntu:24.04` fijada por digest ([docker/README.md](docker/README.md)).
+- [x] **DK-02** Herramientas y versiones fijas (`apt` con `paquete=versión`, `pip` con
       `==`) en `docker/versions.md`: make, cmake, gcc del host, toolchain ARM según CD-02
       (`arm-none-eabi-gcc` para bare metal, `arm-linux-gnueabihf-gcc` para Linux; las dos solo
       si caben), Icarus Verilog (o GHDL según CD-13), Verilator (lint), Python 3 + cocotb +
       NumPy + SciPy + pytest, y herramientas para la imagen de la SD (`sfdisk`, `dosfstools`,
       `mtools`, `u-boot-tools`). *GRUPO* ⟵ CD-02, CD-13
-- [ ] **DK-03** `C·1` El repositorio se monta como volumen en `/work`; usuario no root con el
+      [docker/versions.md](docker/versions.md). Una sola toolchain ARM
+      (`arm-linux-gnueabihf`, sirve para las dos opciones de CD-02) por el límite de DK-07.
+- [x] **DK-03** El repositorio se monta como volumen en `/work`; usuario no root con el
       UID/GID del anfitrión (argumentos de build) para que los archivos generados no queden de
       root. *GRUPO*
 
 ### 8.2 Construcción
 
-- [ ] **DK-04** `C·2` `docker/Dockerfile` liviano: usuario no root, una capa por grupo de
+- [x] **DK-04** `docker/Dockerfile` liviano: usuario no root, una capa por grupo de
       herramientas, sin caché de `apt` ni de `pip`. *GRUPO* ⟵ DK-01..03
-- [ ] **DK-05** `C·1` `docker/compose.yml` con el servicio `dev` (volumen, `working_dir`,
+- [x] **DK-05** `docker/compose.yml` con el servicio `dev` (volumen, `working_dir`,
       usuario). *GRUPO* ⟵ DK-04
-- [ ] **DK-06** `C·1` `.dockerignore` (`db/`, `incremental_db/`, `output_files/`, `hw/soc/gen/`,
+- [x] **DK-06** `.dockerignore` (`db/`, `incremental_db/`, `output_files/`, `hw/soc/gen/`,
       `build/`, `*.sof`, `*.rbf`, WAV grandes). *GRUPO* ⟵ DK-04
-- [ ] **DK-07** `C·1` Tamaño de la imagen < 1 GB (`docker image ls`). Si se pasa: una sola
+- [x] **DK-07** Tamaño de la imagen < 1 GB (`docker image ls`). Si se pasa: una sola
       toolchain ARM o build multi-etapa. *GRUPO* ⟵ DK-04 → tamaño anotado en
       `docker/README.md`.
+      999 MB en `docker image ls` (704 MB de archivos, 252 MB comprimida); con las dos
+      toolchains ARM pasaba de 2 GB.
 - [ ] **DK-08** `D·1` "Hola mundo" ARM compilado en el contenedor; `file` muestra un ELF de ARM.
       *GRUPO* ⟵ DK-05
 - [ ] **DK-09** `B·1` Simulación trivial con cocotb (p. ej. un contador) que pasa en Icarus
@@ -706,10 +780,13 @@ PR-02, PR-03, PR-04, RP-02, RP-04.
 
 ### 8.3 Simulación y pruebas
 
-- [ ] **DK-10** `C·2` `Makefile` raíz: `make sim` (cocotb de todos los módulos HDL), `make test`
+- [x] **DK-10** `Makefile` raíz: `make sim` (cocotb de todos los módulos HDL), `make test`
       (pruebas en C), `make hps` (software del HPS), `make lint` (Verilator `--lint-only`,
       auditoría NV-17), `make clean`; y atajos `make docker-build` / `make docker-shell`.
       *GRUPO* ⟵ DK-09
+      Hecho antes que DK-09: `make sim` corre cada `sim/cocotb/<modulo>/Makefile` que
+      exista (hoy ninguno) y `make hps` compila `sw/common` para ARM hasta que exista
+      `sw/hps/Makefile`. Además `make ci` y `make docker-<objetivo>`.
 - [ ] **DK-11** `B·3` Testbench cocotb del filtro obligatorio contra el modelo NumPy/SciPy con
       los mismos coeficientes cuantizados: impulso (salida = coeficientes), escalón (valor
       final = suma de coeficientes), senoidales en banda de paso y de rechazo (atenuación
@@ -721,32 +798,36 @@ PR-02, PR-03, PR-04, RP-02, RP-04.
       coeficientes, dirección inválida. *§3-HW p.4* ⟵ HW-14, DK-09 · #10 (OBL, EVID)
 - [ ] **DK-13** `B·1` Testbench cocotb de cada módulo HDL propio restante (`seg7_time`,
       volumen si es HW, remuestreo si es HW). *GRUPO + §3-HW p.4* ⟵ HW-10, HW-15
-- [ ] **DK-14** `C·3` Pruebas en C de `sw/common/` (Unity vendorizado o un `test.h` mínimo,
+- [x] **DK-14** Pruebas en C de `sw/common/` (Unity vendorizado o un `test.h` mínimo,
       según P4) con archivos en `tests/data/` generados por `tests/data/gen_wavs.py`
       (8/16/44.1 kHz, mono/estéreo, con y sin `LIST/INFO`, chunks extra y tamaños impares,
       truncados, de 8 y 24 bits para el rechazo), compiladas con `-Werror` y sanitizers.
       Cubren SC-03..11. *§3-SW p.5* ⟵ SC-03..11 · #12 (EVID)
+      `tests/test.h` mínimo (sin dependencias; P4 sin respuesta), 26 WAV generados y ASan +
+      UBSan en todas las pruebas, también las de A y B.
 - [ ] **DK-15** `D·1` `make hps` compila el software del HPS (y el SPL si aplica) dentro del
       contenedor. *§3-SW p.5* ⟵ HP-01, DK-08
-- [ ] **DK-16** `C·1` Formas de onda (VCD/FST) y reportes JUnit (`results.xml`) en `build/sim/`;
+- [x] **DK-16** Formas de onda (VCD/FST) y reportes JUnit (`results.xml`) en `build/sim/`;
       `.gitignore` para `sim_build/`, `results.xml`, `*.vcd`, `*.fst`, `__pycache__/`.
       Revisar que `*.hex` ignorado no tape coeficientes que se quieran versionar. *GRUPO* ⟵ DK-10
 
 ### 8.4 CI
 
-- [ ] **DK-17** `C·2` `.github/workflows/ci.yml`: en cada `push` y `pull_request` hacia
+- [x] **DK-17** `.github/workflows/ci.yml`: en cada `push` y `pull_request` hacia
       `develop` y `main`, construir (o descargar de GHCR) la misma imagen con caché y correr
       `make lint`, `make sim` y `make test` (y `make hps` como prueba de compilación). *GRUPO
       → §5 p.8 (Git)* ⟵ DK-10..15
-- [ ] **DK-18** `C·1` Subir como artefactos los reportes, logs y formas de onda (VCD/FST),
+- [x] **DK-18** Subir como artefactos los reportes, logs y formas de onda (VCD/FST),
       también cuando fallan (`if: always()`), con tiempo de retención definido. *GRUPO* ⟵
       DK-17
-- [ ] **DK-19** `C·1` Hacer obligatorio el check de CI en la protección de `main` y `develop`
+- [~] **DK-19** `C·1` Hacer obligatorio el check de CI en la protección de `main` y `develop`
       (lo configura quien administra el repositorio). *§5 p.8* ⟵ DK-17
+      Pasos en [docker/README.md](docker/README.md#hacer-obligatorio-el-check-dk-19); falta que
+      lo active quien administra el repositorio, después de la primera corrida en un PR.
 
 ### 8.5 Documentación
 
-- [ ] **DK-20** `C·1` Sección "Contenedor" del README: cómo construir y usarlo, qué se hace
+- [x] **DK-20** Sección "Contenedor" del README: cómo construir y usarlo, qué se hace
       dentro (toolchain HPS, cocotb, pruebas C, CI) y qué fuera (Quartus, Platform Designer,
       BSP del Nios V, Questa, programación), y por qué Quartus queda fuera: JTAG/USB-Blaster,
       herramientas gráficas, tamaño de la instalación, licencia de Questa atada a la MAC. *§5
@@ -773,12 +854,17 @@ PR-02, PR-03, PR-04, RP-02, RP-04.
 - [ ] **PR-06** `D·2` Colección de ≥ 10 canciones WAV de licencia libre (8/16/44.1 kHz, mono y
       estéreo) con `LIST/INFO`, etiquetadas con un script; fuentes y licencias en
       `docs/canciones.md`. *§3-F p.3* ⟵ SC-04 · #24 (OBL)
-- [ ] **PR-07** `C·2` Medir y registrar: arranque < 10 s, respuesta a botones < 200 ms, cambio
+- [~] **PR-07** `C·2` Medir y registrar: arranque < 10 s, respuesta a botones < 200 ms, cambio
       de filtro < 100 ms, cambio de canción < 2 s. Método: marcas de tiempo con
       `mcycle`/`mtime` y un LED o GPIO que conmuta, más video a 60 fps o SignalTap. *§3-F p.4*
       ⟵ IN-09 · #20 (OBL, EVID)
-- [ ] **PR-08** `C·1` Estabilidad: la lista completa al menos dos vueltas sin reinicios y con el
+      Instrumentado (LEDR6 cambia con cada botón aceptado) y medido sin tarjeta: el botón
+      se atiende en la misma vuelta del lazo, filtro ≤ 41 ms, canción < 2 s con el modelo
+      del HPS (`test_app`, `tb_player`). Falta en la tarjeta (`docs/pruebas-tarjeta.md`).
+- [~] **PR-08** `C·1` Estabilidad: la lista completa al menos dos vueltas sin reinicios y con el
       contador de underruns en 0. *§3-F p.4* ⟵ IN-09 · #20 (OBL, EVID)
+      Contador de subdesbordes en LEDR5 y en la pantalla; dos vueltas sin subdesbordes en
+      `test_app` y `tb_player`. Falta en la tarjeta.
 - [~] **PR-09** `B·1` Calidad en bypass: grabar el line-out en un PC y comparar espectro y
       nivel con el archivo original (sin recorte ni distorsión audible). *§3-F p.4* ⟵ IN-06 ·
       #16 (EVID)
@@ -806,9 +892,11 @@ PR-02, PR-03, PR-04, RP-02, RP-04.
 
 ## 11. Documentación y entregables — #22 a #25
 
-- [ ] **DOC-01** `C·2` Documento de diseño de software: módulos, métodos, bibliotecas, API
+- [~] **DOC-01** `C·2` Documento de diseño de software: módulos, métodos, bibliotecas, API
       (headers documentados), requisitos de software (del PDF y del profesor) y lista de
       chequeo de cumplimiento. *§5 p.7 (3%)* ⟵ PR-01, NV-14, HP-07 · #22 (OBL)
+      [docs/software/diseno-software.md](docs/software/diseno-software.md); falta la parte
+      del HPS cuando exista (HP-07, D).
 - [ ] **DOC-02** `D·2` Metodología de diseño del sistema: análisis del problema, investigación,
       propuestas, comparación, evaluación y justificación del co-diseño (CD-01..16). *§5 p.7 (7%)*
       ⟵ CD-15 · #22 (OBL)
