@@ -1,5 +1,5 @@
 # tb_pio
-# Transcript: build/sim/tb_pio.log, 2026-11-07 12:10, commit 536bb49
+# Transcript: build/sim/tb_pio.log, 2026-11-07 18:20, commit 4382c4f
 
 TB_PIO: inicio
 [56230000] OK    etapa 1, escritura de LEDR: LEDR = 0x2aa (56.03 us)

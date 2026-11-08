@@ -1,5 +1,5 @@
 # tb_filtro
-# Transcript: build/sim/tb_filtro.log, 2026-11-07 12:08, commit 536bb49
+# Transcript: build/sim/tb_filtro.log, 2026-11-07 18:29, commit 4382c4f
 
 TB_FILTRO: inicio
 [10000] LEDR = 0x000

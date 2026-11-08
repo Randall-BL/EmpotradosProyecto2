@@ -34,4 +34,4 @@ done
     echo
     make -s -C "$HERE/tests" 2>&1 | grep -v -E '^make|directorio'
 } > "$DST/pc_tests.txt"
-echo "pc_tests: $(grep -c PASS "$DST/pc_tests.txt") PASS"
+echo "pc_tests: $(grep -c -E "PASS|PASA:" "$DST/pc_tests.txt") pruebas pasan, $(grep -c -E "FAIL|FALLA" "$DST/pc_tests.txt") fallan"

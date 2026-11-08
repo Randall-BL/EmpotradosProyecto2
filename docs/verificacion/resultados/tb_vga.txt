@@ -1,14 +1,14 @@
 # tb_vga
-# Transcript: build/sim/tb_vga.log, 2026-11-07 12:20, commit 536bb49
+# Transcript: build/sim/tb_vga.log, 2026-11-07 18:36, commit 4382c4f
 
 TB_VGA: inicio
 [10000] LEDR = 0x000
-[56470000] LEDR = 0x0a1
-[12286310000] LEDR = 0x0a2
-[12995210000] LEDR = 0x0a3
-[13244690000] LEDR = 0x0a4
-[13366490000] LEDR = 0x0b0
-[13366490000] OK    pantalla dibujada; resolucion reportada 80x60
+[56410000] LEDR = 0x0a1
+[12286250000] LEDR = 0x0a2
+[12995150000] LEDR = 0x0a3
+[13244610000] LEDR = 0x0a4
+[13366410000] LEDR = 0x0b0
+[13366410000] OK    pantalla dibujada; resolucion reportada 80x60
 [14947310000] cuadro 2 del stream: filas 9-12 desde 14.13 ms
 Captura de la pantalla: build/sim/vga_pantalla.pbm (640 x 104)
 OK    fila 9: las 80 celdas coinciden con la referencia
