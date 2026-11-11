@@ -1,5 +1,5 @@
 # tb_audio
-# Transcript: build/sim/tb_audio.log, 2026-11-07 12:12, commit 536bb49
+# Transcript: build/sim/tb_audio.log, 2026-11-07 18:24, commit 4382c4f
 
 TB_AUDIO: inicio
 [109049000] primer par recibido: L = 0x0123 R = 0xfedc

@@ -1,8 +1,55 @@
 # Pruebas en el PC (make -C tests)
-# 2026-11-07 12:48, commit 536bb49
+# 2026-11-07 19:33, commit 4382c4f
 
+== test_volume
 test_volume: PASS
+== test_screen
 test_screen: PASS
+== test_tone
 tono 440 Hz: 439 cruces/s, SNR de la tabla 48.9 dB
 test_tone: PASS
+== test_dsp
 test_dsp: PASS (FIR igual bit a bit a los 8 casos de sim/vectors)
+== test_wav
+OK     test_le
+OK     test_valid_formats
+OK     test_chunks
+OK     test_metadata
+OK     test_truncated
+OK     test_rejected
+OK     test_every_cut
+OK     test_duration_fmt
+PASA: 163 comprobaciones, 0 fallos
+== test_fsm
+OK     test_playlist
+OK     test_basic_flow
+OK     test_navigation
+OK     test_auto_advance
+OK     test_errors
+OK     test_robustness
+PASA: 20161 comprobaciones, 0 fallos
+== test_input
+OK     test_evq
+OK     test_evq_wrap
+OK     test_switch_decode
+OK     test_switch_update
+OK     test_debounce
+OK     test_clock
+PASA: 1612 comprobaciones, 0 fallos
+== test_shm
+OK     test_layout
+OK     test_handshake
+OK     test_stream
+OK     test_switch_track
+PASA: 177 comprobaciones, 0 fallos
+== test_app
+OK     test_waiting_for_hps
+OK     test_play_pause_stop
+OK     test_navigation
+OK     test_two_laps
+OK     test_bad_tracks
+OK     test_hps_failed
+OK     test_underrun
+OK     test_filters_and_volume
+OK     test_key_led
+PASA: 112 comprobaciones, 0 fallos

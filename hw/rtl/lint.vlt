@@ -1,0 +1,8 @@
+// Exenciones de Verilator para `make lint` (DK-10). Cada una con su justificacion;
+// todo lo demas del HDL propio pasa `verilator --lint-only -Wall` sin advertencias.
+`verilator_config
+
+// seg7_time: unidades del numero de pista. track - t1*10 se calcula en 7 bits pero el
+// resultado esta en 0..9 por construccion (t1 son las decenas de track), asi que cabe
+// en 4 bits.
+lint_off -rule WIDTHTRUNC -file "*/seg7_time.v" -match "*SUB generates 7 bits*"

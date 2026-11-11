@@ -1,7 +1,7 @@
 # rtl_filtro_audio
-# Transcript: build/sim/rtl_filtro_audio.log, 2026-11-07 12:08, commit 536bb49
+# Transcript: build/sim/rtl_filtro_audio.log, 2026-11-07 18:15, commit 4382c4f
 
-TB_FILTRO_AUDIO: inicio (vectores en /home/randall/Escritorio/EMpotrados/EmpotradosProyecto2/sim/vectors)
+TB_FILTRO_AUDIO: inicio (vectores en /home/chris/Escritorio/Tec/SistemasEmpotrados/EmpotradosProyecto2/sim/vectors)
 OK    registros: reset, R/W, limites, coeficientes (17 comprobaciones)
 OK    fir_impulso       140 muestras iguales bit a bit (banco 0, 127 taps, ganancia 0x8000, bypass 0), SAT = 0
 OK    fir_escalon       200 muestras iguales bit a bit (banco 0, 127 taps, ganancia 0x8000, bypass 0), SAT = 0

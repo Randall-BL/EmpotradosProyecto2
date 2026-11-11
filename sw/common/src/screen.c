@@ -145,3 +145,8 @@ void screen_draw_status(const screen_port_t *p, screen_state_t st, const char *f
     buf[n] = '\0';
     p->print(p->ctx, 2, 9, buf, 40);
 }
+
+void screen_draw_message(const screen_port_t *p, const char *msg)
+{
+    p->print(p->ctx, 2, 7, msg ? msg : "", INNER);
+}

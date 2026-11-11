@@ -1,5 +1,5 @@
 # tb_codec
-# Transcript: build/sim/tb_codec.log, 2026-11-07 12:47, commit 536bb49
+# Transcript: build/sim/tb_codec.log, 2026-11-07 19:33, commit 4382c4f
 
 TB_CODEC: inicio
 [10000] LEDR = 0x000

@@ -46,6 +46,15 @@ vsim.wlf
 modelsim.ini
 *.vstf
 
+# cocotb + Icarus (DK-16): los resultados van a build/sim/cocotb/<modulo>/, pero si
+# alguien corre make dentro de sim/cocotb/<modulo>/ quedan junto al test.
+sim_build/
+results.xml
+*.vcd
+*.fst
+__pycache__/
+*.pyc
+
 # ─────────────────────────────────────────────
 #  Software Nios V / HPS
 # ─────────────────────────────────────────────

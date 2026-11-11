@@ -1,5 +1,5 @@
 /*
- * Pruebas en el PC de los filtros en software (sw/common/dsp.c, SC-10).
+ * Pruebas en el PC de los filtros en software (sw/common/src/dsp.c, SC-10).
  *  - El FIR es igual bit a bit al hardware: se compara contra los vectores dorados de
  *    sim/vectors/ (los mismos del testbench del modulo propio), generados por
  *    scripts/design_fir.py.

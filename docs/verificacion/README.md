@@ -1,7 +1,7 @@
 # Resultados de la verificación (testbenches)
 
-Evidencia de la verificación **sin tarjeta** de la plataforma del SoC (persona A) y del
-hardware propio (persona B). Cada
+Evidencia de la verificación **sin tarjeta** de la plataforma del SoC (persona A), del
+hardware propio (persona B) y del software de aplicación (persona C). Cada
 testbench simula en Questa el **SoC completo** (`audio_soc` generado por Platform
 Designer, con el Nios V/m ejecutando un programa de prueba de `sw/niosv/tests/`) y hace de
 "tarjeta" con modelos de los chips externos escritos a partir de sus datasheets. Todos
@@ -28,7 +28,8 @@ se verifican solos y terminan en `PASS` o `FAIL`.
 | [`rtl_filtro_respuesta`](resultados/rtl_filtro_respuesta.txt) | — (módulo aislado) | Generador de senos | Respuesta en frecuencia con 30 senos por banco | Error ≤ 0.83 dB en banda de paso; rechazo ≥ 55.7 dB | PASS |
 | [`tb_filtro`](resultados/tb_filtro.txt) | `test_filtro` | — | **Co-simulación HW/SW**: driver, autoprueba del módulo (431 pares contra el modelo en C), ciclos por par, displays | **0 diferencias**; 163 ciclos por par; HEX = `03 02:05` | PASS |
 | [`tb_ciclos`](resultados/tb_ciclos.txt) | `test_ciclos` | — | Ciclos por muestra en el Nios V/m (`-O2`, leyendo `mtime`) | Volumen 271, FIR 8 181, biquad 2 404, reverb 54 | PASS |
-| [Pruebas en el PC](resultados/pc_tests.txt) | — | — | `volume.c`, `screen.c`, `tone.c`, `dsp.c` compilados con `gcc -Wall -Wextra -Werror`; el modelo del FIR reproduce los 8 casos dorados | Tono de 440 Hz con SNR de **48.9 dB** | PASS |
+| [`tb_player`](resultados/tb_player.txt) | `test_player` | Modelo del HPS (`hps_model`) en la `shm` real; códec reemplazado por un sumidero que verifica cada cuadro | **Reproductor completo**: lógica real (`app.c`), botones por IRQ, switches, LEDs y displays; navegación con vuelta, avance automático en **dos vueltas** (20 cambios), pausa, reanudar, stop, 3 filtros y combinación inválida | Respuesta botón → LED ≤ **2.2 ms** (requisito < 200 ms); 0 subdesbordes; ningún cuadro fuera de orden | PASS |
+| [Pruebas en el PC](resultados/pc_tests.txt) | — | — | 9 programas con `gcc -Wall -Wextra -Werror` y ASan/UBSan: volumen, pantalla, tono, filtros (A, B); parser WAV con 26 archivos, playlist y FSM, cola/switches/antirrebote/reloj, protocolo con el HPS y el lazo principal con mocks (C) | Tono de 440 Hz con SNR de **48.9 dB**; dos vueltas a 10 pistas sin subdesbordes; filtro ≤ 41 ms | PASS |
 
 Respuesta en frecuencia del módulo propio medida en el RTL frente a la teórica:
 
@@ -46,7 +47,7 @@ scripts/test-all.sh --all        # todas las pruebas (~50 min: codec, vga y filt
 scripts/export-results.sh        # actualiza docs/verificacion/resultados/
 ```
 
-Una sola prueba: `scripts/sim-tb.sh <pio|audio|codec|adc|shm|vga|filtro|ciclos>` o
+Una sola prueba: `scripts/sim-tb.sh <pio|audio|codec|adc|shm|vga|filtro|ciclos|player>` o
 `scripts/sim-rtl.sh <filtro_audio|seg7_time|filtro_respuesta>`; el ADC con LTC2308:
 `ELAB_OPTS=-gLTC=1 scripts/sim-tb.sh adc`; el códec en modo rápido de depuración (salta
 las escrituras al ADV7180, no vale como evidencia): `ELAB_OPTS=-gFAST=1 scripts/sim-tb.sh codec`.

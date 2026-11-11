@@ -8,7 +8,7 @@ descrito en HDL propio y accesible por mapeo a memoria (§3-HW p.4, §3-SIS p.5)
 | | |
 |---|---|
 | RTL | [`hw/rtl/filtro_audio.v`](../../hw/rtl/filtro_audio.v) (esclavo Avalon-MM) y [`hw/rtl/fir_core.v`](../../hw/rtl/fir_core.v) (datapath) — Verilog-2005, sin IP de catálogo |
-| Coeficientes | [`scripts/design_fir.py`](../../scripts/design_fir.py) → `hw/rtl/fir_coefs.hex`, `sw/common/fir_coefs.h` |
+| Coeficientes | [`scripts/design_fir.py`](../../scripts/design_fir.py) → `hw/rtl/fir_coefs.hex`, `sw/common/include/fir_coefs.h` |
 | Punto fijo | [CD-14](../decisiones/CD-14.md): muestras y coeficientes Q1.15, acumulador de 40 bits, redondeo y saturación |
 | Verificación aislada | [`sim/questa/rtl/tb_filtro_audio.sv`](../../sim/questa/rtl/tb_filtro_audio.sv), reporte en [verificacion-filtro.md](verificacion-filtro.md) |
 

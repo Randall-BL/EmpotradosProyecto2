@@ -1,0 +1,83 @@
+# CI del proyecto (DK-17, DK-18): la misma imagen del contenedor de desarrollo corre
+# lint, pruebas en C, simulacion cocotb y la compilacion para el HPS.
+# Quartus y Questa no estan en la CI (licencia, tamano y JTAG): esas pruebas se corren
+# de forma nativa con scripts/test-all.sh antes de cada PR (PR-11).
+name: ci
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contenedor:
+    name: lint, test, sim, hps
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Imagen de docker/Dockerfile con cache de capas en GitHub Actions: solo se
+      # reconstruye cuando cambia el Dockerfile.
+      - name: Construir la imagen del contenedor
+        uses: docker/build-push-action@v6
+        with:
+          context: docker
+          file: docker/Dockerfile
+          build-args: |
+            USER_UID=1001
+            USER_GID=1001
+          tags: empotrados-dev:local
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Tamano de la imagen (DK-07, limite 1 GB)
+        run: docker image ls empotrados-dev:local
+
+      # El runner usa UID 1001: la imagen se construyo con ese usuario para que lo
+      # generado en el workspace no quede de root.
+      - name: make lint
+        run: docker run --rm -v "$PWD":/work -w /work empotrados-dev:local make lint 2>&1 | tee lint.log
+        shell: bash -o pipefail {0}
+
+      - name: make test
+        if: success() || failure()
+        run: docker run --rm -v "$PWD":/work -w /work empotrados-dev:local make test 2>&1 | tee test.log
+        shell: bash -o pipefail {0}
+
+      - name: make sim
+        if: success() || failure()
+        run: docker run --rm -v "$PWD":/work -w /work empotrados-dev:local make sim 2>&1 | tee sim.log
+        shell: bash -o pipefail {0}
+
+      - name: make hps
+        if: success() || failure()
+        run: docker run --rm -v "$PWD":/work -w /work empotrados-dev:local make hps 2>&1 | tee hps.log
+        shell: bash -o pipefail {0}
+
+      # DK-18: reportes, logs y formas de onda, tambien cuando algo falla.
+      - name: Subir reportes y formas de onda
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-reportes-${{ github.run_number }}
+          path: |
+            *.log
+            build/sim/**/results.xml
+            build/sim/**/*.vcd
+            build/sim/**/*.fst
+            build/tests/data/*.wav
+          if-no-files-found: ignore
+          retention-days: 14

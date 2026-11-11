@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Genera la tabla de seno del generador de tono de prueba (sw/common/tone.c).
+"""Genera la tabla de seno del generador de tono de prueba (sw/common/src/tone.c).
 
 1024 muestras de un periodo, en int16 con amplitud A (por debajo del maximo para
 dejar margen al volumen y a los filtros). El tono se sintetiza con un acumulador
 de fase de 32 bits: indice = fase >> 22, incremento = f * 2^32 / fs.
 
-Uso: python3 scripts/gen_sine_table.py   (pegar la salida en sw/common/tone.c)
+Uso: python3 scripts/gen_sine_table.py   (pegar la salida en sw/common/src/tone.c)
 """
 import math
 

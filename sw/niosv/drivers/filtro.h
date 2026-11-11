@@ -18,7 +18,7 @@
 #define FILTRO_BANK_BANDPASS 1u    /* pasa-banda 1-4 kHz */
 #define FILTRO_GAIN_UNITY    0x8000u
 
-/* Espera el borrado del reset, carga los coeficientes de sw/common/fir_coefs.h en los
+/* Espera el borrado del reset, carga los coeficientes de sw/common/include/fir_coefs.h en los
  * dos bancos y deja el filtro en bypass, banco 0, 127 taps, ganancia 1.0. */
 void filtro_init(uintptr_t base);
 
@@ -44,7 +44,7 @@ int filtro_take_sat(uintptr_t base);
 
 /* Autoprueba (NV-15, la "rutina de prueba en software" de §3-HW p.4): impulso en los
  * dos bancos, escalon, bypass con ganancia y ruido por el modelo bit a bit de
- * sw/common/dsp.c (431 pares). Devuelve la cantidad de pares distintos (0 = el modulo
+ * sw/common/src/dsp.c (431 pares). Devuelve la cantidad de pares distintos (0 = el modulo
  * funciona). Deja el filtro como filtro_init(). */
 uint32_t filtro_selftest(uintptr_t base);
 

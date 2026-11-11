@@ -1,0 +1,24 @@
+# DK-06: el contexto de build del contenedor no necesita el repositorio (se monta
+# como volumen en /work). Se excluye lo pesado por si se construye desde la raiz.
+.git/
+build/
+db/
+incremental_db/
+output_files/
+hw/soc/gen/
+hw/soc/*.qsys
+hw/soc/*.sopcinfo
+**/db/
+**/incremental_db/
+**/output_files/
+**/sim_build/
+*.sof
+*.rbf
+*.pof
+*.wav
+*.img
+*.wlf
+*.vcd
+*.fst
+*.pdf
+docs/img/
