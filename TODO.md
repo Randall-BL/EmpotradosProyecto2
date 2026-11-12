@@ -560,9 +560,12 @@ porque NV-13 y NV-14 lo necesitaban.
 - [x] **HW-21** Script `scripts/build-quartus.sh` (`quartus_sh --flow compile`) y
       compilación limpia: sin errores, warnings críticos revisados. *§5 p.8 (compilación)* ⟵
       HW-20 · #5 (OBL)
-- [~] **HW-22** `A·1` Cargar el software del Nios V: `ram.hex` dentro del `.sof` (actualizar
+- [x] **HW-22** `A·1` Cargar el software del Nios V: `ram.hex` dentro del `.sof` (actualizar
       la MIF sin recompilar todo) o `niosv-download` por JTAG; script `scripts/program.sh` con
       `quartus_pgm`. *§3-F p.4 (arranque)* ⟵ HW-21, NV-01 · #5
+      Probado en la tarjeta el 12 nov: `update-sw.sh` + `program.sh` (cable "DE-SoC").
+      `niosv-download`/OpenOCD no logran detener el Nios V ("unable to halt hart 0"):
+      se carga solo por el `.sof`.
 - [x] **HW-23** Tabla de justificación de **cada** componente del SoC (componente →
       función → requisito) y quitar los que no tengan función (p. ej. la JTAG UART en la
       versión final, salvo que se use para mediciones). *§3-HW p.5* ⟵ HW-01..17 · #5 (OBL,
@@ -716,10 +719,13 @@ porque NV-13 y NV-14 lo necesitaban.
 
 ## 7. Integración HW/SW en la tarjeta — #33 (IN-01..04), #34 (IN-05..09)
 
-- [~] **IN-01** `A·1` Prueba de humo en tarjeta: LEDs y 7 segmentos por puntero desde el Nios V.
+- [x] **IN-01** `A·1` Prueba de humo en tarjeta: LEDs y 7 segmentos por puntero desde el Nios V.
       *§3-HW p.4* ⟵ HW-02, HW-10, HW-22 (EVID foto)
+      OK el 12 nov (`test_pio`, `test_eco`, displays en `test_filtro`); falta la foto.
 - [~] **IN-02** `A·1` Tono senoidal generado por el Nios V por el line-out, sin SD. *§3-HW
       p.4* ⟵ NV-06, NV-07 → se oye limpio en audífonos.
+      12 nov: suena (440 Hz / 1 kHz, KEY0) con algo de ruido; repetir con el potenciómetro
+      en CH0 (sin él el ADC flota y el volumen varía).
 - [~] **IN-03** `A·1` Potenciómetro → volumen sobre el tono. *§3-SIS p.5* ⟵ NV-08, IN-02
 - [~] **IN-04** `A·1` Pantalla con metadatos fijos. *§3-F p.4* ⟵ NV-11
 - [ ] **IN-05** `D·2` El HPS lee un WAV de la SD y lo deja en memoria compartida; el Nios V lo
@@ -733,6 +739,8 @@ porque NV-13 y NV-14 lo necesitaban.
       [docs/pruebas-tarjeta.md](docs/pruebas-tarjeta.md).
 - [~] **IN-08** `B·1` Filtros 1–3 seleccionables con switches durante la reproducción. *§3-F
       p.4, §3-SIS p.5* ⟵ IN-06, NV-05, NV-10
+      12 nov: OK en la tarjeta con tonos (`test_filtros`: bypass, pasa-bajos, pasa-banda,
+      reverberación); falta con canciones desde la SD (IN-06).
 - [ ] **IN-09** `D·2` Sistema completo arrancando solo desde reset, sin PC conectado. *§3-F
       p.4* ⟵ HP-04, IN-07, IN-08
 
@@ -851,6 +859,8 @@ porque NV-13 y NV-14 lo necesitaban.
       NV-15 (EVID)
 - [~] **PR-05** `A·2` Prueba en tarjeta de cada driver por separado (programa de prueba por
       periférico) antes del lazo principal. *§3-SW p.5* ⟵ NV-03..13
+      12 nov: PIO, códec/audio, filtro y `seg7_time` OK en la tarjeta; faltan `test_adc`
+      (potenciómetro) y `test_vga` (monitor).
 - [ ] **PR-06** `D·2` Colección de ≥ 10 canciones WAV de licencia libre (8/16/44.1 kHz, mono y
       estéreo) con `LIST/INFO`, etiquetadas con un script; fuentes y licencias en
       `docs/canciones.md`. *§3-F p.3* ⟵ SC-04 · #24 (OBL)
