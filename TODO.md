@@ -391,9 +391,12 @@ RP-05, DOC-04.
 ADC de la tarjeta (IP ADC Controller). El software ya lo lee (`adc` en el SoC, SC-11,
 NV-08). Sin él, CH0 queda al aire, lee ruido y el volumen varía solo. Se usa uno de
 **10 kΩ lineal (B10K)** de 3 patas, con 3 cables dupont hembra-hembra al conector del ADC
-(2×5 pines, junto al GPIO): un extremo a **5 V**, el otro a **GND** y el cursor (pata del
-medio) a **CH0**. Antes de conectar, confirmar los pines en el manual de la DE1-SoC
-(sección del conector del ADC). Se prueba con `test_adc`, y en LEDR debe verse el valor
+**J15 "ADC CON"** (2×5 pines, junto al GPIO): un extremo a **5 V**, el otro a **GND** y el
+cursor (pata del medio) a **CH0**. Pinout esperado según Terasic (sin confirmar): pines
+1–8 = CH0–CH7, pin 9 = 5 V, pin 10 = GND. Antes de conectar, ubicar el pin 1 (pad cuadrado
+o marca en la serigrafía) y medir con multímetro cuál pin da 5 V y cuál es GND, o revisarlo
+en el manual de la DE1-SoC (sección "Analog-to-Digital Converter"). Si 5 V y GND se cruzan,
+el potenciómetro hace cortocircuito en un extremo. Se prueba con `test_adc`, y en LEDR debe verse el valor
 subir de un extremo al otro.
 
 ---

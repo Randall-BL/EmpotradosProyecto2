@@ -9,7 +9,7 @@ Lista de lo que hace falta para probar y presentar el reproductor. La columna
 | Tarjeta DE1-SoC con fuente de 12 V y cable USB-Blaster (mini-USB) | Todo | Préstamo del laboratorio; anotar la revisión (rev. F o posterior trae LTC2308) | | falta |
 | microSD | Canciones y arranque del HPS | ≥ 4 GB, clase 10 | | falta |
 | Lector de microSD para el PC | Copiar canciones e imagen | USB | | falta |
-| Potenciómetro | Volumen (ADC CH0) | 10 kΩ lineal, entre 0 V y 5 V del conector del ADC (2×5, junto a GPIO) | | falta |
+| Potenciómetro | Volumen (ADC CH0) | 10 kΩ lineal, entre 5 V y GND del conector J15 "ADC CON" (2×5, junto a GPIO), cursor a CH0 | | falta |
 | Cables dupont hembra-hembra | Conector del ADC | 3 (5 V, GND, CH0) | | falta |
 | Audífonos o parlantes activos | LINE OUT (verde) | Conector de 3.5 mm | | falta |
 | Monitor VGA y cable | Pantalla del reproductor | 640 × 480 a 60 Hz | | falta |
