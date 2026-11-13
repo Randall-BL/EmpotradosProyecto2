@@ -43,6 +43,34 @@ culpar a una prueba. En la tarjeta del 12 de noviembre: los 10 LEDs y los 10 SW 
 Para ver la salida de texto de una prueba (y que sus `printf` no se bloqueen):
 `source scripts/env.sh && juart-terminal` con la FPGA ya programada.
 
+## Arranque del HPS desde la SD (HP-02..HP-08, IN-05/06 — persona D)
+
+**Preparar la SD** (ver CD-02). Corre en el contenedor `hps`, sin root, y nunca junto con
+Quartus (con 7 GB de RAM la PC se cae):
+
+```bash
+scripts/build-quartus.sh                       # .sof y .rbf comprimido
+scripts/convert-music.sh                       # Musica/*.mp3 -> build/hps/music-sd/*.wav
+docker compose -f docker/compose.yml run --rm -e JOBS=2 hps \
+    bash -c 'scripts/build-hps-linux.sh && scripts/make-sdimage.sh build/hps/music-sd'
+lsblk                                          # confirmar cuál es la microSD
+sudo dd if=build/hps/sdcard.img of=/dev/sdX bs=4M conv=fsync status=progress
+```
+
+**Tarjeta:** SW10 (MSEL, en la parte de atrás) = 1 ON, 2 OFF, 3 ON, 4 OFF, 5 ON (`01010`,
+FPP x16 con compresión). El cable mini-USB "UART to USB" va a la consola:
+`sudo picocom -b 115200 /dev/ttyUSB0`. Con `debugsh` en los bootargs (`setenv bootargs
+console=ttyS0,115200 debugsh` desde el prompt de U-Boot) se obtiene un shell con
+`devmem` en lugar del reproductor.
+
+| ID | Pasos | Resultado esperado | Resultado |
+|---|---|---|---|
+| HP-02 | Encender con la SD y mirar la consola. | `U-Boot SPL 2024.01`, `U-Boot 2024.01`, `DRAM: 1 GiB`, `Model: Terasic DE1-SoC`. | **OK** (12 nov 2026). |
+| HP-03, HP-04, HP-08 | Encender sin tocar nada. | U-Boot cuenta 1 s, carga `boot.scr`, configura la FPGA con `audio_player.rbf`, arranca Linux e `init: SD montada`, sin pedir nada. | **OK** (12 nov 2026). Al principio se quedaba en el prompt `=>`: el defconfig no definía `bootcmd` (corregido). Tiempo de arranque sin cronometrar (PR-07). |
+| HP-05, HP-06 | Mismo arranque. | `hps_player: /mnt/sd/music: 10 pistas, 0 descartadas (lista)` y las 10 líneas con título y formato. | **OK** (12 nov 2026), 10 WAV a 44.1 kHz estéreo. |
+| HW-05, HW-06 | Con la FPGA configurada. | `hps_player: shm publicada (10 pistas)`. | **OK** (12 nov 2026). Antes se congelaba todo el sistema al publicar: escribir el `remap` del L3 desde Linux lo cuelga (se halló con `devmem` en el shell de depuración). Ahora `remap` lo escribe U-Boot. |
+| IN-06 | KEY0 con la primera canción. | Suena la canción desde la SD, sin cortes. | **OK** (12 nov 2026) a oído, con la música de `Musica/` (no se versiona). Falta una canción completa sin tocar nada (PR-08). |
+
 ## Reproductor completo (IN-07, PR-07, PR-08 — persona C)
 
 Necesitan el HPS entregando canciones (IN-06 de D: SD con ≥ 10 WAV, arranque del HPS).
@@ -52,7 +80,7 @@ aquí se confirma con la SD, el códec y el tiempo real.
 
 | ID | Pasos | Resultado esperado | Resultado |
 |---|---|---|---|
-| IN-07 | Arrancar con la SD. Con la lista detenida: KEY3, KEY2, KEY2 (desde la 1), KEY3. KEY0 para reproducir; KEY3 y KEY2 mientras suena; KEY0 pausa y reanuda; KEY1 stop. Dejar que termine una canción. | Mientras el HPS arranca: "Esperando al HPS...". Luego canción 01 / N en pantalla y HEX5..HEX4. Siguiente/anterior dan la vuelta (01 ↔ N). KEY0 enciende LEDR7 y suena; pausa: LEDR8, silencio y el tiempo se detiene; stop: tiempo 00:00, LEDR7/8 apagados. Al terminar una canción empieza la siguiente sola. | |
+| IN-07 | Arrancar con la SD. Con la lista detenida: KEY3, KEY2, KEY2 (desde la 1), KEY3. KEY0 para reproducir; KEY3 y KEY2 mientras suena; KEY0 pausa y reanuda; KEY1 stop. Dejar que termine una canción. | Mientras el HPS arranca: "Esperando al HPS...". Luego canción 01 / N en pantalla y HEX5..HEX4. Siguiente/anterior dan la vuelta (01 ↔ N). KEY0 enciende LEDR7 y suena; pausa: LEDR8, silencio y el tiempo se detiene; stop: tiempo 00:00, LEDR7/8 apagados. Al terminar una canción empieza la siguiente sola. | **Parcial** (12 nov 2026): con la SD, KEY0 reproduce, KEY3/KEY2 cambian de canción, KEY1 detiene y los filtros responden a SW0/SW1/SW2 (el eco de 50 ms se oye con SW2 solo). Falta revisar la pantalla y el avance automático al final de una canción. |
 | PR-07 respuesta a botones | Grabar a 60 fps (o con SignalTap sobre `KEY` y `LEDR6`) mientras se pulsa KEY3 varias veces. | LEDR6 cambia con cada pulsación aceptada: contar los cuadros entre el dedo y el LED. < 200 ms (≤ 12 cuadros a 60 fps). En simulación: 17 µs (`tb_pio`) y una vuelta del lazo (`tb_player`). | |
 | PR-07 cambio de filtro | Con música, mover SW0 (pasa-bajos) y grabar el line-out y la tarjeta. | El sonido cambia < 100 ms después del LED (LEDR0). En simulación ≤ 41 ms (`test_app`). | |
 | PR-07 cambio de canción | KEY3 reproduciendo; grabar audio y video. | La canción nueva suena < 2 s después de la pulsación (depende de la lectura de la SD del HPS). | |

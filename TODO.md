@@ -249,8 +249,8 @@ SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
 |---|---|---|---|
 | IN-01..IN-04, PR-05 | Programas de prueba listos y verificados en simulación | La tarjeta DE1-SoC | Correr `docs/pruebas-tarjeta.md` y anotar resultado y evidencia (foto/video) |
 | HW-22 | `scripts/update-sw.sh` probado; `scripts/program.sh` escrito | La tarjeta (programar por JTAG) | `scripts/program.sh` con la DE1-SoC conectada |
-| HW-06 | Lado del Nios V hecho (`shm.s1`, `tb_shm`) | HW-05 (D) | Cuando D agregue el HPS: `add_connection hps.h2f_lw_axi_master shm.s2` y documentar la dirección vista por el HPS |
-| HW-24 | Mapa exportado del `.sopcinfo` (`scripts/report-memory-map.py`) | HW-05 (D) | Regenerar `docs/hw/mapa-memoria-generado.md` cuando exista el maestro del HPS |
+| HW-06 | **Hecho** (12 nov): `hps.h2f_lw_axi_master` → `shm.s2`, probado en la tarjeta | — | — |
+| HW-24 | Mapa exportado del `.sopcinfo` (`scripts/report-memory-map.py`) | — (HW-05 listo el 12 nov) | Regenerar `docs/hw/mapa-memoria-generado.md` con el maestro del HPS |
 | NV-16 | Uso de RAM medido por programa (`scripts/report-memory.sh`) | NV-14 (C, lazo principal) | Medir la aplicación final y ubicar sus buffers |
 | RP-02 | Script listo (`report-resources.py --entity`) | HW-17 (B, módulo propio) | Correrlo con la instancia del filtro |
 | RP-05, DOC-04 | Análisis escrito en `docs/metricas/recursos-y-potencia.md` | RP-02 y RP-04 (B) | Agregar el costo del filtro en HW frente a SW |
@@ -355,6 +355,39 @@ porque NV-13 y NV-14 lo necesitaban.
   `sw/common` con `arm-linux-gnueabihf-gcc` (única toolchain ARM del contenedor; sirve
   para U-Boot y para las dos opciones de CD-02) hasta que exista `sw/hps/Makefile`.
 
+## Estado de la persona D (HPS y arranque) — 12 de noviembre de 2026
+
+**Probado en la tarjeta:** la DE1-SoC arranca sola desde la microSD. El SPL y U-Boot
+configuran la FPGA con el `.rbf`, Linux monta la SD, `hps_player` publica las 10 pistas en
+`shm` y el Nios V las reproduce con botones y filtros. Procedimiento y resultados en
+[docs/pruebas-tarjeta.md](docs/pruebas-tarjeta.md#arranque-del-hps-desde-la-sd-hp-02hp-08-in-0506--persona-d);
+decisiones en [CD-01](docs/decisiones/CD-01.md) y [CD-02](docs/decisiones/CD-02.md).
+
+**Hecho:** CD-01, CD-02, HW-05, HW-06 (con A), SC-12, SC-13, HP-01..03, HP-05..08,
+DK-08, DK-15.
+
+| Tarea | Estado | Bloqueo | Siguiente paso |
+|---|---|---|---|
+| HP-04, PR-07 (arranque) | Arranque autónomo funcionando | — | Cronometrar desde el encendido hasta la lista en pantalla (< 10 s) |
+| IN-05 | Streaming funcionando | — | Prueba con checksum (WAV conocido → Nios V) |
+| IN-06, PR-08 | Suena desde la SD | — | Una canción completa y la lista dos vueltas sin cortes ni subdesbordes |
+| HP-09 | Probado en PC (`test_producer`) | — | En la tarjeta: SD sin carpeta `music/`, un WAV dañado, < 10 archivos |
+| PR-06 | `scripts/convert-music.sh` + 10 canciones del grupo en `Musica/` (sin versionar) | Licencias | Decidir si se usan canciones de licencia libre y documentarlas en `docs/canciones.md` |
+| CD-03 | Buffers definidos en `shm_proto.h` (ring de 8 192 cuadros) | — | Escribir la tabla de latencias con lo medido |
+| HP-10 | — | CD-12 no asigna filtros al HPS | No aplica salvo que cambie CD-12 |
+
+**Hallazgos que afectan a otras personas:**
+
+- **Todos:** con 7 GB de RAM, Quartus y la compilación del kernel no deben correr a la vez
+  (la PC se cayó el 12 nov). El arranque del HPS se compila con `-e JOBS=2`.
+- **A:** `build-quartus.sh` ahora también genera `audio_player.rbf` (comprimido, para
+  MSEL = `01010`). Hay que dejar SW10 en `01010` para el arranque desde la SD; JTAG sigue
+  funcionando. Con la FPGA reconfigurada por JTAG, `hps_player` vuelve a publicar la tabla.
+- **Todos:** el registro `remap` del L3 no se debe escribir desde Linux, porque congela el
+  sistema. Lo hace U-Boot (CD-02).
+- **C:** las pruebas del reproductor en la tarjeta usan SW0/SW1/SW2 uno por filtro (CD-08);
+  la tabla de `test_filtros` tiene otro mapeo.
+
 ---
 
 ## 0. Arranque y organización — #30
@@ -401,7 +434,7 @@ porque NV-13 y NV-14 lo necesitaban.
 > (rendimiento, latencia, recursos, complejidad), datos o mediciones, decisión y fecha.
 > Alimenta el documento de metodología (7%, §5 p.7).
 
-- [ ] **CD-01** `D·2` Partición de procesadores. *§2 p.2, §3-SW p.5, §3-HW p.4* ⟵ P1, P3 · #3
+- [x] **CD-01** `D·2` Partición de procesadores. *§2 p.2, §3-SW p.5, §3-HW p.4* ⟵ P1, P3 · #3
       (OBL)
       - A: híbrida. HPS lee la SD y deja PCM y metadatos en memoria compartida; el Nios V
         atiende botones, máquina de estados, audio y visualización.
@@ -411,11 +444,15 @@ porque NV-13 y NV-14 lo necesitaban.
       → decisión escrita. **Las secciones 5 y 6 asumen la alternativa A** porque es la única
       que cumple "SD mediante el HPS" y deja el audio en manos de la FPGA. Si P1/P3 dicen
       otra cosa, se mueven tareas entre esas secciones.
-- [ ] **CD-02** `D·2` Software del HPS: bare metal (U-Boot SPL + aplicación propia, driver
+      **Decidido:** alternativa A, probada en la tarjeta (12 nov 2026) →
+      [docs/decisiones/CD-01.md](docs/decisiones/CD-01.md).
+- [x] **CD-02** `D·2` Software del HPS: bare metal (U-Boot SPL + aplicación propia, driver
       SD/MMC + FatFs) vs Linux mínimo (Buildroot, aplicación con `mmap` de `/dev/mem`).
       Criterios: arranque < 10 s, esfuerzo del driver SD, "SO mínimo sin interacción". *§3-SW
       p.5, §3-F p.4* ⟵ P2, P4, P14 · #32 → decisión escrita. Define la toolchain del
       contenedor (DK-02).
+      **Decidido:** Linux mínimo (U-Boot 2024.01, Linux 6.6.60, BusyBox en initramfs) →
+      [docs/decisiones/CD-02.md](docs/decisiones/CD-02.md).
 - [ ] **CD-03** `D·2` Camino de las muestras y presupuesto de latencia: SD → HPS → buffer
       compartido → Nios V → filtro → FIFO del IP de Audio. Calcular tamaños de buffer: el
       audio que ya pasó por el filtro y espera salir debe durar < 100 ms (cambio de filtro,
@@ -494,14 +531,18 @@ porque NV-13 y NV-14 lo necesitaban.
 
 ### 3.2 HPS y canal HPS ↔ FPGA — #31
 
-- [ ] **HW-05** `D·3` Agregar el componente HPS de Cyclone V con la configuración de la DE1-SoC
+- [x] **HW-05** `D·3` Agregar el componente HPS de Cyclone V con la configuración de la DE1-SoC
       (DDR3, pines de SD/MMC, UART0, reloj) tomada del GHRD del System CD de Terasic;
       habilitar el bridge liviano H2F y los que pida CD-06. Confirmar en el manual que la
       microSD está cableada al HPS. *§3-SW p.5, §4 p.7* ⟵ CD-01 (OBL)
-- [~] **HW-06** `A·2` Canal HPS ↔ Nios V: memoria compartida (según CD-06) + registros de
+      HPS con DDR3, SD/MMC, UART0 y puente liviano en `build_system.tcl`; probado en la
+      tarjeta (12 nov 2026).
+- [x] **HW-06** `A·2` Canal HPS ↔ Nios V: memoria compartida (según CD-06) + registros de
       buzón para el handshake (comandos y punteros del ring buffer), y una IRQ si hace falta.
       *§3-SW p.5* ⟵ HW-05, SC-13 (OBL) → dirección del canal vista por ambos procesadores,
       documentada.
+      `hps.h2f_lw_axi_master` → `shm.s2` en `0xFF20_0000` (Nios V: `0x0002_0000`); el
+      HPS publica la tabla y el Nios V reproduce (12 nov 2026).
 
 ### 3.3 Periféricos de catálogo — #6, #7
 
@@ -609,14 +650,17 @@ porque NV-13 y NV-14 lo necesitaban.
       CD-14 · #16 (OBL)
 - [x] **SC-11** Volumen: lectura del ADC de 12 bits → ganancia (curva logarítmica) y
       escalado con saturación. *§3-SIS p.5* ⟵ CD-05 · #17 (OBL)
-- [ ] **SC-12** `D·2` Remuestreo, si CD-07 lo pide. *§3-F p.3* ⟵ CD-07
-- [~] **SC-13** `D·2` Protocolo HPS ↔ Nios V en un header común (`shm_proto.h`): versión,
+- [x] **SC-12** `D·2` Remuestreo, si CD-07 lo pide. *§3-F p.3* ⟵ CD-07
+      `sw/common/src/resample.c` (a 48 kHz en el HPS, CD-07), `tests/test_resample.c`;
+      44.1 kHz suena bien en la tarjeta (12 nov 2026).
+- [x] **SC-13** `D·2` Protocolo HPS ↔ Nios V en un header común (`shm_proto.h`): versión,
       tabla de pistas con metadatos, ring buffer con índices de productor y consumidor,
       comandos; `_Static_assert` de tamaños y alineación (ambos son de 32 bits little-endian).
       *§3-SW p.5* ⟵ CD-01, CD-06 (OBL)
       **Borrador de C** en `sw/common/include/shm_proto.h` (lo necesitaban NV-13 y NV-14),
       con productor y consumidor probados en `test_shm` y un modelo del HPS (`hps_model.c`).
       D lo revisa y lo ajusta al escribir HP-06/HP-07.
+      Usado por los dos lados en la tarjeta (12 nov 2026).
 - [x] **SC-14** Interfaces de "puerto" (structs de punteros a función: salida de audio,
       display, reloj) para que la lógica no dependa del hardware y se pueda probar con mocks.
       *GRUPO → §5 p.7* ⟵ SC-01
@@ -689,32 +733,48 @@ porque NV-13 y NV-14 lo necesitaban.
 
 > Asume CD-01 = A. Toolchain ARM dentro del contenedor (DK-02).
 
-- [ ] **HP-01** `D·1` Ejecutar la decisión de CD-02 (bare metal o Linux mínimo) y fijar
+- [x] **HP-01** `D·1` Ejecutar la decisión de CD-02 (bare metal o Linux mínimo) y fijar
       versiones de U-Boot y, si aplica, Buildroot. *§3-SW p.5* ⟵ CD-02
-- [ ] **HP-02** `D·3` U-Boot SPL para Cyclone V a partir del handoff de Quartus
+      Linux mínimo (CD-02); versiones fijas con SHA-256 en `sw/hps/linux/sources.sha256`.
+- [x] **HP-02** `D·3` U-Boot SPL para Cyclone V a partir del handoff de Quartus
       (`hps_isw_handoff`) con el script `qts-filter` de U-Boot, compilado en el contenedor.
       *§3-F p.4 (arranque)* ⟵ HW-05, HW-21, DK-08 → la tarjeta arranca el SPL desde la SD
       (mensaje por UART0).
-- [ ] **HP-03** `D·2` Imagen de la SD con `scripts/make-sdimage.sh`: partición tipo A2 (SPL),
+      `scripts/build-hps-linux.sh` (contenedor `hps`). Usa `socfpga_de1_soc_defconfig`
+      (handoff del GHRD de Terasic, igual al HPS de HW-05) en lugar de `qts-filter`
+      (CD-02). SPL y U-Boot por UART0 OK (12 nov 2026).
+- [x] **HP-03** `D·2` Imagen de la SD con `scripts/make-sdimage.sh`: partición tipo A2 (SPL),
       FAT32 (WAV, `.rbf`, aplicación o script de U-Boot) y, si es Linux, rootfs. El script
       genera un archivo `.img`, nunca escribe en un dispositivo; la grabación se hace a mano.
       *§3-F p.3 (≥ 10 canciones en SD)* ⟵ HP-02
-- [ ] **HP-04** `D·2` Arranque autónomo: U-Boot configura la FPGA con el `.rbf` (convertido del
+      `scripts/make-sdimage.sh` → `build/hps/sdcard.img` (A2 de 8 MiB + FAT32 de 512
+      MiB); grabada y probada (12 nov 2026).
+- [~] **HP-04** `D·2` Arranque autónomo: U-Boot configura la FPGA con el `.rbf` (convertido del
       `.sof` con `quartus_cpf`, nativo), habilita los bridges y lanza la aplicación. *§3-F p.4
       (< 10 s)* ⟵ HP-03, P14
-- [ ] **HP-05** `D·3` Acceso a la SD y a FAT32: driver SD/MMC + FatFs (bare metal) o sistema de
+      Funciona (12 nov 2026): U-Boot configura la FPGA con el `.rbf` (`build-quartus.sh`
+      lo genera), escribe `remap` y arranca Linux. Falta cronometrar < 10 s (PR-07).
+- [x] **HP-05** `D·3` Acceso a la SD y a FAT32: driver SD/MMC + FatFs (bare metal) o sistema de
       archivos de Linux; en bare metal, región de los bridges como memoria de dispositivo en la
       MMU (sin caché). *§3-SW p.5* ⟵ HP-01, P4 · #11 (OBL)
-- [ ] **HP-06** `D·2` Recorrer la SD: ≥ 10 `.wav`, orden estable, parseo con `sw/common/`
+      Drivers del kernel (`dw_mmc` + `vfat`), SD montada solo lectura (12 nov 2026).
+- [x] **HP-06** `D·2` Recorrer la SD: ≥ 10 `.wav`, orden estable, parseo con `sw/common/`
       (SC-03..06) y tabla de pistas publicada en memoria compartida. *§3-F p.3* ⟵ HP-05, SC-13
       · #11 (OBL)
-- [ ] **HP-07** `D·2` Productor del ring buffer: lectura de PCM por bloques, atención de
+      10 WAV de la SD publicados en `shm` (12 nov 2026); `tests/test_producer.c`.
+- [x] **HP-07** `D·2` Productor del ring buffer: lectura de PCM por bloques, atención de
       comandos del Nios V (cambiar pista, stop) y fin de archivo. *§3-F p.3–4 (continuidad,
       cambio < 2 s)* ⟵ HP-06, HW-06 (OBL)
-- [ ] **HP-08** `D·1` Sin interacción con el SO: arranque automático, sin consola de usuario.
+      `sw/hps/src/producer.c`; en la tarjeta suena y cambia de pista con KEY2/KEY3 (12
+      nov 2026).
+- [x] **HP-08** `D·1` Sin interacción con el SO: arranque automático, sin consola de usuario.
       *§3-SW p.5* ⟵ HP-04 (OBL)
-- [ ] **HP-09** `D·1` Errores: SD ausente, archivo corrupto o no soportado (se salta y se
+      `sw/hps/linux/init` lanza `hps_player` sin consola (12 nov 2026). Shell solo con
+      `debugsh` en los bootargs (depuración).
+- [~] **HP-09** `D·1` Errores: SD ausente, archivo corrupto o no soportado (se salta y se
       informa), menos de 10 archivos. *§3-F p.4 (estabilidad)* ⟵ HP-06
+      Probado en PC (`test_producer`: archivos no soportados se saltan, sin SD); falta
+      probar en la tarjeta (SD sin carpeta, WAV dañado).
 - [ ] **HP-10** `D·2` Filtros en el ARM, solo si CD-12 los asigna al HPS. *§3-SIS p.5* ⟵ CD-12
 
 ## 7. Integración HW/SW en la tarjeta — #33 (IN-01..04), #34 (IN-05..09)
@@ -728,10 +788,13 @@ porque NV-13 y NV-14 lo necesitaban.
       en CH0 (sin él el ADC flota y el volumen varía).
 - [~] **IN-03** `A·1` Potenciómetro → volumen sobre el tono. *§3-SIS p.5* ⟵ NV-08, IN-02
 - [~] **IN-04** `A·1` Pantalla con metadatos fijos. *§3-F p.4* ⟵ NV-11
-- [ ] **IN-05** `D·2` El HPS lee un WAV de la SD y lo deja en memoria compartida; el Nios V lo
+- [~] **IN-05** `D·2` El HPS lee un WAV de la SD y lo deja en memoria compartida; el Nios V lo
       recibe completo (checksum). *§3-SW p.5* ⟵ HP-07, NV-13
-- [ ] **IN-06** `D·2` Reproducción de un WAV completo desde la SD, en bypass y sin cortes.
+      El streaming funciona en la tarjeta (12 nov 2026); falta la prueba con checksum.
+- [~] **IN-06** `D·2` Reproducción de un WAV completo desde la SD, en bypass y sin cortes.
       *§3-F p.3–4* ⟵ IN-02, IN-05
+      Suena desde la SD en la tarjeta (12 nov 2026); falta una canción completa sin
+      cortes (PR-08).
 - [~] **IN-07** `C·2` Botones + FSM + playlist + avance automático con ≥ 10 canciones. *§3-F
       p.3* ⟵ IN-06, NV-03, NV-14
       Verificado sin tarjeta: `tb_player` (Nios V, 10 pistas, dos vueltas) y `test_app`.
@@ -781,8 +844,9 @@ porque NV-13 y NV-14 lo necesitaban.
       `docker/README.md`.
       999 MB en `docker image ls` (704 MB de archivos, 252 MB comprimida); con las dos
       toolchains ARM pasaba de 2 GB.
-- [ ] **DK-08** `D·1` "Hola mundo" ARM compilado en el contenedor; `file` muestra un ELF de ARM.
+- [x] **DK-08** `D·1` "Hola mundo" ARM compilado en el contenedor; `file` muestra un ELF de ARM.
       *GRUPO* ⟵ DK-05
+      `hps_player` y BusyBox: ELF ARM estáticos compilados en el contenedor `hps`.
 - [ ] **DK-09** `B·1` Simulación trivial con cocotb (p. ej. un contador) que pasa en Icarus
       dentro del contenedor. *GRUPO* ⟵ DK-05
 
@@ -813,8 +877,9 @@ porque NV-13 y NV-14 lo necesitaban.
       Cubren SC-03..11. *§3-SW p.5* ⟵ SC-03..11 · #12 (EVID)
       `tests/test.h` mínimo (sin dependencias; P4 sin respuesta), 26 WAV generados y ASan +
       UBSan en todas las pruebas, también las de A y B.
-- [ ] **DK-15** `D·1` `make hps` compila el software del HPS (y el SPL si aplica) dentro del
+- [x] **DK-15** `D·1` `make hps` compila el software del HPS (y el SPL si aplica) dentro del
       contenedor. *§3-SW p.5* ⟵ HP-01, DK-08
+      `make hps` usa `sw/hps/Makefile`; el arranque completo con `scripts/build-hps-linux.sh`.
 - [x] **DK-16** Formas de onda (VCD/FST) y reportes JUnit (`results.xml`) en `build/sim/`;
       `.gitignore` para `sim_build/`, `results.xml`, `*.vcd`, `*.fst`, `__pycache__/`.
       Revisar que `*.hex` ignorado no tape coeficientes que se quieran versionar. *GRUPO* ⟵ DK-10
@@ -861,9 +926,12 @@ porque NV-13 y NV-14 lo necesitaban.
       periférico) antes del lazo principal. *§3-SW p.5* ⟵ NV-03..13
       12 nov: PIO, códec/audio, filtro y `seg7_time` OK en la tarjeta; faltan `test_adc`
       (potenciómetro) y `test_vga` (monitor).
-- [ ] **PR-06** `D·2` Colección de ≥ 10 canciones WAV de licencia libre (8/16/44.1 kHz, mono y
+- [~] **PR-06** `D·2` Colección de ≥ 10 canciones WAV de licencia libre (8/16/44.1 kHz, mono y
       estéreo) con `LIST/INFO`, etiquetadas con un script; fuentes y licencias en
       `docs/canciones.md`. *§3-F p.3* ⟵ SC-04 · #24 (OBL)
+      `scripts/convert-music.sh` convierte `Musica/` (no versionada) a WAV 16 bits/44.1
+      kHz con título. Las 10 canciones del grupo no son de licencia libre: falta decidir
+      si se documentan o se usan otras (`docs/canciones.md`).
 - [~] **PR-07** `C·2` Medir y registrar: arranque < 10 s, respuesta a botones < 200 ms, cambio
       de filtro < 100 ms, cambio de canción < 2 s. Método: marcas de tiempo con
       `mcycle`/`mtime` y un LED o GPIO que conmuta, más video a 60 fps o SignalTap. *§3-F p.4*
