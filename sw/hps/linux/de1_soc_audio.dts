@@ -1,0 +1,40 @@
+// Device tree de Linux para la DE1-SoC del reproductor (HP-02).
+//
+// Solo lo que usa el HPS: 1 GB de DDR3, la microSD (mmc), la UART0 (consola de
+// arranque por el USB-UART de la placa) y el watchdog que deja activo el preloader.
+// El puente liviano hacia la FPGA lo habilita la propia aplicacion por /dev/mem
+// (sw/hps/src/devmem.c), porque la FPGA puede configurarse despues de Linux (JTAG).
+/dts-v1/;
+#include "socfpga_cyclone5.dtsi"
+
+/ {
+	model = "Terasic DE1-SoC (reproductor de audio)";
+	compatible = "terasic,de1-soc", "altr,socfpga-cyclone5", "altr,socfpga";
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	aliases {
+		serial0 = &uart0;
+	};
+
+	memory@0 {
+		name = "memory";
+		device_type = "memory";
+		reg = <0x0 0x40000000>;
+	};
+};
+
+&mmc {
+	status = "okay";
+};
+
+&uart0 {
+	clock-frequency = <100000000>;
+	status = "okay";
+};
+
+&watchdog0 {
+	status = "okay";
+};
