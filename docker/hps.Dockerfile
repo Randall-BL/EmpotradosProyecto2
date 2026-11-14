@@ -16,7 +16,7 @@ ARG USER_UID=1000
 ARG USER_GID=1000
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates make gcc libc6-dev file \
+        ca-certificates make gcc libc6-dev file patch \
         gcc-arm-linux-gnueabihf libc6-dev-armhf-cross \
         bc bison flex cpio kmod rsync xz-utils bzip2 curl \
         libssl-dev libgnutls28-dev uuid-dev \

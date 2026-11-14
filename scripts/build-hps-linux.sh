@@ -61,6 +61,16 @@ fetch "$UBOOT_URL"
 fetch "$LINUX_URL"
 fetch "$BUSYBOX_URL"
 
+# Parches propios del kernel (sw/hps/linux/patches), una sola vez por arbol extraido.
+for p in "$LNX"/patches/*.patch; do
+    [ -e "$p" ] || continue
+    stamp="$SRC/linux-$LINUX_VER/.applied-$(basename "$p")"
+    [ -f "$stamp" ] && continue
+    echo ">> Parche del kernel: $(basename "$p")"
+    patch -d "$SRC/linux-$LINUX_VER" -p1 --forward --quiet < "$p"
+    touch "$stamp"
+done
+
 # ---------------------------------------------------------------- U-Boot
 echo ">> U-Boot $UBOOT_VER (socfpga_de1_soc_defconfig)"
 UB="$SRC/u-boot-$UBOOT_VER"
