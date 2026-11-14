@@ -7,13 +7,13 @@ ARM_CC  ?= arm-linux-gnueabihf-gcc
 BUILD   := ../../build/hps
 COMMON  := ../common
 CFLAGS  ?= -std=c11 -Wall -Wextra -Werror -O2
-CFLAGS  += -march=armv7-a -mfpu=neon -mfloat-abi=hard -D_DEFAULT_SOURCE \
+CFLAGS  += -pthread -march=armv7-a -mfpu=neon -mfloat-abi=hard -D_DEFAULT_SOURCE \
            -I$(COMMON)/include -Isrc
-LDFLAGS += -static
+LDFLAGS += -static -pthread
 
 # sw/common que usa el HPS: parser WAV, protocolo de shm y remuestreo a 48 kHz.
 COMMON_SRC := wav.c le.c err.c shm_proto.c resample.c
-SRC := src/main.c src/producer.c src/devmem.c $(addprefix $(COMMON)/src/,$(COMMON_SRC))
+SRC := src/main.c src/producer.c src/prefetch.c src/devmem.c $(addprefix $(COMMON)/src/,$(COMMON_SRC))
 HDRS := $(wildcard src/*.h $(COMMON)/include/*.h)
 
 .PHONY: all clean

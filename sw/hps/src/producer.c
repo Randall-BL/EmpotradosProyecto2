@@ -85,7 +85,6 @@ uint32_t producer_scan(producer_t *p, const char *dir)
 {
     p->ntracks = 0;
     p->skipped = 0;
-    p->f = NULL;
     DIR *d = opendir(dir);
     if (!d) {
         p->hps_state = SHM_HPS_NO_SD;
@@ -145,11 +144,24 @@ void producer_publish(producer_t *p, volatile shm_t *s)
     }
 }
 
+/* Resumen de la pista que termina: deja en el log si hubo lecturas lentas o el ring se
+ * vacio, aunque no se haya oido. */
+static void report_track(producer_t *p)
+{
+    if (!p->verbose || !p->active)
+        return;
+    prefetch_t *pf = &p->pf;
+    size_t min = pf->min_level == (size_t)-1 ? 0 : pf->min_level;
+    printf("hps_player: pista %u: %u lecturas, %u lentas, max %u ms, buffer minimo %u KB, "
+           "ring vacio %u veces\n", p->track + 1u, pf->reads, pf->slow_reads,
+           pf->max_read_ms, (unsigned)(min >> 10), p->ring_empty);
+}
+
 void producer_stop(producer_t *p)
 {
-    if (p->f)
-        fclose(p->f);
-    p->f = NULL;
+    prefetch_stop(&p->pf);
+    report_track(p);
+    p->active = 0;
     p->in_pos = p->in_len = 0;
 }
 
@@ -159,28 +171,44 @@ static uint32_t start_track(producer_t *p, uint32_t track)
     if (track >= p->ntracks)
         return SHM_STREAM_ERROR;
     producer_file_t *file = &p->files[track];
-    p->f = fopen(file->path, "rb");
-    if (!p->f || fseek(p->f, (long)file->data_offset, SEEK_SET) != 0) {
-        producer_stop(p);
+    FILE *f = fopen(file->path, "rb");
+    size_t bytes = (size_t)file->frames * file->channels * 2u;
+    if (!f || fseek(f, (long)file->data_offset, SEEK_SET) != 0) {
+        if (f)
+            fclose(f);
         return SHM_STREAM_ERROR;
     }
+    p->pf.verbose = p->verbose;
+    if (prefetch_start(&p->pf, f, bytes, track) != 0) {
+        fclose(f);
+        return SHM_STREAM_ERROR;
+    }
+    p->active = 1;
     p->track = track;
     p->in_left = file->frames;
+    p->wrote = p->starving = 0;
+    p->ring_empty = 0;
     resample_init(&p->rs, file->rate);
+    /* Primer bloque antes del ack: el Nios V empieza con datos y no con un corte. */
+    prefetch_wait(&p->pf, bytes < PREFETCH_PRIME ? bytes : PREFETCH_PRIME);
     return SHM_STREAM_RUNNING;
 }
 
-/* Lee el siguiente bloque de PCM. 0 al llegar al final (o error de lectura). */
+/* Toma el siguiente bloque de PCM del prefetch. 1 si hay datos, 0 al llegar al final
+ * (o error de lectura) y -1 si el hilo lector todavia no los trae. */
 static int refill(producer_t *p)
 {
     producer_file_t *file = &p->files[p->track];
     uint32_t want = p->in_left < PRODUCER_IN_FRAMES ? p->in_left : PRODUCER_IN_FRAMES;
     if (want == 0)
         return 0;
+    size_t fs = (size_t)file->channels * 2u;
     uint8_t *raw = (uint8_t *)p->in;
-    size_t bytes = fread(raw, 1, (size_t)want * file->channels * 2u, p->f);
-    uint32_t got = (uint32_t)(bytes / (file->channels * 2u));
+    size_t bytes = prefetch_read(&p->pf, raw, (size_t)want * fs, fs);
+    uint32_t got = (uint32_t)(bytes / fs);
     if (got == 0) {
+        if (!prefetch_finished(&p->pf, fs))
+            return -1;
         p->in_left = 0;                   /* archivo mas corto de lo esperado */
         return 0;
     }
@@ -193,17 +221,40 @@ static int refill(producer_t *p)
     return 1;
 }
 
+/* Diagnostico: el ring vacio con la pista en curso es un corte que el Nios V oye. */
+static void check_starving(producer_t *p, uint32_t space)
+{
+    if (!p->wrote || space < SHM_RING_FRAMES) {
+        p->starving = 0;
+        return;
+    }
+    if (p->starving)
+        return;
+    p->starving = 1;
+    p->ring_empty++;
+    if (p->verbose)
+        printf("hps_player: ring vacio (pista %u, buffer del HPS %u KB)\n", p->track + 1u,
+               (unsigned)(prefetch_level(&p->pf) >> 10));
+}
+
 static int stream(producer_t *p)
 {
     int did = 0;
-    while (p->f) {
+    if (p->active)
+        check_starving(p, shm_hps_space(p->s));
+    while (p->active) {
         uint32_t space = shm_hps_space(p->s);
         if (space == 0)
             break;
-        if (p->in_pos == p->in_len && !refill(p)) {
-            producer_stop(p);
-            shm_hps_end(p->s, SHM_STREAM_EOF);
-            return 1;
+        if (p->in_pos == p->in_len) {
+            int r = refill(p);
+            if (r < 0)
+                break;                    /* el lector va atrasado: se reintenta luego */
+            if (r == 0) {
+                producer_stop(p);
+                shm_hps_end(p->s, SHM_STREAM_EOF);
+                return 1;
+            }
         }
         uint32_t room = space < (uint32_t)(sizeof p->out / sizeof p->out[0])
                             ? space : (uint32_t)(sizeof p->out / sizeof p->out[0]);
@@ -212,8 +263,10 @@ static int stream(producer_t *p)
         uint32_t made = resample_run(&p->rs, &p->in[p->in_pos * ch], p->in_len - p->in_pos,
                                      ch, &used, p->out, room);
         p->in_pos += used;
-        if (made)
+        if (made) {
             shm_hps_write(p->s, p->out, made);
+            p->wrote = 1;
+        }
         did = 1;
         if (made == 0 && used == 0)
             break;

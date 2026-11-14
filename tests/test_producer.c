@@ -132,7 +132,7 @@ static void test_commands(void)
     CHECK(shm_nios_acked(s, seq));
     CHECK_EQ(shm_nios_avail(s, seq), 0);
     CHECK_EQ(shm_nios_stream(s, seq), SHM_STREAM_IDLE);
-    CHECK(prod.f == NULL);
+    CHECK(!prod.active);
 
     seq = shm_nios_send(s, SHM_CMD_PLAY, 99);
     producer_poll(&prod);

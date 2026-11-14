@@ -7,15 +7,24 @@
  * reconfigurarse mientras corre: antes de tocar el puente se revisa que este en modo
  * usuario, y si shm pierde el "magic" (RAM de la FPGA reiniciada) se vuelve a publicar.
  *
+ * Tiempo real (HP-07): el lazo corre con SCHED_FIFO y la memoria bloqueada (mlockall),
+ * y la SD la lee un hilo aparte (prefetch.c). En la consola solo se reportan anomalias:
+ * lecturas lentas, ring vacio, pausas del lazo y un resumen al terminar cada pista.
+ *
  * Uso: hps_player [carpeta]   (por defecto /mnt/sd/music)
  */
+#include <sched.h>
 #include <signal.h>
 #include <stdio.h>
+#include <string.h>
+#include <sys/mman.h>
 #include <time.h>
 #include "devmem.h"
 #include "producer.h"
 
 #define DEFAULT_DIR "/mnt/sd/music"
+#define RT_PRIORITY 50                    /* SCHED_FIFO, por encima de lo normal */
+#define LOOP_SLOW_MS 100u                 /* pausa del lazo que se reporta */
 
 static producer_t prod;
 static volatile sig_atomic_t quit;
@@ -30,6 +39,27 @@ static void sleep_us(long us)
 {
     struct timespec ts = {us / 1000000L, (us % 1000000L) * 1000L};
     nanosleep(&ts, NULL);
+}
+
+static uint32_t now_ms(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint32_t)ts.tv_sec * 1000u + (uint32_t)(ts.tv_nsec / 1000000L);
+}
+
+/* Prioridad de tiempo real y memoria sin paginar. Si falla se sigue igual. */
+static void realtime_setup(void)
+{
+    if (mlockall(MCL_CURRENT | MCL_FUTURE) != 0)
+        perror("hps_player: mlockall");
+    struct sched_param sp;
+    memset(&sp, 0, sizeof sp);
+    sp.sched_priority = RT_PRIORITY;
+    if (sched_setscheduler(0, SCHED_FIFO, &sp) != 0)
+        perror("hps_player: SCHED_FIFO");
+    else
+        printf("hps_player: SCHED_FIFO %d, memoria bloqueada\n", RT_PRIORITY);
 }
 
 static const char *state_name(uint32_t st)
@@ -57,6 +87,9 @@ int main(int argc, char **argv)
                prod.table[i].artist, prod.table[i].sample_rate, prod.table[i].channels,
                prod.table[i].duration_s);
 
+    prod.verbose = 1;
+    realtime_setup();                     /* el hilo lector hereda la politica */
+
     devmem_t d = {.fd = -1};
     if (devmem_open(&d) != 0) {
         perror("hps_player: /dev/mem");
@@ -64,7 +97,12 @@ int main(int argc, char **argv)
     }
 
     int online = 0;
+    uint32_t last = now_ms();
     while (!quit) {
+        uint32_t t = now_ms();
+        if (prod.active && t - last > LOOP_SLOW_MS)
+            printf("hps_player: lazo detenido %u ms (pista %u)\n", t - last, prod.track + 1u);
+        last = t;
         if (!devmem_fpga_ready(&d)) {
             if (online)
                 printf("hps_player: la FPGA salio de modo usuario; esperando\n");
@@ -80,8 +118,11 @@ int main(int argc, char **argv)
             online = 1;
             printf("hps_player: shm publicada (%u pistas)\n", prod.ntracks);
         }
+        uint32_t cmds = prod.commands;
         if (!producer_poll(&prod))
             sleep_us(1000);
+        if (prod.commands != cmds)
+            last = now_ms();              /* PLAY espera el primer bloque a proposito */
     }
     producer_stop(&prod);
     devmem_close(&d);

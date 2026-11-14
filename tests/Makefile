@@ -32,8 +32,9 @@ SRC_test_shm    := shm_proto.c
 SRC_test_resample := resample.c
 # El productor del HPS es C estandar + POSIX: se prueba aqui contra un shm en RAM.
 SRC_test_producer := resample.c shm_proto.c wav.c le.c err.c
-EXTRA_test_producer := $(HPS)/producer.c
-DEFS_test_producer := -D_DEFAULT_SOURCE -I$(HPS)
+EXTRA_test_producer := $(HPS)/producer.c $(HPS)/prefetch.c
+DEFS_test_producer := -D_DEFAULT_SOURCE -pthread -I$(HPS)
+LIBS_test_producer := -pthread
 SRC_test_app    := app.c fsm.c playlist.c evq.c switches.c debounce.c shm_proto.c \
                    shm_source.c hps_model.c screen.c volume.c dsp.c err.c
 LIBS_test_tone  := -lm
