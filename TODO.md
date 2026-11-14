@@ -341,16 +341,16 @@ retomar.
 
 | Requisito | Estado | Qué falta | Tareas |
 |---|---|---|---|
-| ≥ 10 canciones en SD, WAV 16 bits 8/16/44.1 kHz | ✅ (44.1 kHz) | Probar en la tarjeta un WAV de 8 kHz y uno de 16 kHz | HP-06, SC-12 |
-| Metadatos: título, artista, álbum, duración | 🟡 | Las canciones de `Musica/` no traen artista ni álbum (salen "Desconocido"): etiquetarlas (`convert-music.sh` copia las etiquetas) o usar otras | PR-06 |
+| ≥ 10 canciones en SD, WAV 16 bits 8/16/44.1 kHz | 🟡 | La SD tiene 14 pistas: 10 canciones (8 kHz mono, 16 kHz estéreo y mono, 44.1 kHz) y la prueba de sonidos a 8/16/44.1/48 kHz (`scripts/gen-cancion-prueba.py`), más un WAV de 24 bits que se descarta. Falta confirmar a oído y en la consola | HP-06, HP-09, SC-12 |
+| Metadatos: título, artista, álbum, duración | 🟡 | Etiquetas ID3 en los MP3 de `Musica/` y formato por canción en `Musica/canciones.tsv` (13 nov); falta verlos en la VGA | PR-06 |
 | Play, pausa, stop, anterior, siguiente por interrupciones | ✅ | — | IN-07 |
 | Avance automático al terminar una canción | 🟡 | Verlo en la tarjeta | IN-07 |
 | Tiempo MM:SS en 7 segmentos | ✅ | — | HW-10 |
-| Metadatos, canción N/total y filtro activo en VGA | 🟡 | **Nunca se ha visto en un monitor**: conectar uno | IN-04, `test_vga` |
+| Metadatos, canción N/total y filtro activo en VGA | 🟡 | Visto en un monitor el 13 nov (contador de subdesbordes); falta revisar cada campo con las canciones nuevas | IN-04, `test_vga` |
 | 3 filtros con switches, sin distorsión en bypass | ✅ a oído | Evidencias: respuesta en frecuencia y grabación del line-out | PR-09, PR-10 |
 | Volumen con potenciómetro en el ADC | 🟡 | Conseguir el potenciómetro y probarlo (ver abajo) | IN-03, PR-05 (`test_adc`) |
 | Arranque < 10 s, botones < 200 ms, filtro < 100 ms, canción < 2 s | 🟡 | Medir y registrar (video a 60 fps) | PR-07, HP-04 |
-| Estabilidad, sin cortes ni reinicios | 🟡 | La lista completa dos vueltas | PR-08, IN-06 |
+| Estabilidad, sin cortes ni reinicios | 🟡 | Cortes de la SD corregidos el 13 nov (CD-02). Falta la lista completa dos vueltas | PR-08, IN-06 |
 
 **Hardware y software obligatorios (§3, p.4–5)**
 
@@ -381,8 +381,8 @@ RP-05, DOC-04.
 
 **Orden sugerido para retomar:**
 
-1. Material: potenciómetro y monitor VGA (`docs/material.md`).
-2. Etiquetar las canciones con artista y álbum, y regenerar la SD (`docs/pruebas-tarjeta.md`).
+1. Material: potenciómetro (`docs/material.md`). El monitor VGA ya se usó el 13 nov.
+2. ~~Etiquetar las canciones con artista y álbum, y regenerar la SD~~ (hecho el 13 nov).
 3. Una sesión en la tarjeta con video: volumen, VGA, mediciones de PR-07, PR-08 y avance
    automático. El mismo video sirve de evidencia para el README.
 4. Documentación: metodología (7 %) y README (10 %).
@@ -772,15 +772,18 @@ subir de un extremo al otro.
       comandos del Nios V (cambiar pista, stop) y fin de archivo. *§3-F p.3–4 (continuidad,
       cambio < 2 s)* ⟵ HP-06, HW-06 (OBL)
       `sw/hps/src/producer.c`; en la tarjeta suena y cambia de pista con KEY2/KEY3 (12
-      nov 2026).
+      nov 2026). 13 nov: cortes de ~1 s por el límite de 100 ms del kernel en lecturas SD;
+      corregido con un parche a `dw_mmc` y lectura anticipada de 4 MiB
+      (`sw/hps/src/prefetch.c`), `SCHED_FIFO` y diagnóstico en la consola (CD-02).
 - [x] **HP-08** `D·1` Sin interacción con el SO: arranque automático, sin consola de usuario.
       *§3-SW p.5* ⟵ HP-04 (OBL)
       `sw/hps/linux/init` lanza `hps_player` sin consola (12 nov 2026). Shell solo con
       `debugsh` en los bootargs (depuración).
 - [~] **HP-09** `D·1` Errores: SD ausente, archivo corrupto o no soportado (se salta y se
       informa), menos de 10 archivos. *§3-F p.4 (estabilidad)* ⟵ HP-06
-      Probado en PC (`test_producer`: archivos no soportados se saltan, sin SD); falta
-      probar en la tarjeta (SD sin carpeta, WAV dañado).
+      Probado en PC (`test_producer`: archivos no soportados se saltan, sin SD). La SD
+      lleva `11_Prueba_24bit_no_soportado.wav` (24 bits) para mostrar el descarte; falta
+      verlo en la consola de la tarjeta, y SD sin carpeta y WAV dañado.
 - [ ] **HP-10** `D·2` Filtros en el ARM, solo si CD-12 los asigna al HPS. *§3-SIS p.5* ⟵ CD-12
 
 ## 7. Integración HW/SW en la tarjeta — #33 (IN-01..04), #34 (IN-05..09)
@@ -799,8 +802,8 @@ subir de un extremo al otro.
       El streaming funciona en la tarjeta (12 nov 2026); falta la prueba con checksum.
 - [~] **IN-06** `D·2` Reproducción de un WAV completo desde la SD, en bypass y sin cortes.
       *§3-F p.3–4* ⟵ IN-02, IN-05
-      Suena desde la SD en la tarjeta (12 nov 2026); falta una canción completa sin
-      cortes (PR-08).
+      Suena desde la SD en la tarjeta (12 nov 2026). 13 nov: la canción 9 suena sin cortes
+      tras el parche del kernel (`ring vacio 0 veces`); falta la lista completa (PR-08).
 - [~] **IN-07** `C·2` Botones + FSM + playlist + avance automático con ≥ 10 canciones. *§3-F
       p.3* ⟵ IN-06, NV-03, NV-14
       Verificado sin tarjeta: `tb_player` (Nios V, 10 pistas, dos vueltas) y `test_app`.
