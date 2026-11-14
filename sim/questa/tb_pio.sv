@@ -15,6 +15,7 @@ module tb_pio;
     localparam real CLK_NS      = 20.0;      // CLOCK_50
     localparam int  BOOT_US     = 3000;      // arranque del Nios V (crt0 + alt_main)
     localparam int  STEP_US     = 500;       // tiempo maximo por etapa
+    localparam int  SETTLE_US   = 25000;     // etapas 2 y 3: SW estable 20 ms (antirrebote)
     localparam real RESP_MAX_US = 200000.0;  // requisito de respuesta a botones
 
     logic       clk   = 1'b0;
@@ -85,10 +86,10 @@ module tb_pio;
         expect_led(10'h2AA, "etapa 1, escritura de LEDR", BOOT_US, w);
 
         sw = 10'h155;
-        expect_led(10'h155, "etapa 2, lectura de SW = 0x155", STEP_US, w);
+        expect_led(10'h155, "etapa 2, lectura de SW = 0x155", SETTLE_US, w);
 
         sw = 10'h000;
-        expect_led(10'h300, "etapa 3, IRQ registradas", STEP_US, w);
+        expect_led(10'h300, "etapa 3, IRQ registradas", SETTLE_US, w);
 
         press(4'b0001, 1'b0, 10'h101, "KEY0 por IRQ");
         press(4'b0010, 1'b0, 10'h102, "KEY1 por IRQ");

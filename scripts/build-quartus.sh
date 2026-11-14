@@ -39,4 +39,8 @@ if awk '/; Multicorner Timing Analysis Summary/,/^$/' "$STA" | grep -E "Worst-ca
     echo "AVISO: hay requisitos de tiempo sin cumplir (ver $STA)" >&2
     exit 2
 fi
-echo ">> Listo: $QDIR/output_files/audio_player.sof"
+# HP-04: .rbf comprimido para que U-Boot configure la FPGA desde la SD
+# (SW10/MSEL = 01010, FPP x16 con compresion).
+quartus_cpf -c -o bitstream_compression=on \
+    "$QDIR/output_files/audio_player.sof" "$QDIR/output_files/audio_player.rbf" >/dev/null
+echo ">> Listo: $QDIR/output_files/audio_player.sof y audio_player.rbf"

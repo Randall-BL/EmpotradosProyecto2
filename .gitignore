@@ -89,3 +89,11 @@ hw/quartus/update_mif.log
 
 # Coeficientes del RTL propio: los genera scripts/design_fir.py y se versionan
 !hw/rtl/*.hex
+
+# Canciones para la SD (pesadas, no se versionan; ver scripts/make-sdimage.sh)
+/Musica/
+
+# Lo que Quartus genera para el HPS al compilar (handoff y reportes de la DDR3).
+# U-Boot usa la configuracion de la DE1-SoC que trae su propio arbol (ver CD-02).
+hw/quartus/hps_isw_handoff/
+hw/quartus/hps_sdram_p0_*

@@ -46,7 +46,30 @@ module DE1_SoC_top (
     output wire        VGA_HS,
     output wire        VGA_VS,
     output wire        VGA_BLANK_N,
-    output wire        VGA_SYNC_N
+    output wire        VGA_SYNC_N,
+
+    // HPS (HW-05): DDR3 de Linux, microSD y UART0 (pines dedicados del HPS)
+    output wire [14:0] HPS_DDR3_ADDR,
+    output wire [2:0]  HPS_DDR3_BA,
+    output wire        HPS_DDR3_CAS_N,
+    output wire        HPS_DDR3_CKE,
+    output wire        HPS_DDR3_CK_N,
+    output wire        HPS_DDR3_CK_P,
+    output wire        HPS_DDR3_CS_N,
+    output wire [3:0]  HPS_DDR3_DM,
+    inout  wire [31:0] HPS_DDR3_DQ,
+    inout  wire [3:0]  HPS_DDR3_DQS_N,
+    inout  wire [3:0]  HPS_DDR3_DQS_P,
+    output wire        HPS_DDR3_ODT,
+    output wire        HPS_DDR3_RAS_N,
+    output wire        HPS_DDR3_RESET_N,
+    input  wire        HPS_DDR3_RZQ,
+    output wire        HPS_DDR3_WE_N,
+    output wire        HPS_SD_CLK,
+    inout  wire        HPS_SD_CMD,
+    inout  wire [3:0]  HPS_SD_DATA,
+    input  wire        HPS_UART_RX,
+    output wire        HPS_UART_TX
 );
 
     // ---- Reset de encendido ----
@@ -93,7 +116,33 @@ module DE1_SoC_top (
         .hex_hex2       (HEX2),
         .hex_hex3       (HEX3),
         .hex_hex4       (HEX4),
-        .hex_hex5       (HEX5)
+        .hex_hex5       (HEX5),
+
+        // HPS: DDR3, microSD y UART0
+        .hps_ddr_mem_a       (HPS_DDR3_ADDR),
+        .hps_ddr_mem_ba      (HPS_DDR3_BA),
+        .hps_ddr_mem_ck      (HPS_DDR3_CK_P),
+        .hps_ddr_mem_ck_n    (HPS_DDR3_CK_N),
+        .hps_ddr_mem_cke     (HPS_DDR3_CKE),
+        .hps_ddr_mem_cs_n    (HPS_DDR3_CS_N),
+        .hps_ddr_mem_ras_n   (HPS_DDR3_RAS_N),
+        .hps_ddr_mem_cas_n   (HPS_DDR3_CAS_N),
+        .hps_ddr_mem_we_n    (HPS_DDR3_WE_N),
+        .hps_ddr_mem_reset_n (HPS_DDR3_RESET_N),
+        .hps_ddr_mem_dq      (HPS_DDR3_DQ),
+        .hps_ddr_mem_dqs     (HPS_DDR3_DQS_P),
+        .hps_ddr_mem_dqs_n   (HPS_DDR3_DQS_N),
+        .hps_ddr_mem_odt     (HPS_DDR3_ODT),
+        .hps_ddr_mem_dm      (HPS_DDR3_DM),
+        .hps_ddr_oct_rzqin   (HPS_DDR3_RZQ),
+        .hps_io_hps_io_sdio_inst_CMD (HPS_SD_CMD),
+        .hps_io_hps_io_sdio_inst_D0  (HPS_SD_DATA[0]),
+        .hps_io_hps_io_sdio_inst_D1  (HPS_SD_DATA[1]),
+        .hps_io_hps_io_sdio_inst_D2  (HPS_SD_DATA[2]),
+        .hps_io_hps_io_sdio_inst_D3  (HPS_SD_DATA[3]),
+        .hps_io_hps_io_sdio_inst_CLK (HPS_SD_CLK),
+        .hps_io_hps_io_uart0_inst_RX (HPS_UART_RX),
+        .hps_io_hps_io_uart0_inst_TX (HPS_UART_TX)
     );
 
     // El codec es maestro: BCLK y DACLRCK son entradas para la FPGA. La entrada de

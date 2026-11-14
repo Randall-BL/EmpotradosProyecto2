@@ -162,6 +162,110 @@ add_instance filtro filtro_audio
 add_instance seg7 seg7_time
 
 # ============================================================================
+#  HPS (HW-05, CD-01): ARM Cortex-A9 con Linux minimo (CD-02). Lee la SD y llena
+#  el ring de shm por el puente liviano HPS->FPGA (h2f_lw_axi -> shm.s2).
+# ============================================================================
+# Solo lo que usa el reproductor: DDR3 (memoria de Linux), SD/MMC (canciones y
+# arranque), UART0 (consola de arranque para depurar) y el puente liviano. Sin
+# puentes FPGA<->HPS de alto ancho de banda ni interrupciones HPS<->FPGA.
+# La DDR3 y la temporizacion de la placa son las de la DE1-SoC (GHRD de Terasic,
+# las mismas que asume el preloader socfpga_de1_soc de U-Boot).
+add_instance hps altera_hps
+foreach {param value} {
+    HPS_PROTOCOL {DDR3}
+    RATE {Full}
+    REF_CLK_FREQ {25.0}
+    MEM_ASR {Manual}
+    MEM_ATCL {Disabled}
+    MEM_AUTO_LEVELING_MODE {true}
+    MEM_BANKADDR_WIDTH {3}
+    MEM_BL {OTF}
+    MEM_BT {Sequential}
+    MEM_CK_PHASE {0.0}
+    MEM_CK_WIDTH {1}
+    MEM_CLK_EN_WIDTH {1}
+    MEM_CLK_FREQ {400.0}
+    MEM_COL_ADDR_WIDTH {10}
+    MEM_CS_WIDTH {1}
+    MEM_DLL_EN {true}
+    MEM_DQ_PER_DQS {8}
+    MEM_DQ_WIDTH {32}
+    MEM_DRV_STR {RZQ/7}
+    MEM_FORMAT {DISCRETE}
+    MEM_IF_DM_PINS_EN {true}
+    MEM_IF_DQSN_EN {true}
+    MEM_INIT_EN {false}
+    MEM_MIRROR_ADDRESSING {0}
+    MEM_NUMBER_OF_DIMMS {1}
+    MEM_NUMBER_OF_RANKS_PER_DEVICE {1}
+    MEM_NUMBER_OF_RANKS_PER_DIMM {1}
+    MEM_PD {DLL off}
+    MEM_RANK_MULTIPLICATION_FACTOR {1}
+    MEM_ROW_ADDR_WIDTH {15}
+    MEM_RTT_NOM {RZQ/4}
+    MEM_RTT_WR {RZQ/4}
+    MEM_SRT {Normal}
+    MEM_TCL {11}
+    MEM_TFAW_NS {30.0}
+    MEM_TINIT_US {500}
+    MEM_TMRD_CK {4}
+    MEM_TRAS_NS {35.0}
+    MEM_TRCD_NS {13.75}
+    MEM_TREFI_US {7.8}
+    MEM_TRFC_NS {260.0}
+    MEM_TRP_NS {13.75}
+    MEM_TRRD_NS {7.5}
+    MEM_TRTP_NS {7.5}
+    MEM_TWR_NS {15.0}
+    MEM_TWTR {4}
+    MEM_USER_LEVELING_MODE {Leveling}
+    MEM_VENDOR {Other}
+    MEM_VOLTAGE {1.5V DDR3}
+    MEM_WTCL {8}
+    TIMING_BOARD_AC_EYE_REDUCTION_H {0.0}
+    TIMING_BOARD_AC_EYE_REDUCTION_SU {0.0}
+    TIMING_BOARD_AC_SKEW {0.02}
+    TIMING_BOARD_AC_SLEW_RATE {1.0}
+    TIMING_BOARD_AC_TO_CK_SKEW {0.01}
+    TIMING_BOARD_CK_CKN_SLEW_RATE {2.0}
+    TIMING_BOARD_DELTA_DQS_ARRIVAL_TIME {0.0}
+    TIMING_BOARD_DELTA_READ_DQS_ARRIVAL_TIME {0.0}
+    TIMING_BOARD_DERATE_METHOD {AUTO}
+    TIMING_BOARD_DQS_DQSN_SLEW_RATE {2.0}
+    TIMING_BOARD_DQ_EYE_REDUCTION {0.0}
+    TIMING_BOARD_DQ_SLEW_RATE {1.0}
+    TIMING_BOARD_DQ_TO_DQS_SKEW {0.05}
+    TIMING_BOARD_ISI_METHOD {AUTO}
+    TIMING_BOARD_MAX_CK_DELAY {0.03}
+    TIMING_BOARD_MAX_DQS_DELAY {0.02}
+    TIMING_BOARD_READ_DQ_EYE_REDUCTION {0.0}
+    TIMING_BOARD_SKEW_BETWEEN_DIMMS {0.05}
+    TIMING_BOARD_SKEW_BETWEEN_DQS {0.06}
+    TIMING_BOARD_SKEW_CKDQS_DIMM_MAX {0.12}
+    TIMING_BOARD_SKEW_CKDQS_DIMM_MIN {0.06}
+    TIMING_BOARD_SKEW_WITHIN_DQS {0.01}
+    TIMING_BOARD_TDH {0.0}
+    TIMING_BOARD_TDS {0.0}
+    TIMING_BOARD_TIH {0.0}
+    TIMING_BOARD_TIS {0.0}
+} {
+    set_instance_parameter_value hps $param $value
+}
+foreach {param value} {
+    F2S_Width {0}
+    S2F_Width {0}
+    LWH2F_Enable {true}
+    F2SDRAM_Type {}
+    F2SDRAM_Width {}
+    SDIO_PinMuxing {HPS I/O Set 0}
+    SDIO_Mode {4-bit Data}
+    UART0_PinMuxing {HPS I/O Set 0}
+    UART0_Mode {No Flow Control}
+} {
+    set_instance_parameter_value hps $param $value
+}
+
+# ============================================================================
 #  Conexiones de reloj y reset
 # ============================================================================
 foreach inst {audio av_config adc char_buf filtro seg7} {
@@ -193,6 +297,8 @@ add_connection clk.clk shm.clk1
 add_connection clk.clk_reset shm.reset1
 add_connection clk.clk shm.clk2
 add_connection clk.clk_reset shm.reset2
+# Puente liviano del HPS a 50 MHz, en el mismo dominio que shm.s2.
+add_connection clk.clk hps.h2f_lw_axi_clock
 
 # ============================================================================
 #  Avalon-MM y mapa de direcciones (docs/hw/mapa-memoria.md)
@@ -218,6 +324,9 @@ map cpu.data_manager        char_buf.avalon_char_buffer_slave  0x00042000
 map cpu.data_manager        filtro.s1              0x00040100
 map cpu.data_manager        seg7.s1                0x00040120
 map cpu.data_manager        cpu.dm_agent           0x00050000
+
+# HPS: shm.s2 al inicio del puente liviano (0xFF20_0000 visto desde el ARM).
+map hps.h2f_lw_axi_master   shm.s2                 0x00000000
 
 # ============================================================================
 #  Interrupciones (receptor platform_irq_rx del Nios V)
@@ -260,5 +369,11 @@ add_interface vga conduit end
 set_interface_property vga EXPORT_OF vga.external_interface
 add_interface hex conduit end
 set_interface_property hex EXPORT_OF seg7.hex
+
+# HPS: DDR3 y pines dedicados del HPS (SD, UART0)
+add_interface hps_ddr conduit end
+set_interface_property hps_ddr EXPORT_OF hps.memory
+add_interface hps_io conduit end
+set_interface_property hps_io EXPORT_OF hps.hps_io
 
 save_system audio_soc.qsys
