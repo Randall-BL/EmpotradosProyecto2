@@ -61,6 +61,6 @@ HEX3..HEX0  00:00 ................... | 02:05
 
 | Decisión | Alternativa | Por qué |
 |---|---|---|
-| Conversión a MM:SS en hardware | PIO de 28 bits y decodificación en software | Cumple la lectura estricta de "manejo directo de los displays en hardware" (P6); el CPU hace una sola escritura por segundo |
+| Conversión a MM:SS en hardware | PIO de 28 bits y decodificación en software | Cumple la lectura estricta de "manejo directo de los displays en hardware"; el CPU hace una sola escritura por segundo |
 | Restas sucesivas | Divisor combinacional entre 60 | Menos lógica; 2.3 µs por actualización es irrelevante a 1 Hz |
 | Saturación a 99:59 y 99 | Dar la vuelta | Una canción no dura 100 minutos; se evita mostrar un tiempo equivocado |

@@ -13,10 +13,12 @@ LDFLAGS += $(SAN)
 BUILD   := ../build/tests
 DATA    := $(BUILD)/data
 C       := ../sw/common/src
+HPS     := ../sw/hps/src
 HDRS    := $(wildcard ../sw/common/include/*.h) test.h
 
 TESTS   := test_volume test_screen test_tone test_dsp \
-           test_wav test_fsm test_input test_shm test_app
+           test_wav test_fsm test_input test_shm test_app test_resample \
+           test_producer
 
 # Fuentes de sw/common que usa cada prueba.
 SRC_test_volume := volume.c
@@ -27,6 +29,12 @@ SRC_test_wav    := wav.c le.c err.c
 SRC_test_fsm    := fsm.c playlist.c
 SRC_test_input  := evq.c switches.c debounce.c clock.c
 SRC_test_shm    := shm_proto.c
+SRC_test_resample := resample.c
+# El productor del HPS es C estandar + POSIX: se prueba aqui contra un shm en RAM.
+SRC_test_producer := resample.c shm_proto.c wav.c le.c err.c
+EXTRA_test_producer := $(HPS)/producer.c $(HPS)/prefetch.c
+DEFS_test_producer := -D_DEFAULT_SOURCE -pthread -I$(HPS)
+LIBS_test_producer := -pthread
 SRC_test_app    := app.c fsm.c playlist.c evq.c switches.c debounce.c shm_proto.c \
                    shm_source.c hps_model.c screen.c volume.c dsp.c err.c
 LIBS_test_tone  := -lm
@@ -43,8 +51,8 @@ all: build $(DATA)/.stamp
 build: $(addprefix $(BUILD)/,$(TESTS))
 
 .SECONDEXPANSION:
-$(BUILD)/%: %.c $$(addprefix $(C)/,$$(SRC_$$*)) $(HDRS) | $(BUILD)
-	$(CC) $(CFLAGS) $(DEFS_$*) -o $@ $< $(addprefix $(C)/,$(SRC_$*)) $(LDFLAGS) $(LIBS_$*)
+$(BUILD)/%: %.c $$(addprefix $(C)/,$$(SRC_$$*)) $$(EXTRA_$$*) $(HDRS) | $(BUILD)
+	$(CC) $(CFLAGS) $(DEFS_$*) -o $@ $< $(addprefix $(C)/,$(SRC_$*)) $(EXTRA_$*) $(LDFLAGS) $(LIBS_$*)
 
 $(DATA)/.stamp: data/gen_wavs.py | $(BUILD)
 	$(PYTHON) data/gen_wavs.py $(DATA)

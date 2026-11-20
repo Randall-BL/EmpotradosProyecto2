@@ -25,16 +25,51 @@ potenciómetro de 10 kΩ entre 0 V y 5 V del conector del ADC con el cursor en *
 
 | ID | Programa (`APP=`) | Pasos | Resultado esperado | Resultado |
 |---|---|---|---|---|
-| IN-01 / PR-05 | `test_pio` | Programar. Mover SW a 0x155 y volver a 0. Pulsar KEY0..KEY3, luego dos a la vez. Subir SW4 y SW3. | LEDR muestra 0x2AA al arrancar; luego 0x155 (eco de SW); 0x300 al quedar lista; cada KEY enciende LEDR8 + el LED de su número (0x101, 0x102, 0x104, 0x108); dos KEY juntos, ambos; SW4 → 0x210, SW3 → 0x218. Una pulsación con rebote se ve como una sola. | |
+| IN-01 / PR-05 | `test_pio` | Programar. Mover SW a 0x155 y volver a 0. Pulsar KEY0..KEY3, luego dos a la vez. Subir SW4 y SW3. | LEDR muestra 0x2AA al arrancar; luego 0x155 (eco de SW); 0x300 al quedar lista; cada KEY enciende LEDR8 + el LED de su número (0x101, 0x102, 0x104, 0x108); dos KEY juntos, ambos; SW4 → 0x210, SW3 → 0x218. Una pulsación con rebote se ve como una sola. || **OK** (12 nov 2026). Sin antirrebote, un rebote de SW adelantaba las etapas 2 y 3 (al subir solo SW8 quedaba LEDR = 0x200); corregido: las etapas esperan SW estable 20 ms y la etapa 4 muestra SW[8:0]. Dos KEY "juntos" a mano llegan como dos eventos (el lazo responde en µs): esperado. |
 | PR-05 | `test_adc` | Girar el potenciómetro de un extremo al otro. | LEDR muestra el valor del ADC >> 2: todo apagado en un extremo, todo encendido en el otro, binario creciente en medio. Funciona igual en placas con AD7928 o con LTC2308. | |
 | PR-05 | `test_vga` | Programar con el monitor conectado. | Pantalla del reproductor con "Cancion de prueba", "Artista de prueba", 03:45, canción 3 / 12, volumen 50 %. LEDR = 0x0B0. | |
-| IN-02 | `test_tono` | Escuchar con SW0 = 0 y luego SW0 = 1. KEY0 silencia y vuelve a sonar. | Tono limpio de 440 Hz y de 1 kHz (sin chasquidos ni cortes). La pantalla muestra el tono y el estado. Si el códec no responde: mensaje de error y todos los LEDs encendidos. | |
+| IN-02 | `test_tono` | Escuchar con SW0 = 0 y luego SW0 = 1. KEY0 silencia y vuelve a sonar. | Tono limpio de 440 Hz y de 1 kHz (sin chasquidos ni cortes). La pantalla muestra el tono y el estado. Si el códec no responde: mensaje de error y todos los LEDs encendidos. || **OK** (12 nov 2026) con audífonos: 440 Hz / 1 kHz con SW0 y silencio con KEY0. Algo de ruido; sin potenciómetro CH0 queda al aire y el volumen varía: repetir con el potenciómetro. |
 | IN-03 | `test_tono` | Girar el potenciómetro. | El volumen cambia de forma pareja (escalones de 2 dB, silencio en un extremo); la barra de LEDs y el porcentaje en pantalla siguen al potenciómetro; no tiembla en reposo. | |
 | IN-04 | `test_tono` | Mirar el monitor. | Marco, título de la aplicación, metadatos fijos, estado, filtro (tono) y barra de volumen como en el boceto de CD-09. | |
-| PR-04 / NV-15 | `test_filtro` | Programar y mirar LEDR y los displays. | LEDR = 0x0D0 (autoprueba del módulo propio: 0 diferencias) y HEX5..HEX0 = `03 02:05`. Con 0x0DF falló la autoprueba. | |
-| IN-08 | `test_filtros` | Escuchar con SW[1:0] = 00, 01, 10 y 11; cambiar los switches mientras suena. | 00: los tres tonos (300 Hz, 2.5 kHz, 8 kHz). 01: solo el grave. 10: solo el medio. 11: los tres con eco (con KEY1 se oyen pulsos y sus ecos cada 50 ms). El cambio es inmediato, sin chasquidos. HEX3..HEX0 cuenta MM:SS; la pantalla muestra el filtro; LEDR[1:0] = SW[1:0]; LEDR9 encendido si falló la autoprueba. | |
+| PR-04 / NV-15 | `test_filtro` | Programar y mirar LEDR y los displays. | LEDR = 0x0D0 (autoprueba del módulo propio: 0 diferencias) y HEX5..HEX0 = `03 02:05`. Con 0x0DF falló la autoprueba. || **OK** (12 nov 2026): LEDR = 0x0D0, HEX = `03 02:05`; JTAG UART: 0 diferencias, 163 ciclos por par, BCD 0205. **Requiere `juart-terminal` abierto**: sin él los `printf` llenan la FIFO y LEDR se queda en 0x0D3. |
+| IN-08 | `test_filtros` | Escuchar con SW[1:0] = 00, 01, 10 y 11; cambiar los switches mientras suena. | 00: los tres tonos (300 Hz, 2.5 kHz, 8 kHz). 01: solo el grave. 10: solo el medio. 11: los tres con eco (con KEY1 se oyen pulsos y sus ecos cada 50 ms). El cambio es inmediato, sin chasquidos. HEX3..HEX0 cuenta MM:SS; la pantalla muestra el filtro; LEDR[1:0] = SW[1:0]; LEDR9 encendido si falló la autoprueba. || **OK** (12 nov 2026) a oído: 00 tres tonos, 01 solo el grave, 10 solo el medio, 11 eco (con KEY1); cambio inmediato, reloj MM:SS, LEDR9 apagado. Pantalla VGA sin verificar (sin monitor). |
 | PR-09 | `test_filtros` | SW = 00 y el potenciómetro al máximo; grabar el line-out en un PC. | Espectro con solo las tres líneas (sin armónicos de distorsión por encima de −60 dB respecto a las líneas). | |
 | PR-10 | `test_filtros` | Repetir la grabación con SW = 01 y 10. | La línea de 8 kHz cae > 55 dB con el pasa-bajos; con el pasa-banda caen las de 300 Hz y 8 kHz. Comparar con `docs/img/filtro-respuesta-medida.png` (medida en simulación). | |
+
+Diagnóstico: `test_eco` enciende los 10 LEDs al arrancar y, al mover un switch, copia
+SW a LEDR (sin interrupciones). Sirve para descartar un LED o un switch dañado antes de
+culpar a una prueba. En la tarjeta del 12 de noviembre: los 10 LEDs y los 10 SW bien.
+
+Para ver la salida de texto de una prueba (y que sus `printf` no se bloqueen):
+`source scripts/env.sh && juart-terminal` con la FPGA ya programada.
+
+## Arranque del HPS desde la SD (HP-02..HP-08, IN-05/06 — persona D)
+
+**Preparar la SD** (ver CD-02). Corre en el contenedor `hps`, sin root, y nunca junto con
+Quartus (con 7 GB de RAM la PC se cae):
+
+```bash
+scripts/build-quartus.sh                       # .sof y .rbf comprimido
+scripts/convert-music.sh                       # Musica/*.mp3 -> build/hps/music-sd/*.wav
+docker compose -f docker/compose.yml run --rm -e JOBS=2 hps \
+    bash -c 'scripts/build-hps-linux.sh && scripts/make-sdimage.sh build/hps/music-sd'
+lsblk                                          # confirmar cuál es la microSD
+sudo dd if=build/hps/sdcard.img of=/dev/sdX bs=4M conv=fsync status=progress
+```
+
+**Tarjeta:** SW10 (MSEL, en la parte de atrás) = 1 ON, 2 OFF, 3 ON, 4 OFF, 5 ON (`01010`,
+FPP x16 con compresión). El cable mini-USB "UART to USB" va a la consola:
+`sudo picocom -b 115200 /dev/ttyUSB0`. Con `debugsh` en los bootargs (`setenv bootargs
+console=ttyS0,115200 debugsh` desde el prompt de U-Boot) se obtiene un shell con
+`devmem` en lugar del reproductor.
+
+| ID | Pasos | Resultado esperado | Resultado |
+|---|---|---|---|
+| HP-02 | Encender con la SD y mirar la consola. | `U-Boot SPL 2024.01`, `U-Boot 2024.01`, `DRAM: 1 GiB`, `Model: Terasic DE1-SoC`. | **OK** (12 nov 2026). |
+| HP-03, HP-04, HP-08 | Encender sin tocar nada. | U-Boot cuenta 1 s, carga `boot.scr`, configura la FPGA con `audio_player.rbf`, arranca Linux e `init: SD montada`, sin pedir nada. | **OK** (12 nov 2026). Al principio se quedaba en el prompt `=>`: el defconfig no definía `bootcmd` (corregido). Tiempo de arranque sin cronometrar (PR-07). |
+| HP-05, HP-06 | Mismo arranque. | `hps_player: /mnt/sd/music: 10 pistas, 0 descartadas (lista)` y las 10 líneas con título y formato. | **OK** (12 nov 2026), 10 WAV a 44.1 kHz estéreo. |
+| HW-05, HW-06 | Con la FPGA configurada. | `hps_player: shm publicada (10 pistas)`. | **OK** (12 nov 2026). Antes se congelaba todo el sistema al publicar: escribir el `remap` del L3 desde Linux lo cuelga (se halló con `devmem` en el shell de depuración). Ahora `remap` lo escribe U-Boot. |
+| IN-06 | KEY0 con la primera canción. | Suena la canción desde la SD, sin cortes. | **OK** (12 nov 2026) a oído, con la música de `Musica/` (no se versiona). Falta una canción completa sin tocar nada (PR-08). |
 
 ## Reproductor completo (IN-07, PR-07, PR-08 — persona C)
 
@@ -45,7 +80,7 @@ aquí se confirma con la SD, el códec y el tiempo real.
 
 | ID | Pasos | Resultado esperado | Resultado |
 |---|---|---|---|
-| IN-07 | Arrancar con la SD. Con la lista detenida: KEY3, KEY2, KEY2 (desde la 1), KEY3. KEY0 para reproducir; KEY3 y KEY2 mientras suena; KEY0 pausa y reanuda; KEY1 stop. Dejar que termine una canción. | Mientras el HPS arranca: "Esperando al HPS...". Luego canción 01 / N en pantalla y HEX5..HEX4. Siguiente/anterior dan la vuelta (01 ↔ N). KEY0 enciende LEDR7 y suena; pausa: LEDR8, silencio y el tiempo se detiene; stop: tiempo 00:00, LEDR7/8 apagados. Al terminar una canción empieza la siguiente sola. | |
+| IN-07 | Arrancar con la SD. Con la lista detenida: KEY3, KEY2, KEY2 (desde la 1), KEY3. KEY0 para reproducir; KEY3 y KEY2 mientras suena; KEY0 pausa y reanuda; KEY1 stop. Dejar que termine una canción. | Mientras el HPS arranca: "Esperando al HPS...". Luego canción 01 / N en pantalla y HEX5..HEX4. Siguiente/anterior dan la vuelta (01 ↔ N). KEY0 enciende LEDR7 y suena; pausa: LEDR8, silencio y el tiempo se detiene; stop: tiempo 00:00, LEDR7/8 apagados. Al terminar una canción empieza la siguiente sola. | **Parcial** (12 nov 2026): con la SD, KEY0 reproduce, KEY3/KEY2 cambian de canción, KEY1 detiene y los filtros responden a SW0/SW1/SW2 (el eco de 50 ms se oye con SW2 solo). Falta revisar la pantalla y el avance automático al final de una canción. |
 | PR-07 respuesta a botones | Grabar a 60 fps (o con SignalTap sobre `KEY` y `LEDR6`) mientras se pulsa KEY3 varias veces. | LEDR6 cambia con cada pulsación aceptada: contar los cuadros entre el dedo y el LED. < 200 ms (≤ 12 cuadros a 60 fps). En simulación: 17 µs (`tb_pio`) y una vuelta del lazo (`tb_player`). | |
 | PR-07 cambio de filtro | Con música, mover SW0 (pasa-bajos) y grabar el line-out y la tarjeta. | El sonido cambia < 100 ms después del LED (LEDR0). En simulación ≤ 41 ms (`test_app`). | |
 | PR-07 cambio de canción | KEY3 reproduciendo; grabar audio y video. | La canción nueva suena < 2 s después de la pulsación (depende de la lectura de la SD del HPS). | |

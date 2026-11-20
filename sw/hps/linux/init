@@ -1,0 +1,34 @@
+#!/bin/sh
+# init del rootfs minimo del HPS (HP-08): monta la SD y lanza la aplicacion, sin
+# consola de usuario. Si la aplicacion termina, la vuelve a lanzar.
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t devtmpfs devtmpfs /dev 2>/dev/null
+
+# La SD puede tardar unos milisegundos en aparecer despues del kernel.
+i=0
+while [ ! -b /dev/mmcblk0p1 ] && [ $i -lt 50 ]; do
+    sleep 0.1
+    i=$((i + 1))
+done
+if mount -t vfat -o ro /dev/mmcblk0p1 /mnt/sd; then
+    echo "init: SD montada"
+else
+    echo "init: no se pudo montar la SD"
+fi
+
+# Depuracion: con "debugsh" en los bootargs (setenv desde la consola de U-Boot) se abre
+# un shell en la consola serial en lugar del reproductor ("busybox devmem" para probar
+# los registros y el puente a mano). En el arranque normal no se usa.
+case " $(cat /proc/cmdline) " in
+*" debugsh "*)
+    echo "init: shell de depuracion (busybox --list para ver comandos)"
+    exec /bin/sh </dev/console >/dev/console 2>&1
+    ;;
+esac
+
+while true; do
+    /usr/bin/hps_player /mnt/sd/music
+    echo "init: hps_player termino ($?); reiniciando"
+    sleep 1
+done

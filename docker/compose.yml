@@ -24,3 +24,20 @@ services:
     init: true
     stdin_open: true
     tty: true
+
+  # Construccion del arranque del HPS: U-Boot, kernel y BusyBox (docker/hps.Dockerfile).
+  hps:
+    image: empotrados-hps:local
+    build:
+      context: .
+      dockerfile: hps.Dockerfile
+      args:
+        USER_UID: ${HOST_UID:-1000}
+        USER_GID: ${HOST_GID:-1000}
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    volumes:
+      - ..:/work
+    working_dir: /work
+    environment:
+      - HOME=/home/dev
+    init: true
