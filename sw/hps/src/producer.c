@@ -1,3 +1,12 @@
+/*
+ * Productor del HPS: tabla de pistas y flujo de audio hacia el ring de shm
+ * (HP-06, HP-07, HP-09). Ver producer.h.
+ *
+ * Flujo de una pista: PLAY -> start_track() abre el archivo y arranca el prefetch ->
+ * ack -> stream() en cada vuelta: refill() toma PCM del prefetch, resample_run() lo
+ * convierte a 48 kHz y shm_hps_write() lo pone en el ring -> al acabarse el archivo,
+ * EOF.
+ */
 #ifndef _DEFAULT_SOURCE
 #define _DEFAULT_SOURCE                   /* strcasecmp, DT_* */
 #endif
@@ -12,6 +21,7 @@
 
 /* ---- Lector del parser sobre un FILE* ---- */
 
+/* Funcion read de wav_reader_t: fseek a off y fread de n bytes (ctx = FILE*). */
 static uint32_t file_read(void *ctx, uint32_t off, uint8_t *buf, uint32_t n)
 {
     FILE *f = ctx;
@@ -20,6 +30,7 @@ static uint32_t file_read(void *ctx, uint32_t off, uint8_t *buf, uint32_t n)
     return (uint32_t)fread(buf, 1, n, f);
 }
 
+/* 1 si el nombre termina en .wav (sin distinguir mayusculas) y no es oculto. */
 static int is_wav(const char *name)
 {
     size_t n = strlen(name);
@@ -28,11 +39,13 @@ static int is_wav(const char *name)
     return strcasecmp(name + n - 4, ".wav") == 0;
 }
 
+/* Comparador de qsort para ordenar los nombres alfabeticamente. */
 static int cmp_names(const void *a, const void *b)
 {
     return strcmp(*(const char *const *)a, *(const char *const *)b);
 }
 
+/* Copia un texto a un campo de SHM_TEXT bytes rellenando el resto con '\0'. */
 static void copy_text(char *dst, const char *src)
 {
     size_t i = 0;
@@ -49,6 +62,7 @@ static int load_track(const char *path, const char *name, producer_file_t *file,
     FILE *f = fopen(path, "rb");
     if (!f)
         return 0;
+    /* Tamano del archivo (fseek al final + ftell) y analisis de la cabecera. */
     wav_info_t info;
     wav_reader_t r = {f, 0, file_read};
     int ok = fseek(f, 0, SEEK_END) == 0;
@@ -62,6 +76,8 @@ static int load_track(const char *path, const char *name, producer_file_t *file,
     if (!ok)
         return 0;
 
+    /* Metadatos faltantes -> nombre del archivo / "Desconocido". Se guarda lo
+     * necesario para leer el PCM y la fila de la tabla que vera el Nios V. */
     wav_meta_fallback(&info, name);
     snprintf(file->path, sizeof file->path, "%s", path);
     file->data_offset = info.data_offset;
@@ -81,6 +97,7 @@ static int load_track(const char *path, const char *name, producer_file_t *file,
     return 1;
 }
 
+/* Recorre dir y arma la tabla (ver producer.h). */
 uint32_t producer_scan(producer_t *p, const char *dir)
 {
     p->ntracks = 0;
@@ -104,6 +121,7 @@ uint32_t producer_scan(producer_t *p, const char *dir)
     closedir(d);
     qsort(names, n, sizeof names[0], cmp_names);
 
+    /* Se analiza cada archivo; los que fallan (o no caben) se cuentan en skipped. */
     for (uint32_t i = 0; i < n; ++i) {
         char path[PRODUCER_PATH_MAX];
         int len = snprintf(path, sizeof path, "%s/%s", dir, names[i]);
@@ -128,6 +146,8 @@ static void put_track(volatile shm_track_t *dst, const shm_track_t *src)
         d[i] = w[i];
 }
 
+/* Corta el flujo, reinicia el control de shm, copia la tabla y publica el estado
+ * (READY con la tabla, o NO_SD / NO_TRACKS sin ella). */
 void producer_publish(producer_t *p, volatile shm_t *s)
 {
     producer_stop(p);
@@ -157,6 +177,7 @@ static void report_track(producer_t *p)
            pf->max_read_ms, (unsigned)(min >> 10), p->ring_empty);
 }
 
+/* Detiene el prefetch (y su hilo), imprime el resumen y vacia el bloque pendiente. */
 void producer_stop(producer_t *p)
 {
     prefetch_stop(&p->pf);
@@ -165,6 +186,11 @@ void producer_stop(producer_t *p)
     p->in_pos = p->in_len = 0;
 }
 
+/*
+ * Arranca la pista track: abre el archivo, se posiciona en el PCM, lanza el prefetch
+ * y prepara el remuestreo. Devuelve el estado de flujo para el ack: RUNNING, o ERROR
+ * si la pista no existe o no se pudo abrir.
+ */
 static uint32_t start_track(producer_t *p, uint32_t track)
 {
     producer_stop(p);
@@ -237,6 +263,11 @@ static void check_starving(producer_t *p, uint32_t space)
                (unsigned)(prefetch_level(&p->pf) >> 10));
 }
 
+/*
+ * Llena el ring mientras haya espacio: rellena el bloque de entrada cuando se agota,
+ * lo convierte a 48 kHz y escribe lo producido. Al acabarse el archivo marca EOF.
+ * Devuelve 1 si hizo algo (para que el lazo no duerma).
+ */
 static int stream(producer_t *p)
 {
     int did = 0;
@@ -256,6 +287,7 @@ static int stream(producer_t *p)
                 return 1;
             }
         }
+        /* Se produce como mucho lo que cabe en el ring y en el buffer de salida. */
         uint32_t room = space < (uint32_t)(sizeof p->out / sizeof p->out[0])
                             ? space : (uint32_t)(sizeof p->out / sizeof p->out[0]);
         uint32_t used;
@@ -269,11 +301,13 @@ static int stream(producer_t *p)
         }
         did = 1;
         if (made == 0 && used == 0)
-            break;
+            break;                        /* sin progreso: evita un lazo infinito */
     }
     return did;
 }
 
+/* Atiende un comando (PLAY arranca la pista, STOP u otro la corta), responde con el
+ * ack y despues avanza el flujo. Devuelve 1 si hubo trabajo. */
 int producer_poll(producer_t *p)
 {
     uint32_t cmd, arg, seq;

@@ -24,7 +24,7 @@ module tb_codec #(
     parameter bit FAST = 0
 );
     logic clk = 1'b0, rst_n = 1'b0;
-    always #10 clk = ~clk;
+    always #10 clk = ~clk;                      // 50 MHz
 
     wire [9:0] led;
     wire scl, sda;
@@ -47,6 +47,7 @@ module tb_codec #(
         .vga_R          (), .vga_G  (), .vga_B  ()
     );
 
+    // Solo se usa la parte I2C del modelo (enable = 0: sin BCLK/LRCK).
     wm8731_model codec (
         .enable (1'b0), .bclk (), .daclrck (), .dacdat (1'b0),
         .left (), .right (), .frame_valid (),
@@ -54,9 +55,12 @@ module tb_codec #(
     );
 
     int errors = 0;
+    // Registro de todas las escrituras al codec, en orden: (registro, dato).
     typedef struct { logic [6:0] r; logic [8:0] d; } wr_t;
     wr_t log_q[$];
 
+    // Anota cada escritura. En modo FAST, tras la ultima del codec (R9) adelanta la
+    // ROM de autoinicializacion del IP para saltar las del ADV7180.
     always @(posedge codec.reg_valid) begin
         log_q.push_back('{codec.reg_addr, codec.reg_data});
         $display("[%0t] I2C: R%0d <= 0x%03h", $time, codec.reg_addr, codec.reg_data);
@@ -70,6 +74,7 @@ module tb_codec #(
     always @(led) $display("[%0t] LEDR = 0x%03h", $time, led);
     always @(posedge dut.av_config.auto_init_complete) $display("[%0t] AIS: autoinicializacion completa", $time);
 
+    // Compara el valor final de un registro del codec con el esperado y lo reporta.
     task automatic check_reg(input int r, input logic [8:0] exp, input string what);
         if (codec.regs[r] !== exp) begin
             $error("R%0d = 0x%03h, se esperaba 0x%03h (%s)", r, codec.regs[r], exp, what);
@@ -78,6 +83,8 @@ module tb_codec #(
             $display("OK    R%0d = 0x%03h  %s", r, codec.regs[r], what);
     endtask
 
+    // Control: suelta el reset, espera el resultado del software y revisa registros
+    // y orden de las escrituras.
     initial begin
         $display("TB_CODEC: inicio");
         #200 rst_n = 1'b1;

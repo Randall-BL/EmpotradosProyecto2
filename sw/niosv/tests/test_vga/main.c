@@ -13,17 +13,21 @@
 
 static vga_text_t vga;
 
+/* Puerto de pantalla: reenvia print al driver de texto (ctx = vga_text_t). */
 static void vga_port_print(void *ctx, uint32_t x, uint32_t y, const char *s, uint32_t width)
 {
     vga_text_print((const vga_text_t *)ctx, x, y, s, width);
 }
 
+/* Dibuja la pantalla de referencia etapa por etapa y reporta el resultado en LEDR. */
 int main(void)
 {
     pio_write(PIO_LED_BASE, 0x0A1);
     vga_text_init(&vga, CHAR_BUF_AVALON_CHAR_CONTROL_SLAVE_BASE,
                   CHAR_BUF_AVALON_CHAR_BUFFER_SLAVE_BASE);
 
+    /* Datos fijos (iguales a tests/test_screen.c); el album es largo a proposito para
+     * probar el recorte. */
     screen_port_t port = { &vga, vga_port_print };
     screen_track_t t = { "Cancion de prueba", "Artista de prueba",
                          "Album con un nombre muy largo que no cabe en la pantalla del reproductor",

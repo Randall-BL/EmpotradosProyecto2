@@ -10,11 +10,14 @@
 # Usar:       scripts/build-hps-linux.sh (se ejecuta dentro de este contenedor)
 FROM ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852
 
+# apt sin preguntas; usuario con el UID/GID del anfitrion (como en docker/Dockerfile).
 ARG DEBIAN_FRONTEND=noninteractive
 ARG USER_NAME=dev
 ARG USER_UID=1000
 ARG USER_GID=1000
 
+# Herramientas: compilador nativo y cruzado ARM, lo que piden U-Boot y el kernel
+# (bc, bison, flex, ssl, pyelftools, swig...), descarga (curl) e imagen de la SD.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates make gcc libc6-dev file patch \
         gcc-arm-linux-gnueabihf libc6-dev-armhf-cross \
@@ -24,6 +27,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         fdisk dosfstools mtools u-boot-tools \
     && rm -rf /var/lib/apt/lists/*
 
+# Usuario no root con el UID del anfitrion (se quita el "ubuntu" de la imagen base).
 RUN (userdel -r ubuntu 2>/dev/null || true) \
     && (getent group "${USER_GID}" >/dev/null || groupadd -g "${USER_GID}" "${USER_NAME}") \
     && useradd -m -u "${USER_UID}" -g "${USER_GID}" -s /bin/bash "${USER_NAME}"

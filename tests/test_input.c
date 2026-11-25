@@ -8,6 +8,7 @@
 #include "switches.h"
 #include "test.h"
 
+/* Cola vacia, llena (descarta y cuenta) y orden FIFO. */
 static void test_evq(void)
 {
     evq_t q;
@@ -27,6 +28,7 @@ static void test_evq(void)
     CHECK_EQ(evq_count(&q), 0);
 }
 
+/* La cola sigue funcionando cuando los indices dan la vuelta de 32 bits. */
 static void test_evq_wrap(void)
 {
     /* Los indices corren libres: deben funcionar al dar la vuelta de 32 bits. */
@@ -46,6 +48,8 @@ static void test_evq_wrap(void)
     CHECK_EQ(evq_count(&q), 0);
 }
 
+/* Tabla SW[2:0] -> filtro, bits altos ignorados y deteccion de combinaciones
+ * invalidas (mas de un switch arriba). */
 static void test_switch_decode(void)
 {
     int bad = -1;
@@ -66,6 +70,7 @@ static void test_switch_decode(void)
     CHECK_STR(sw_filter_name(FILTER_COUNT), "?");
 }
 
+/* Confirmacion de dos lecturas: un cambio se acepta solo si se repite. */
 static void test_switch_update(void)
 {
     sw_state_t s;
@@ -93,6 +98,7 @@ static void test_switch_update(void)
     CHECK_EQ(s.filter, FILTER_BYPASS);
 }
 
+/* Ventana de antirrebote por boton, incluida la vuelta del contador de ms. */
 static void test_debounce(void)
 {
     deb_t d;
@@ -110,6 +116,8 @@ static void test_debounce(void)
     CHECK(deb_accept(&d, 2, 0x40u));           /* 80 ms despues */
 }
 
+/* Conversion de ciclos a ms: exacta, con vuelta del contador y sin perder fraccion
+ * en muchas llamadas pequenas. */
 static void test_clock(void)
 {
     clk_t c;
@@ -131,6 +139,7 @@ static void test_clock(void)
     CHECK_EQ(c.ms, (uint32_t)(((unsigned long long)t) / 50000u));
 }
 
+/* Corre todas las pruebas de entradas. */
 int main(void)
 {
     RUN(test_evq);

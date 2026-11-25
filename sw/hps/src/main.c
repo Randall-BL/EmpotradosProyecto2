@@ -26,21 +26,25 @@
 #define RT_PRIORITY 50                    /* SCHED_FIFO, por encima de lo normal */
 #define LOOP_SLOW_MS 100u                 /* pausa del lazo que se reporta */
 
+/* Estado del productor (tabla de pistas, flujo actual) y bandera de salida. */
 static producer_t prod;
 static volatile sig_atomic_t quit;
 
+/* SIGTERM / SIGINT: pide salir del lazo principal de forma ordenada. */
 static void on_signal(int sig)
 {
     (void)sig;
     quit = 1;
 }
 
+/* Duerme us microsegundos (cede la CPU a otros procesos). */
 static void sleep_us(long us)
 {
     struct timespec ts = {us / 1000000L, (us % 1000000L) * 1000L};
     nanosleep(&ts, NULL);
 }
 
+/* Milisegundos de un reloj monotono (no salta si cambia la hora del sistema). */
 static uint32_t now_ms(void)
 {
     struct timespec ts;
@@ -62,6 +66,7 @@ static void realtime_setup(void)
         printf("hps_player: SCHED_FIFO %d, memoria bloqueada\n", RT_PRIORITY);
 }
 
+/* Texto del estado del HPS (SHM_HPS_*) para la consola. */
 static const char *state_name(uint32_t st)
 {
     switch (st) {
@@ -72,13 +77,20 @@ static const char *state_name(uint32_t st)
     }
 }
 
+/*
+ * 1. Recorre la carpeta de canciones y arma la tabla (sin tocar todavia la FPGA).
+ * 2. Pasa a tiempo real y abre /dev/mem.
+ * 3. Lazo: espera la FPGA configurada, publica la tabla en shm (y la republica si la
+ *    FPGA se reinicio) y atiende comandos y el flujo de audio del Nios V.
+ */
 int main(int argc, char **argv)
 {
     const char *dir = argc > 1 ? argv[1] : DEFAULT_DIR;
-    setvbuf(stdout, NULL, _IOLBF, 0);
+    setvbuf(stdout, NULL, _IOLBF, 0);    /* una linea por escritura: logs al momento */
     signal(SIGTERM, on_signal);
     signal(SIGINT, on_signal);
 
+    /* Paso 1: lista de canciones validas. */
     uint32_t n = producer_scan(&prod, dir);
     printf("hps_player: %s: %u pistas, %u descartadas (%s)\n", dir, n, prod.skipped,
            state_name(prod.hps_state));
@@ -96,6 +108,8 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    /* online = la tabla ya esta publicada en shm; last = inicio de la vuelta anterior,
+     * para detectar pausas largas del lazo. */
     int online = 0;
     uint32_t last = now_ms();
     while (!quit) {
@@ -103,6 +117,7 @@ int main(int argc, char **argv)
         if (prod.active && t - last > LOOP_SLOW_MS)
             printf("hps_player: lazo detenido %u ms (pista %u)\n", t - last, prod.track + 1u);
         last = t;
+        /* Sin FPGA configurada no se toca el puente (el acceso colgaria el bus). */
         if (!devmem_fpga_ready(&d)) {
             if (online)
                 printf("hps_player: la FPGA salio de modo usuario; esperando\n");
@@ -111,6 +126,7 @@ int main(int argc, char **argv)
             sleep_us(100000);
             continue;
         }
+        /* Primera vez, o la RAM de shm se reinicio (perdio el magic): se publica. */
         volatile shm_t *s = d.shm;
         if (!online || s->ctrl.magic != SHM_MAGIC) {
             devmem_lwbridge_enable(&d);
@@ -118,6 +134,7 @@ int main(int argc, char **argv)
             online = 1;
             printf("hps_player: shm publicada (%u pistas)\n", prod.ntracks);
         }
+        /* Atiende comandos y llena el ring; si no hubo nada que hacer, duerme 1 ms. */
         uint32_t cmds = prod.commands;
         if (!producer_poll(&prod))
             sleep_us(1000);

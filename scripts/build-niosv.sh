@@ -21,6 +21,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$HERE/scripts/env.sh"
 cd "$HERE"
 
+# Programa a compilar (vacio = la aplicacion) y descripcion del hardware.
 APP="${APP:-}"
 SOPC="$HERE/hw/soc/audio_soc.sopcinfo"
 # Cada programa compila en su carpeta (build/niosv para la aplicacion,
@@ -40,6 +41,7 @@ echo ">> Generando BSP (HAL) ..."
 niosv-bsp --create --type=hal --sopcinfo="$SOPC" --no-default \
           --script="$HERE/sw/niosv/bsp.tcl" "$OUT/bsp/settings.bsp"
 
+# Carpeta de fuentes y nombre del ELF segun se compile la aplicacion o una prueba.
 if [ -n "${APP:-}" ]; then
     SRC="$HERE/sw/niosv/tests/$APP"
     ELF="$APP.elf"

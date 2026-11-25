@@ -6,12 +6,13 @@
 #include <stdlib.h>
 #include "volume.h"
 
-static int failures;
+static int failures;                       /* comprobaciones fallidas */
 
 #define CHECK(cond) do { \
     if (!(cond)) { printf("FALLO %s:%d: %s\n", __FILE__, __LINE__, #cond); failures++; } \
 } while (0)
 
+/* Potenciometro abajo, arriba y fuera de rango. */
 static void test_extremos(void)
 {
     volume_t v;
@@ -24,6 +25,7 @@ static void test_extremos(void)
     CHECK(v.step == VOLUME_STEPS - 1);
 }
 
+/* La tabla de ganancias crece siempre y en pasos de ~2 dB. */
 static void test_monotona(void)
 {
     for (uint32_t s = 1; s < VOLUME_STEPS; ++s)
@@ -35,6 +37,7 @@ static void test_monotona(void)
     }
 }
 
+/* Pequenas variaciones en el borde de un escalon no lo cambian; movimientos reales si. */
 static void test_histeresis(void)
 {
     volume_t v;
@@ -52,6 +55,7 @@ static void test_histeresis(void)
     CHECK(v.step == VOLUME_STEPS - 1);
 }
 
+/* Escalado de muestras: redondeo, silencio, -6 dB y saturacion arriba y abajo. */
 static void test_escalado(void)
 {
     CHECK(volume_scale(1000, 32767) == 1000);               /* 0 dB: igual (redondeo) */
@@ -69,6 +73,7 @@ static void test_escalado(void)
     CHECK(buf[0] == 50 && buf[1] == -50 && buf[2] == 16384 && buf[3] == -16384);
 }
 
+/* Corre las cuatro pruebas; codigo de salida 0 si todo paso. */
 int main(void)
 {
     test_extremos();

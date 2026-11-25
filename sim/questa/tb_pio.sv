@@ -25,10 +25,11 @@ module tb_pio;
     wire  [9:0] led;
 
     int  errors   = 0;
-    real resp_max = 0.0;
+    real resp_max = 0.0;                     // peor respuesta boton -> LED (ns)
 
     always #(CLK_NS / 2.0) clk = ~clk;
 
+    // SoC: solo se conectan los PIO (el resto de puertos queda abierto).
     audio_soc dut (
         .clk_clk       (clk),
         .reset_reset_n (rst_n),
@@ -78,6 +79,8 @@ module tb_pio;
         #20us;
     endtask
 
+    // Secuencia de la prueba: las etapas 1-3 del programa y despues los eventos de
+    // botones y switches, midiendo cada respuesta.
     initial begin
         real w;
         $display("TB_PIO: inicio");

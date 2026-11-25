@@ -20,39 +20,45 @@ module fir_core #(
     parameter AW        = 7,               // log2(MAX_TAPS)
     parameter COEF_FILE = ""               // $readmemh opcional: 2*MAX_TAPS coeficientes
 ) (
-    input  wire              clk,
-    input  wire              reset,
+    input  wire              clk,           // reloj del sistema (50 MHz)
+    input  wire              reset,         // reset sincrono, activo en alto
 
     // Una muestra estereo
-    input  wire              start,
-    input  wire signed [15:0] x_l,
-    input  wire signed [15:0] x_r,
-    input  wire              bank,
+    input  wire              start,         // pulso: procesar x_l/x_r (solo en reposo)
+    input  wire signed [15:0] x_l,          // muestra izquierda Q1.15
+    input  wire signed [15:0] x_r,          // muestra derecha Q1.15
+    input  wire              bank,          // banco de coeficientes: 0 o 1
     input  wire [AW:0]       ntaps,         // 1..MAX_TAPS
-    input  wire              bypass,
+    input  wire              bypass,        // 1 = sin FIR (solo ganancia)
     input  wire [15:0]       gain,          // Q1.15 sin signo
     input  wire              clear,         // pone la linea de retardo en cero
 
-    output reg               busy,
+    output reg               busy,          // 1 mientras procesa o borra
     output reg               done,          // pulso: y_l/y_r validos
-    output reg signed [15:0] y_l,
-    output reg signed [15:0] y_r,
+    output reg signed [15:0] y_l,           // salida izquierda Q1.15
+    output reg signed [15:0] y_r,           // salida derecha Q1.15
     output reg               sat,           // pulso con done: hubo saturacion
 
     // Banco de coeficientes (lo escribe y lee el procesador cuando busy = 0)
-    input  wire              coef_we,
+    input  wire              coef_we,       // escribe coef_wdata en coef_addr
     input  wire [AW:0]       coef_addr,     // {banco, indice}
-    input  wire [15:0]       coef_wdata,
-    output reg  [15:0]       coef_rdata
+    input  wire [15:0]       coef_wdata,    // coeficiente Q1.15 a escribir
+    output reg  [15:0]       coef_rdata     // coeficiente leido (un ciclo de latencia)
 );
+    // Estados de la maquina de control (ver "control" abajo):
+    //   CLEAR borra la linea de retardo, IDLE espera, LOAD guarda la muestra,
+    //   MAC emite los taps, DRAIN vacia el pipeline, ROUND redondea y satura,
+    //   GAIN aplica el volumen, DONE publica el resultado.
     localparam S_CLEAR = 3'd0, S_IDLE = 3'd1, S_LOAD = 3'd2, S_MAC = 3'd3,
                S_DRAIN = 3'd4, S_ROUND = 3'd5, S_GAIN = 3'd6, S_DONE = 3'd7;
 
     // ---------------------------------------------------------------- memorias
-    reg signed [15:0] coef_mem [0:2*MAX_TAPS-1];
-    reg signed [15:0] dl_l [0:MAX_TAPS-1];
-    reg signed [15:0] dl_r [0:MAX_TAPS-1];
+    reg signed [15:0] coef_mem [0:2*MAX_TAPS-1];   // 2 bancos x MAX_TAPS coeficientes
+    reg signed [15:0] dl_l [0:MAX_TAPS-1];         // linea de retardo circular, canal L
+    reg signed [15:0] dl_r [0:MAX_TAPS-1];         // linea de retardo circular, canal R
 
+    // Contenido inicial de los coeficientes: desde archivo (simulacion o sintesis con
+    // .hex) o en cero (el software los carga por el bus).
     integer i;
     initial begin
         if (COEF_FILE != "")
@@ -61,10 +67,12 @@ module fir_core #(
             for (i = 0; i < 2*MAX_TAPS; i = i + 1) coef_mem[i] = 16'sd0;
     end
 
-    reg  [2:0]       state;
+    reg  [2:0]       state;                // estado actual (S_*)
     reg  [AW-1:0]    pos;                  // muestra mas reciente
     reg  [AW:0]      k;                    // tap que se emite
     reg  [AW:0]      n_lat;                // taps latcheados
+    // Copias de las entradas tomadas al recibir start (la configuracion queda fija
+    // durante todo el calculo de la muestra).
     reg              bank_lat, bypass_lat;
     reg  [15:0]      gain_lat;
     reg  signed [15:0] xl_lat, xr_lat;
@@ -80,7 +88,9 @@ module fir_core #(
             dl_r[dl_waddr] <= dl_wr;
         end
 
-    // Lectura sincrona (un ciclo) de coeficiente y muestras para el MAC
+    // Lectura sincrona (un ciclo) de coeficiente y muestras para el MAC.
+    // El tap k usa h[k] y x[n-k]: como la muestra nueva esta en pos, x[n-k] esta en
+    // pos + k (la linea avanza "hacia atras" con cada muestra).
     wire [AW-1:0]    dl_raddr = pos + k[AW-1:0];
     reg  signed [15:0] c_q, xl_q, xr_q;
     always @(posedge clk) begin
@@ -98,10 +108,12 @@ module fir_core #(
 
     // ---------------------------------------------------------------- MAC
     reg               v1, v2;              // valido en la etapa de producto / acumulado
-    reg signed [31:0] p_l, p_r;
-    reg signed [39:0] acc_l, acc_r;
-    wire issuing = (state == S_MAC);
+    reg signed [31:0] p_l, p_r;            // producto h[k] * x[n-k] (Q2.30)
+    reg signed [39:0] acc_l, acc_r;        // acumuladores: 8 bits de guarda sobre 32
+    wire issuing = (state == S_MAC);       // se esta emitiendo un tap este ciclo
 
+    // Pipeline: ciclo 1 lee RAM (c_q, x*_q), ciclo 2 multiplica (p_*), ciclo 3 acumula.
+    // v1/v2 acompanan a cada tap para saber cuando el producto es valido.
     always @(posedge clk) begin
         v1  <= issuing;
         v2  <= v1;
@@ -117,6 +129,7 @@ module fir_core #(
     end
 
     // ---------------------------------------------------------------- redondeo y saturacion
+    // Satura un valor de 41 bits al rango de 16 bits con signo.
     function signed [15:0] sat16;
         input signed [40:0] v;
         begin
@@ -126,6 +139,7 @@ module fir_core #(
         end
     endfunction
 
+    // 1 si sat16(v) recortaria el valor (para la marca de saturacion).
     function is_sat;
         input signed [40:0] v;
         begin
@@ -137,8 +151,8 @@ module fir_core #(
     // $signed: una concatenacion es sin signo y >>> seria un desplazamiento logico.
     wire signed [40:0] rnd_l = ($signed({acc_l[39], acc_l}) + 41'sd16384) >>> 15;
     wire signed [40:0] rnd_r = ($signed({acc_r[39], acc_r}) + 41'sd16384) >>> 15;
-    reg  signed [15:0] fy_l, fy_r;
-    reg                sat_acc, sat_hold;
+    reg  signed [15:0] fy_l, fy_r;         // salida del FIR (antes de la ganancia)
+    reg                sat_acc, sat_hold;  // saturo el FIR / saturo FIR o ganancia
 
     // z = sat16((y * g + 2^14) >>> 15), g sin signo
     wire signed [33:0] gp_l = fy_l * $signed({1'b0, gain_lat});
@@ -147,6 +161,8 @@ module fir_core #(
     wire signed [40:0] gz_r = ($signed({{7{gp_r[33]}}, gp_r}) + 41'sd16384) >>> 15;
 
     // ---------------------------------------------------------------- control
+    // Maquina de estados: una muestra recorre IDLE -> LOAD -> MAC (ntaps ciclos) ->
+    // DRAIN -> ROUND -> GAIN -> DONE -> IDLE. En bypass salta de LOAD a GAIN.
     always @(posedge clk) begin
         if (reset) begin
             state <= S_CLEAR;
@@ -169,7 +185,7 @@ module fir_core #(
                 end else
                     k <= k + 1'b1;
             end
-            S_IDLE: begin
+            S_IDLE: begin                        // espera clear o start
                 if (clear) begin
                     state <= S_CLEAR;
                     busy  <= 1'b1;
@@ -180,6 +196,7 @@ module fir_core #(
                     xl_lat     <= x_l;
                     xr_lat     <= x_r;
                     bank_lat   <= bank;
+                    // ntaps fuera de rango se acota a 1..MAX_TAPS
                     n_lat      <= (ntaps == 0) ? 1 : ((ntaps > MAX_TAPS) ? MAX_TAPS : ntaps);
                     bypass_lat <= bypass;
                     gain_lat   <= gain;
@@ -206,13 +223,13 @@ module fir_core #(
                 if (!issuing && !v1 && !v2)
                     state <= S_ROUND;
             end
-            S_ROUND: begin
+            S_ROUND: begin                       // Q2.30 -> Q1.15 con redondeo
                 fy_l    <= sat16(rnd_l);
                 fy_r    <= sat16(rnd_r);
                 sat_acc <= is_sat(rnd_l) || is_sat(rnd_r);
                 state   <= S_GAIN;
             end
-            S_GAIN: begin
+            S_GAIN: begin                        // volumen: y * g / 32768
                 y_l      <= sat16(gz_l);
                 y_r      <= sat16(gz_r);
                 sat_hold <= sat_acc || is_sat(gz_l) || is_sat(gz_r);

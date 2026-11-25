@@ -11,8 +11,9 @@
 #include "adc.h"
 #include "pio.h"
 
-#define POT_CHANNEL 0u
+#define POT_CHANNEL 0u                 /* canal del potenciometro */
 
+/* Conversion continua y copia del canal 0 a LEDR (12 bits -> 10 bits). */
 int main(void)
 {
     adc_init(ADC_BASE);

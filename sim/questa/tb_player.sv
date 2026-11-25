@@ -30,8 +30,8 @@ module tb_player;
     localparam real STEP_US = 20_000.0;         // espera maxima por paso (20 ms reales)
 
     logic clk = 1'b0, rst_n = 1'b0;
-    always #10 clk = ~clk;
-    logic [3:0] key = 4'hF;
+    always #10 clk = ~clk;                      // 50 MHz
+    logic [3:0] key = 4'hF;                     // botones sueltos (activos en bajo)
     logic [9:0] sw  = 10'h000;
     wire  [9:0] led;
     wire  [6:0] hex [6];
@@ -50,6 +50,7 @@ module tb_player;
         .hex_hex3 (hex[3]), .hex_hex4 (hex[4]), .hex_hex5 (hex[5])
     );
 
+    // Digito (0..9) que muestra un display, o -1 si esta apagado o no es un digito.
     function automatic int seg(input logic [6:0] s);
         case (s)
         7'b1000000: return 0;  7'b1111001: return 1;  7'b0100100: return 2;
@@ -66,10 +67,12 @@ module tb_player;
         return (t < 0 || u < 0) ? -1 : t * 10 + u;
     endfunction
 
+    // Numero de pista en HEX5..HEX4 (-1 si esta apagado).
     function automatic int track_shown();
         return track_of(hex[5], hex[4]);
     endfunction
 
+    // Tiempo en HEX3..HEX0 como "MM:SS".
     function automatic string time_shown();
         return $sformatf("%0d%0d:%0d%0d", seg(hex[3]), seg(hex[2]), seg(hex[1]), seg(hex[0]));
     endfunction
@@ -77,6 +80,7 @@ module tb_player;
     int  errors = 0;
     real resp_max = 0.0;                        // en us reales
 
+    // Bitacora: cada cambio de LEDR o de la pista se imprime en el transcript.
     initial forever @(led or hex[5] or hex[4]) begin
         #1 $display("[%0t] LEDR = 0x%03h  pista %0d", $time, led, track_shown());
     end
@@ -88,6 +92,7 @@ module tb_player;
         errors++;
     end
 
+    // Reporta OK o FALLO para una condicion (y cuenta los fallos).
     task automatic check(input bit ok, input string what);
         if (ok) $display("[%0t] OK    %s", $time, what);
         else begin
@@ -106,6 +111,7 @@ module tb_player;
         check(track_shown() == n, $sformatf("%s: pista %02d", what, n));
     endtask
 
+    // Espera hasta timeout_us a que (LEDR & mask) == value.
     task automatic wait_led(input logic [9:0] mask, input logic [9:0] value,
                             input real timeout_us, input string what);
         fork
@@ -141,6 +147,7 @@ module tb_player;
         #(60.0 * APP_MS);                       // fuera de la ventana de antirrebote
     endtask
 
+    // Guion del "usuario": la secuencia de la cabecera, paso por paso.
     initial begin
         int changes, last;
         $display("TB_PLAYER: inicio");
@@ -192,6 +199,7 @@ module tb_player;
         wait_led(10'h180, 10'h000, STEP_US, "detenido (LEDR7/8 apagados)");
         check(time_shown() == "00:00", $sformatf("tiempo en 00:00 (%s)", time_shown()));
 
+        // Switches -> filtro (LEDR[2:0]) y combinacion invalida (LEDR9).
         sw = 10'h001;  wait_led(10'h007, 10'h001, STEP_US, "SW0 -> pasa-bajos (LEDR0)");
         sw = 10'h002;  wait_led(10'h007, 10'h002, STEP_US, "SW1 -> pasa-banda (LEDR1)");
         sw = 10'h004;  wait_led(10'h007, 10'h004, STEP_US, "SW2 -> reverberacion (LEDR2)");

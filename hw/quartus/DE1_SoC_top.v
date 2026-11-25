@@ -10,11 +10,12 @@
 // en 0 al configurarse y el contador mantiene el SoC en reset 2^15 ciclos
 // (655 us), hasta que los PLL de audio y video se estabilizan.
 module DE1_SoC_top (
-    input  wire        CLOCK_50,
+    input  wire        CLOCK_50,           // oscilador de 50 MHz de la placa
 
-    input  wire [3:0]  KEY,
-    input  wire [9:0]  SW,
-    output wire [9:0]  LEDR,
+    // Controles e indicadores
+    input  wire [3:0]  KEY,                // botones (activos en bajo)
+    input  wire [9:0]  SW,                 // switches deslizantes
+    output wire [9:0]  LEDR,               // LEDs rojos
     output wire [6:0]  HEX0,
     output wire [6:0]  HEX1,
     output wire [6:0]  HEX2,
@@ -73,6 +74,8 @@ module DE1_SoC_top (
 );
 
     // ---- Reset de encendido ----
+    // Cuenta desde 0 hasta que el bit 15 se pone en 1 y ahi se detiene. Mientras el
+    // bit 15 vale 0 el SoC esta en reset (reset_n activo en bajo).
     reg [15:0] por_count = 16'd0;
     always @(posedge CLOCK_50) begin
         if (!por_count[15])
@@ -81,6 +84,7 @@ module DE1_SoC_top (
     wire reset_n = por_count[15];
 
     // ---- SoC ----
+    // Cada puerto exportado por Platform Designer va al pin de la placa del mismo uso.
     audio_soc u_soc (
         .clk_clk        (CLOCK_50),
         .reset_reset_n  (reset_n),

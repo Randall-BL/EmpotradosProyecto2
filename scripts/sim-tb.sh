@@ -16,6 +16,7 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Nombre de la prueba, testbench y programa del Nios V que le corresponde.
 NAME="${1:?uso: scripts/sim-tb.sh <nombre>  (p. ej. pio)}"
 TB="$HERE/sim/questa/tb_$NAME.sv"
 APP_DIR="$HERE/sw/niosv/tests/test_$NAME"
@@ -23,11 +24,13 @@ APP_DIR="$HERE/sw/niosv/tests/test_$NAME"
 
 source "$HERE/scripts/env.sh" >/dev/null
 
+# Compila el programa de prueba (salvo NOBUILD=1 o si la prueba no tiene programa).
 if [ "${NOBUILD:-0}" != "1" ] && [ -d "$APP_DIR" ]; then
     APP="test_$NAME" "$HERE/scripts/build-niosv.sh" > "$HERE/build/niosv-test_$NAME.log" 2>&1 \
         || { echo "ERROR: fallo build-niosv.sh, ver build/niosv-test_$NAME.log" >&2; exit 1; }
 fi
 
+# Modelo de simulacion del SoC e imagen de la RAM del programa.
 GEN="$HERE/hw/soc/gen/simulation"
 [ -f "$GEN/mentor/msim_setup.tcl" ] || { echo "ERROR: corra primero scripts/build-soc.sh" >&2; exit 1; }
 HEX="$HERE/build/niosv-test_$NAME/app/build/ram.hex"
@@ -63,6 +66,7 @@ MODELS="$(ls "$HERE"/sim/questa/*_model.sv 2>/dev/null | tr '\n' ' ')"
 vsim -c -do "set TOP_LEVEL_NAME tb_$NAME; set USER_DEFINED_ELAB_OPTIONS {${ELAB_OPTS:-}}; source msim_setup.tcl; file_copy; dev_com; com; \
 vlog -sv -work work $MODELS $TB; elab; run -all; quit -f" > "$LOG" 2>&1 || true
 
+# Muestra las lineas utiles del transcript y decide el resultado por "PASS".
 grep -E "^# (TB_|\[|Respuesta|Pares|Relleno|Escrituras|OK |FILTRO |CICLOS |\*\* (Error|Fatal))|FALLO" "$LOG" | sed 's/^# //'
 if grep -q "TB_[A-Z0-9_]*: PASS" "$LOG"; then
     exit 0

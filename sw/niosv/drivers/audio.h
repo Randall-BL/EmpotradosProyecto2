@@ -18,7 +18,7 @@
 
 #include <stdint.h>
 
-#define AUDIO_FIFO_DEPTH 128u
+#define AUDIO_FIFO_DEPTH 128u          /* palabras por FIFO de salida */
 
 /* Limpia las FIFO de salida y deja la IRQ de escritura deshabilitada. */
 void audio_init(uintptr_t base);

@@ -11,11 +11,13 @@
 #include "producer.h"
 #include "test.h"
 
+/* shm en RAM, productor bajo prueba, carpeta de WAV y cuadros recibidos (hasta 4 s). */
 static shm_t shm;
 static producer_t prod;
 static const char *data_dir;
 static uint32_t got[48000 * 4];
 
+/* Indice de la pista con ese titulo en la tabla publicada, o -1 si no esta. */
 static int find_track(const char *title)
 {
     for (uint32_t i = 0; i < shm.ctrl.track_count; ++i)
@@ -40,6 +42,8 @@ static uint32_t play(uint32_t track, uint32_t *final_state)
     return n;
 }
 
+/* La carpeta se recorre en orden, los invalidos se saltan y la tabla publicada tiene
+ * los metadatos esperados. */
 static void test_scan(void)
 {
     uint32_t wavs = 0;
@@ -166,6 +170,7 @@ static void test_no_sd(void)
     CHECK_EQ(p2.hps_state, SHM_HPS_NO_TRACKS);
 }
 
+/* argv[1] = carpeta con los WAV de prueba (por defecto ../build/tests/data). */
 int main(int argc, char **argv)
 {
     data_dir = argc > 1 ? argv[1] : "../build/tests/data";

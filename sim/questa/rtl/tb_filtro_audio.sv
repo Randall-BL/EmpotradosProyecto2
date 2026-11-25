@@ -16,19 +16,21 @@ module tb_filtro_audio;
     logic clk = 1'b0, reset = 1'b1;
     always #10 clk = ~clk;                       // 50 MHz
 
+    // Bus Avalon-MM que maneja el testbench.
     logic [2:0]  address = '0;
     logic        read = 1'b0, write = 1'b0;
     logic [31:0] writedata = '0;
     wire  [31:0] readdata;
     wire         waitrequest;
 
-    string vec_dir;
+    string vec_dir;                              // carpeta de sim/vectors (+VEC=...)
     filtro_audio dut (
         .clk (clk), .reset (reset),
         .avs_address (address), .avs_read (read), .avs_write (write),
         .avs_writedata (writedata), .avs_readdata (readdata), .avs_waitrequest (waitrequest)
     );
 
+    // Direcciones de los registros (en palabras).
     localparam CTRL = 0, STATUS = 1, NTAPS = 2, GAIN = 3, CADDR = 4, CDATA = 5, DIN = 6, DOUT = 7;
     int errors = 0, checks = 0;
 
@@ -40,6 +42,7 @@ module tb_filtro_audio;
         write <= 1'b0;
     endtask
 
+    // Lectura Avalon: mantiene read mientras waitrequest = 1 y toma readdata al final.
     task automatic avs_rd(input int a, output logic [31:0] d);
         @(posedge clk);
         address <= a; read <= 1'b1;
@@ -55,6 +58,7 @@ module tb_filtro_audio;
         do avs_rd(STATUS, d); while (d[1]);
     endtask
 
+    // Compara un valor leido con el esperado y cuenta el error si difiere.
     task automatic expect_eq(input string what, input logic [31:0] got, input logic [31:0] exp);
         checks++;
         if (got !== exp) begin
@@ -108,7 +112,10 @@ module tb_filtro_audio;
     endtask
 
     // ---- Un caso dorado ----
-    int max_lat = 0;
+    // Lee fir_<name>.txt, configura el filtro como indica su cabecera, pasa cada
+    // entrada por DATA_IN/DATA_OUT y compara la salida bit a bit. Al final compara
+    // STATUS.SAT con lo que predice el modelo (expect_sat). Mide la latencia.
+    int max_lat = 0;                             // peor latencia vista (ciclos)
     task automatic caso(input string name, input bit expect_sat);
         int fd, bank, ntaps, gain, bypass, n, bad = 0, lat;
         logic [31:0] in, out, got, st;
@@ -146,6 +153,8 @@ module tb_filtro_audio;
                      name, n, bank, ntaps, gain, bypass, st[2]);
     endtask
 
+    // Secuencia principal: reset, prueba de registros, carga de coeficientes y los 8
+    // casos dorados.
     initial begin
         if (!$value$plusargs("VEC=%s", vec_dir)) vec_dir = "../../sim/vectors";
         $display("TB_FILTRO_AUDIO: inicio (vectores en %s)", vec_dir);

@@ -16,6 +16,7 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Entradas (salida de build-hps-linux.sh, musica y .rbf) y archivos que se generan.
 B="$HERE/build/hps"
 OUT="$B/out"
 MUSIC="${1:-$B/music}"
@@ -23,16 +24,19 @@ IMG="$B/sdcard.img"
 FAT="$B/fat.img"
 RBF="$HERE/hw/quartus/output_files/audio_player.rbf"
 
+# Tamanos y posiciones de las particiones, en MiB.
 FAT_MIB="${FAT_MIB:-512}"
 A2_START_MIB=1
 A2_MIB=8
 FAT_START_MIB=16
 
+# Requisitos: los cuatro archivos de arranque y la carpeta de musica.
 for f in u-boot-with-spl.sfp zImage de1_soc_audio.dtb boot.scr; do
     [ -f "$OUT/$f" ] || { echo "ERROR: falta $OUT/$f; corra scripts/build-hps-linux.sh" >&2; exit 1; }
 done
 [ -d "$MUSIC" ] || { echo "ERROR: no existe la carpeta de musica $MUSIC" >&2; exit 1; }
 
+# 1. Sistema de archivos FAT32 en un archivo aparte, llenado con mtools (sin montar).
 echo ">> FAT32 de $FAT_MIB MiB"
 rm -f "$FAT"
 truncate -s "${FAT_MIB}M" "$FAT"
@@ -54,6 +58,8 @@ for w in "$MUSIC"/*.wav "$MUSIC"/*.WAV; do
 done
 echo "   $n canciones en music/"
 
+# 2. Imagen completa: tabla MBR (sfdisk lee las particiones del heredoc, en sectores
+#    de 512 B = 2048 por MiB) y copia de la FAT y del preloader en su lugar.
 echo ">> Imagen y tabla de particiones"
 rm -f "$IMG"
 truncate -s "$((FAT_START_MIB + FAT_MIB))M" "$IMG"

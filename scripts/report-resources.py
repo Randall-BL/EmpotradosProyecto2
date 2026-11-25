@@ -17,11 +17,13 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = ROOT / "hw" / "quartus" / "output_files"
+# Columnas del reporte de Quartus que se extraen y su nombre corto en la tabla.
 COLS = ["ALMs needed [=A-B+C]", "Dedicated Logic Registers", "Block Memory Bits", "M10Ks", "DSP Blocks"]
 SHORT = ["ALMs", "Registros", "Bits de memoria", "M10K", "DSP"]
 
 
 def summary():
+    """Lineas de totales (ALMs, registros, pines, memoria, DSP, PLL) del .fit.summary."""
     rows = []
     for line in (OUT / "audio_player.fit.summary").read_text(encoding="latin-1").splitlines():
         m = re.match(r"\s*(Logic utilization \(in ALMs\)|Total registers|Total pins|"
@@ -32,6 +34,12 @@ def summary():
 
 
 def entities():
+    """Filas de la tabla "Fitter Resource Utilization by Entity" del .fit.rpt.
+
+    Devuelve (profundidad, nodo, entidad, valores de COLS). La profundidad se deduce de
+    la indentacion del nombre (3 espacios por nivel); a los valores se les quita el
+    parentesis con el detalle.
+    """
     text = (OUT / "audio_player.fit.rpt").read_text(encoding="latin-1").splitlines()
     start = next(i for i, l in enumerate(text) if l.startswith("; Fitter Resource Utilization by Entity"))
     header = [c.strip() for c in text[start + 2].split(";")[1:-1]]
@@ -52,6 +60,7 @@ def entities():
 
 
 def md_table(head, rows):
+    """Tabla Markdown con la cabecera head y las filas rows."""
     s = "| " + " | ".join(head) + " |\n|" + "---|" * len(head) + "\n"
     for r in rows:
         s += "| " + " | ".join(str(c) for c in r) + " |\n"
@@ -59,6 +68,9 @@ def md_table(head, rows):
 
 
 def main():
+    """Imprime totales, una fila por componente del SoC (nivel 2 de la jerarquia) y,
+    con --entity, el detalle de la instancia o entidad pedida.
+    """
     ap = argparse.ArgumentParser()
     ap.add_argument("--entity", help="instancia o entidad a detallar (RP-02)")
     a = ap.parse_args()

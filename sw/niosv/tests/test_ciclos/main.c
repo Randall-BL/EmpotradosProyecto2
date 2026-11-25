@@ -15,16 +15,20 @@
 #include "pio.h"
 #include "volume.h"
 
-#define REPS 4u
+#define REPS 4u                        /* repeticiones por medicion */
 
+/* Ciclos de CPU (mtime cuenta 1 por ciclo). */
 static inline uint32_t cycles(void)
 {
     return HW_REG(ALT_CPU_MTIME_OFFSET, 0);     /* palabra baja de mtime */
 }
 
+/* volatile: el compilador no puede eliminar ni precalcular las operaciones medidas. */
 static volatile int16_t sink;
 static volatile int16_t src = 12345;
-static int16_t reverb_buf[256];
+static int16_t reverb_buf[256];         /* linea de retardo corta para la reverberacion */
+
+/* Ejecuta body REPS veces y guarda en var el promedio de ciclos por repeticion. */
 
 #define MEASURE(var, body)                              \
     do {                                                \
@@ -33,9 +37,12 @@ static int16_t reverb_buf[256];
         var = (cycles() - t0_) / REPS;                  \
     } while (0)
 
+/* Mide cada operacion, imprime los resultados y deja LEDR = 0x0E0 al terminar. */
 int main(void)
 {
     uint32_t empty, gain, fir, biquad, reverb, mmio_w, mmio_r, shm_r;
+    /* Filtros de prueba: FIR pasa-bajos de 127 etapas, un biquad cualquiera y una
+     * reverberacion de 256 muestras. */
     dsp_fir_t f;
     dsp_biquad_t q;
     dsp_reverb_t r;
@@ -60,6 +67,7 @@ int main(void)
     MEASURE(shm_r,  sink = (int16_t)shm[3]);
     pio_write(PIO_LED_BASE, 0x0F7);
 
+    /* A cada medicion se le resta el lazo vacio para quedarse con la operacion. */
     printf("CICLOS lazo_vacio %lu\n", (unsigned long)empty);
     printf("CICLOS volumen_mul %lu\n", (unsigned long)(gain - empty));
     printf("CICLOS fir127 %lu\n", (unsigned long)(fir - empty));

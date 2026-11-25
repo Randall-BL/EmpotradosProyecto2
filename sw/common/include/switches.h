@@ -18,12 +18,13 @@
 
 #include <stdint.h>
 
+/* Filtros disponibles. */
 typedef enum {
     FILTER_BYPASS = 0,
     FILTER_LOWPASS,
     FILTER_BANDPASS,
     FILTER_REVERB,
-    FILTER_COUNT
+    FILTER_COUNT                          /* cantidad de filtros */
 } filter_id_t;
 
 #define SW_FILTER_MASK 0x7u               /* SW[2:0] */
@@ -32,13 +33,14 @@ typedef enum {
 typedef struct {
     uint32_t last_raw;                    /* ultima lectura de SW[2:0] */
     uint32_t stable_raw;                  /* lectura aceptada */
-    filter_id_t filter;
+    filter_id_t filter;                   /* filtro activo */
     int invalid;                          /* 1 si stable_raw tiene mas de un bit */
 } sw_state_t;
 
 /* Traduce SW[2:0] a filtro. *invalid = 1 si hay mas de un switch arriba. */
 filter_id_t sw_decode(uint32_t sw, int *invalid);
 
+/* Toma la posicion inicial de los switches como aceptada. */
 void sw_init(sw_state_t *s, uint32_t sw);
 
 /* Lectura periodica. Devuelve 1 si cambio el filtro o la marca de invalido. */

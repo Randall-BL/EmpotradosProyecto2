@@ -14,7 +14,7 @@
 #include "shm_proto.h"
 
 typedef struct {
-    volatile shm_t *s;
+    volatile shm_t *s;                     /* memoria compartida */
     uint32_t seq;                          /* ultimo comando enviado */
     int active;                            /* hay una pista pedida (PLAY sin STOP) */
     /* Copia de los textos de la pista pedida: terminados en '\0' aunque el HPS no lo
@@ -22,6 +22,7 @@ typedef struct {
     char title[SHM_TEXT], artist[SHM_TEXT], album[SHM_TEXT];
 } shm_source_t;
 
+/* Prepara la fuente sobre s, sin pista activa. */
 void shm_source_init(shm_source_t *src, volatile shm_t *s);
 
 /* Llena port con las funciones de esta fuente (ctx = src). */

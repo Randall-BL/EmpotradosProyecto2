@@ -15,13 +15,15 @@
 #include "pio.h"
 #include "seg7.h"
 
-#define FRAMES 48u
+#define FRAMES 48u                     /* pares para medir los ciclos por par */
 
+/* Ciclos de CPU (palabra baja de mtime). */
 static inline uint32_t cycles(void)
 {
     return HW_REG(ALT_CPU_MTIME_OFFSET, 0);
 }
 
+/* Ejecuta los 4 pasos de la cabecera; LEDR = 0x0Dx indica la etapa en curso. */
 int main(void)
 {
     pio_write(PIO_LED_BASE, 0x0D1);
@@ -35,6 +37,8 @@ int main(void)
     filtro_config(FILTRO_BASE, 0, FILTRO_BANK_LOWPASS);
     volatile uint32_t sink = 0;
     uint32_t t0 = cycles();
+    /* Pipelining: el primer par se escribe solo; despues, en cada vuelta se lee el
+     * resultado anterior y se escribe el siguiente. */
     filtro_write(FILTRO_BASE, filtro_pack(1000, -1000));
     for (uint32_t i = 1; i < FRAMES; ++i) {
         uint32_t y = filtro_read(FILTRO_BASE);
@@ -45,7 +49,7 @@ int main(void)
     uint32_t per_frame = (cycles() - t0) / FRAMES;
     (void)sink;
 
-    /* Displays */
+    /* Displays: 125 s = 02:05. Se espera (con limite) a que el hardware lo muestre. */
     seg7_init(SEG7_BASE);
     seg7_set_track(SEG7_BASE, 3, 1);
     seg7_set_time(SEG7_BASE, 125);

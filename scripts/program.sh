@@ -14,9 +14,11 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$HERE/scripts/env.sh" >/dev/null
+# Archivo a programar: el argumento o el .sof del proyecto.
 SOF="${1:-$HERE/hw/quartus/output_files/audio_player.sof}"
 [ -f "$SOF" ] || { echo "ERROR: no existe $SOF" >&2; exit 1; }
 
+# Deteccion del cable: primero uno que se llame "DE-SoC"; si no, el primero de la lista.
 if [ -z "${CABLE:-}" ]; then
     CABLE="$(quartus_pgm -l 2>/dev/null | sed -n 's/^[0-9]*) \(.*DE-SoC.*\)$/\1/p' | head -1)"
     [ -n "$CABLE" ] || CABLE="$(quartus_pgm -l 2>/dev/null | sed -n 's/^1) \(.*\)$/\1/p')"

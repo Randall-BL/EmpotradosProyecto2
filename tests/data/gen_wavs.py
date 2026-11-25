@@ -16,6 +16,11 @@ import sys
 
 
 def chunk(cid: bytes, body: bytes, pad: bool = True) -> bytes:
+    """Arma un chunk RIFF: id de 4 bytes + tamano (32 bits LE) + cuerpo.
+
+    Con pad=True agrega el byte de relleno si el cuerpo tiene largo impar (lo que
+    exige RIFF); con pad=False se puede generar un archivo mal formado a proposito.
+    """
     data = cid + struct.pack("<I", len(body)) + body
     if pad and len(body) % 2:
         data += b"\x00"
@@ -23,11 +28,20 @@ def chunk(cid: bytes, body: bytes, pad: bool = True) -> bytes:
 
 
 def fmt_pcm(rate: int, ch: int, bits: int = 16, tag: int = 1) -> bytes:
+    """Chunk "fmt " clasico de 16 bytes (tag 1 = PCM, 3 = float).
+
+    Calcula block_align = canales * bits / 8 y byte_rate = rate * block_align.
+    """
     align = ch * bits // 8
     return chunk(b"fmt ", struct.pack("<HHIIHH", tag, ch, rate, rate * align, align, bits))
 
 
 def fmt_extensible(rate: int, ch: int, sub: int = 1) -> bytes:
+    """Chunk "fmt " WAVE_FORMAT_EXTENSIBLE (0xFFFE) de 40 bytes.
+
+    sub es el formato real que va en los 2 primeros bytes del GUID SubFormat
+    (1 = PCM, 3 = float). Campos: cbSize = 22, bits validos = 16 y mascara de canales.
+    """
     align = ch * 2
     guid = struct.pack("<H", sub) + b"\x00\x00\x00\x00\x10\x00\x80\x00\x00\xaa\x00\x38\x9b\x71"
     body = struct.pack("<HHIIHHHHI", 0xFFFE, ch, rate, rate * align, align, 16, 22, 16,
@@ -36,6 +50,10 @@ def fmt_extensible(rate: int, ch: int, sub: int = 1) -> bytes:
 
 
 def tone(rate: int, ch: int, seconds: float, freq: float = 440.0) -> bytes:
+    """PCM de 16 bits de un seno de freq Hz, amplitud 8000, durante seconds segundos.
+
+    Con varios canales repite la misma muestra en cada uno (intercalado).
+    """
     n = int(rate * seconds)
     out = bytearray()
     for i in range(n):
@@ -46,6 +64,11 @@ def tone(rate: int, ch: int, seconds: float, freq: float = 440.0) -> bytes:
 
 
 def info(title=None, artist=None, album=None) -> bytes:
+    """Chunk LIST/INFO con INAM (titulo), IART (artista) e IPRD (album).
+
+    Un campo None se omite. Un str se codifica en latin-1 con su byte 0 final; un
+    bytes se copia tal cual (para probar textos con caracteres de control).
+    """
     body = b"INFO"
     for cid, txt in ((b"INAM", title), (b"IART", artist), (b"IPRD", album)):
         if txt is not None:
@@ -55,6 +78,11 @@ def info(title=None, artist=None, album=None) -> bytes:
 
 
 def id3_frame(fid: bytes, text: str, enc: int, v4: bool) -> bytes:
+    """Frame de texto ID3v2 (TIT2, TPE1, TALB...) con la codificacion enc.
+
+    enc: 0 = latin-1, 1 = UTF-16 con BOM, 2 = UTF-16BE, 3 = UTF-8. En v2.4 el tamano
+    del frame es syncsafe; en v2.3 es un entero big-endian.
+    """
     if enc == 0:
         payload = b"\x00" + text.encode("latin-1")
     elif enc == 1:
@@ -69,22 +97,34 @@ def id3_frame(fid: bytes, text: str, enc: int, v4: bool) -> bytes:
 
 
 def syncsafe(n: int) -> bytes:
+    """Entero de 28 bits en 4 bytes de 7 bits cada uno (formato "syncsafe" de ID3v2)."""
     return bytes([(n >> 21) & 0x7F, (n >> 14) & 0x7F, (n >> 7) & 0x7F, n & 0x7F])
 
 
 def id3(frames: bytes, v4: bool = False, padding: int = 10) -> bytes:
+    """Chunk "id3 " con una etiqueta ID3v2.3 o 2.4: cabecera de 10 bytes + frames + relleno.
+    """
     body = frames + b"\x00" * padding
     hdr = b"ID3" + bytes([4 if v4 else 3, 0, 0]) + syncsafe(len(body))
     return chunk(b"id3 ", hdr + body)
 
 
 def riff(*chunks: bytes, riff_size: int = None) -> bytes:
+    """Archivo completo: "RIFF" + tamano + "WAVE" + los chunks.
+
+    riff_size permite declarar un tamano falso para probar archivos inconsistentes.
+    """
     body = b"WAVE" + b"".join(chunks)
     size = len(body) if riff_size is None else riff_size
     return b"RIFF" + struct.pack("<I", size) + body
 
 
 def main() -> None:
+    """Genera todos los casos de prueba en la carpeta de salida (argv[1]).
+
+    Cada entrada del diccionario f es nombre de archivo -> contenido; tests/test_wav.c y
+    tests/test_producer.c conocen lo que se espera de cada uno.
+    """
     out = sys.argv[1] if len(sys.argv) > 1 else "build/tests/data"
     os.makedirs(out, exist_ok=True)
     f = {}

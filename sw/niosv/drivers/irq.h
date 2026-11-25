@@ -10,6 +10,7 @@
 
 #include <stdint.h>
 
+/* Firma de una rutina de interrupcion: recibe el contexto registrado. */
 typedef void (*irq_handler_t)(void *ctx);
 
 /* Registra handler para la IRQ irq del controlador ic_id (PIO_KEY_IRQ y
@@ -17,6 +18,7 @@ typedef void (*irq_handler_t)(void *ctx);
  * Devuelve 0 si se pudo registrar. */
 int irq_attach(uint32_t ic_id, uint32_t irq, irq_handler_t handler, void *ctx);
 
+/* Habilita / deshabilita una linea de interrupcion ya registrada. */
 void irq_enable(uint32_t ic_id, uint32_t irq);
 void irq_disable(uint32_t ic_id, uint32_t irq);
 

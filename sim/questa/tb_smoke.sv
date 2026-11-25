@@ -10,15 +10,17 @@
 module tb_smoke;
     logic       clk   = 1'b0;
     logic       rst_n = 1'b0;
-    logic [3:0] key   = 4'hF;
+    logic [3:0] key   = 4'hF;           // botones sin presionar (activos en bajo)
     logic [9:0] sw    = 10'h00A;     // el programa imprime PIO_IN = 0x0000000a
     wire  [9:0] led;
     wire        i2c_sdat;
 
-    always #10 clk = ~clk;
-    initial #200 rst_n = 1'b1;
+    always #10 clk = ~clk;              // 50 MHz (periodo de 20 ns)
+    initial #200 rst_n = 1'b1;          // suelta el reset a los 200 ns
 
-    pullup (i2c_sdat);
+    pullup (i2c_sdat);                  // resistencia de pull-up del bus I2C
+
+    // SoC completo; las salidas que no se observan quedan sin conectar.
 
     audio_soc dut (
         .clk_clk        (clk),

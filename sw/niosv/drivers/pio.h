@@ -18,16 +18,19 @@
 #define PIO_REG_IRQ_MASK 0x8
 #define PIO_REG_EDGE_CAP 0xC
 
+/* Lee el valor de las entradas (switches, botones). */
 static inline uint32_t pio_read(uintptr_t base)
 {
     return HW_REG(base, PIO_REG_DATA);
 }
 
+/* Escribe las salidas (LEDs). */
 static inline void pio_write(uintptr_t base, uint32_t value)
 {
     HW_REG(base, PIO_REG_DATA) = value;
 }
 
+/* Elige que bits generan interrupcion (1 = habilitado). */
 static inline void pio_irq_mask(uintptr_t base, uint32_t mask)
 {
     HW_REG(base, PIO_REG_IRQ_MASK) = mask;

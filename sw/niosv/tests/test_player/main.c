@@ -29,11 +29,11 @@
 #include "shm_source.h"
 #include "timebase.h"
 
-#define TRACKS        10u
-#define TRACK_FRAMES  48u
-#define SINK_CHUNK    32u
-#define FAST_TICKS_MS 500u
-#define LED_SINK_FAIL 0x3EEu
+#define TRACKS        10u      /* pistas que publica el modelo del HPS */
+#define TRACK_FRAMES  48u      /* cuadros por pista (1 ms de audio: corto a proposito) */
+#define SINK_CHUNK    32u      /* espacio que el codec simulado ofrece en cada vuelta */
+#define FAST_TICKS_MS 500u     /* ciclos por "ms": reloj 100 veces mas rapido */
+#define LED_SINK_FAIL 0x3EEu   /* LEDR si el sumidero vio un cuadro fuera de lugar */
 
 static app_t app;
 static evq_t events;
@@ -41,15 +41,22 @@ static shm_source_t source;
 static hps_model_t hps;
 static int16_t rev_l[APP_REVERB_FRAMES], rev_r[APP_REVERB_FRAMES];
 
+/* Ultimo cuadro visto por el sumidero (pista y posicion) y errores detectados. */
 static uint32_t exp_track = 0xFFFFu, exp_pos;
 static volatile uint32_t sink_errors;
 
+/* audio.space del codec simulado: siempre hay lugar para SINK_CHUNK cuadros. */
 static uint32_t sink_space(void *ctx)
 {
     (void)ctx;
     return SINK_CHUNK;
 }
 
+/*
+ * audio.write del codec simulado: decodifica (pista, posicion) del cuadro y verifica
+ * que una pista nueva empiece en la posicion 0 y que dentro de una pista las
+ * posiciones sean consecutivas. Cualquier otra cosa cuenta como error.
+ */
 static void sink_write(void *ctx, uint32_t lr)
 {
     (void)ctx;
@@ -64,6 +71,7 @@ static void sink_write(void *ctx, uint32_t lr)
     exp_pos = pos;
 }
 
+/* Pantalla nula: descarta todo (la pantalla la verifica tb_vga). */
 static void null_print(void *ctx, uint32_t x, uint32_t y, const char *s, uint32_t width)
 {
     (void)ctx;
@@ -73,12 +81,15 @@ static void null_print(void *ctx, uint32_t x, uint32_t y, const char *s, uint32_
     (void)width;
 }
 
+/* Potenciometro simulado al maximo (volumen 0 dB). */
 static uint32_t adc_max(void *ctx)
 {
     (void)ctx;
     return 4095u;
 }
 
+/* Arma el reproductor con los reemplazos de la cabecera y lo hace girar junto al
+ * modelo del HPS hasta que el testbench termine o el sumidero detecte un error. */
 int main(void)
 {
     pio_write(PIO_LED_BASE, 0);
@@ -92,6 +103,7 @@ int main(void)
     shm->ctrl.magic = 0;                         /* el "HPS" todavia no arranco */
     shm_source_init(&source, shm);
     app_ports_t ports;
+    /* Puertos reales, salvo pantalla, codec y potenciometro (ver cabecera). */
     ports_niosv_init(&ports, 0);
     ports.screen = (screen_port_t){ 0, null_print };
     ports.audio = (audio_port_t){ 0, 128u, sink_space, sink_write };
@@ -104,6 +116,8 @@ int main(void)
         app_step(&app);
     hps_model_init(&hps, shm, TRACKS, TRACK_FRAMES, 0);
 
+    /* Cada vuelta: el "HPS" atiende comandos y escribe hasta 64 cuadros, y el
+     * reproductor da una vuelta de su lazo. */
     for (;;) {
         hps_model_poll(&hps, 64u);
         app_step(&app);

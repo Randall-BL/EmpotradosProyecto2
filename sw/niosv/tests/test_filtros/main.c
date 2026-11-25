@@ -26,22 +26,28 @@
 #include "vga_text.h"
 #include "volume.h"
 
-#define FS            48000u
+#define FS            48000u               /* frecuencia del codec */
 #define REVERB_D      2400u                 /* 50 ms */
-#define CODEC_TIMEOUT 20000000u
+#define CODEC_TIMEOUT 20000000u              /* lecturas de estado antes de rendirse */
 
 static vga_text_t vga;
-static int16_t rev_buf_l[REVERB_D], rev_buf_r[REVERB_D];
+static int16_t rev_buf_l[REVERB_D], rev_buf_r[REVERB_D];   /* lineas de retardo */
 
+/* Puerto de pantalla sobre el driver de texto VGA. */
 static void vga_port_print(void *ctx, uint32_t x, uint32_t y, const char *s, uint32_t width)
 {
     vga_text_print((const vga_text_t *)ctx, x, y, s, width);
 }
 
+/* Nombre de cada filtro segun SW[1:0]. */
 static const char *const NAMES[4] = {
     "BYPASS (SW=00)", "PASA-BAJOS 1 kHz (SW=01)", "PASA-BANDA 1-4 kHz (SW=10)", "REVERB (SW=11)",
 };
 
+/*
+ * Inicializa pantalla, codec, filtro (con autoprueba), ADC y audio; despues genera la
+ * mezcla de tonos sin fin, aplicando el filtro elegido y atendiendo los controles.
+ */
 int main(void)
 {
     vga_text_init(&vga, CHAR_BUF_AVALON_CHAR_CONTROL_SLAVE_BASE, CHAR_BUF_AVALON_CHAR_BUFFER_SLAVE_BASE);
@@ -65,6 +71,7 @@ int main(void)
     adc_init(ADC_BASE);
     audio_init(AUDIO_BASE);
 
+    /* Generadores de los tres tonos, reverberacion y volumen inicial. */
     tone_t t1, t2, t3;
     tone_init(&t1, 300, FS);
     tone_init(&t2, 2500, FS);
@@ -75,14 +82,19 @@ int main(void)
     volume_t vol;
     volume_init(&vol, adc_read(ADC_BASE, 0));
     filtro_set_gain(FILTRO_BASE, vol.gain_q15);
-    (void)pio_edges_take(PIO_KEY_BASE);
+    (void)pio_edges_take(PIO_KEY_BASE);        /* descarta flancos de antes del arranque */
 
+    /* sel = filtro elegido (4 = ninguno todavia, fuerza el primer cambio); frames y
+     * tick cuentan pares para el reloj y los controles; burst marca los pulsos. */
     uint32_t sel = 4, frames = 0, tick = 0, seconds = 0, redraw = 1, burst = 0;
     int muted = 0, pulses = 0;
     for (;;) {
+        /* Audio: se llena todo el espacio libre de la FIFO. */
         uint32_t n = audio_space(AUDIO_BASE);
         for (uint32_t i = 0; i < n; ++i) {
+            /* Mezcla de los tres tonos a 1/4 de amplitud cada uno (no satura). */
             int16_t x = (int16_t)((tone_next(&t1) >> 2) + (tone_next(&t2) >> 2) + (tone_next(&t3) >> 2));
+            /* Silencio con KEY0; con pulsos, solo suenan los primeros 0.2 s de cada segundo. */
             if (muted || (pulses && burst >= FS / 5u))
                 x = 0;
             if (++burst == FS)
@@ -92,6 +104,7 @@ int main(void)
                 l = dsp_reverb_step(&rl, l);
                 r = dsp_reverb_step(&rr, r);
             }
+            /* Filtro de hardware (o bypass) + ganancia, y a la FIFO del codec. */
             filtro_write(FILTRO_BASE, filtro_pack(l, r));
             uint32_t y = filtro_read(FILTRO_BASE);
             audio_write_frame(AUDIO_BASE, (int16_t)(y & 0xFFFFu), (int16_t)(y >> 16));
@@ -112,6 +125,7 @@ int main(void)
                 filtro_set_gain(FILTRO_BASE, vol.gain_q15);
                 redraw = 1;
             }
+            /* Botones por sondeo de edgecapture (esta prueba no usa IRQ). */
             uint32_t k = pio_edges_take(PIO_KEY_BASE);
             if (k & 1u) { muted = !muted; redraw = 1; }
             if (k & 2u) { pulses = !pulses; }

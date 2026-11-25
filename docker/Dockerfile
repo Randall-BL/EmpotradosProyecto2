@@ -12,6 +12,7 @@
 # DK-01: base fijada por digest (ubuntu:24.04 al 2026-11-03).
 FROM ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852
 
+# apt sin preguntas interactivas durante la construccion.
 ARG DEBIAN_FRONTEND=noninteractive
 # DK-03: el usuario del contenedor toma el UID/GID del anfitrion para que lo que se
 # genere en /work no quede de root.
@@ -70,6 +71,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && find /opt/venv -name '__pycache__' -prune -exec rm -rf {} + \
     && rm -rf /opt/venv/lib/python3.12/site-packages/scipy/*/tests \
               /opt/venv/lib/python3.12/site-packages/numpy/*/tests
+# El venv va primero en el PATH; sin archivos .pyc en el repositorio montado.
 ENV PATH=/opt/venv/bin:$PATH \
     PYTHONDONTWRITEBYTECODE=1
 
@@ -78,6 +80,7 @@ ENV PATH=/opt/venv/bin:$PATH \
 RUN (userdel -r ubuntu 2>/dev/null || true) \
     && (getent group "${USER_GID}" >/dev/null || groupadd -g "${USER_GID}" "${USER_NAME}") \
     && useradd -m -u "${USER_UID}" -g "${USER_GID}" -s /bin/bash "${USER_NAME}"
+# Se trabaja como ese usuario, en el repositorio montado en /work.
 USER ${USER_NAME}
 WORKDIR /work
 CMD ["bash"]

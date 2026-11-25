@@ -16,9 +16,10 @@
 #include "irq.h"
 #include "pio.h"
 
-#define STEP        0x0123u
-#define POLL_FRAMES 192u
+#define STEP        0x0123u            /* incremento del canal izquierdo por par */
+#define POLL_FRAMES 192u               /* pares que se envian en la etapa de sondeo */
 
+/* Proxima muestra izquierda de la secuencia (compartida entre main y la ISR). */
 static volatile uint16_t next_left;
 
 /* Llena todo el espacio libre de las FIFO; devuelve cuantos pares escribio. */
@@ -33,12 +34,14 @@ static uint32_t fill(void)
     return n;
 }
 
+/* ISR de escritura del IP de audio: rellena las FIFO cada vez que bajan del 75 %. */
 static void audio_isr(void *ctx)
 {
     (void)ctx;
     (void)fill();
 }
 
+/* Etapa 1 por sondeo, despues etapa 2 por interrupcion (ver la cabecera). */
 int main(void)
 {
     uint32_t sent = 0;

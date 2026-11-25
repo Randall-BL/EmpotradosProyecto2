@@ -13,17 +13,23 @@
 #include "dsp.h"
 #include "fir_coefs.h"
 
-static int failures;
+static int failures;                       /* comprobaciones fallidas */
 
 #define CHECK(cond) do { \
     if (!(cond)) { printf("FALLO %s:%d: %s\n", __FILE__, __LINE__, #cond); failures++; } \
 } while (0)
 
+/* Casos de sim/vectors/fir_<caso>.txt que se comparan. */
 static const char *const CASES[] = {
     "impulso", "escalon", "senos", "saturacion", "ruido_banco1", "bypass_gain", "taps16",
     "ganancia_alta",
 };
 
+/*
+ * Para cada caso lee el archivo de vectores: cabecera "banco taps ganancia bypass n"
+ * y n lineas "entrada salida" en hex (par {R, L}). Pasa cada entrada por el modelo
+ * (FIR + ganancia, un filtro por canal) y cuenta las salidas distintas.
+ */
 static void test_fir_vectors(void)
 {
     for (unsigned c = 0; c < sizeof CASES / sizeof CASES[0]; ++c) {
@@ -54,6 +60,7 @@ static void test_fir_vectors(void)
     }
 }
 
+/* Respuesta al impulso de la reverberacion (D = 100) y ausencia de desborde. */
 static void test_reverb(void)
 {
     static int16_t buf[100];
@@ -75,6 +82,7 @@ static void test_reverb(void)
     CHECK(mx > 16000 && mn < -16000);                       /* sin desborde: sigue la entrada */
 }
 
+/* Ganancia en continua de un pasa-bajos y saturacion de la salida. */
 static void test_biquad(void)
 {
     /* Pasa-bajos de 1er orden escrito como biquad: y = 0.25x + 0.25x1 + 0.5y1 (Q2.14). */
@@ -88,6 +96,7 @@ static void test_biquad(void)
     CHECK(y == INT16_MAX);
 }
 
+/* Corre las tres pruebas; codigo de salida 0 si todo paso. */
 int main(void)
 {
     test_fir_vectors();

@@ -18,6 +18,8 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Carpetas: compilacion, fuentes descargadas, salida y archivos propios de Linux;
+# prefijo del compilador cruzado y cantidad de trabajos de make.
 B="$HERE/build/hps"
 SRC="$B/src"
 OUT="$B/out"
@@ -26,6 +28,7 @@ CROSS=arm-linux-gnueabihf-
 JOBS="${JOBS:-$(nproc)}"
 mkdir -p "$SRC" "$OUT"
 
+# Versiones fijas de las fuentes (cada una con su SHA-256 en sources.sha256).
 UBOOT_VER=2024.01
 LINUX_VER=6.6.60
 BUSYBOX_VER=1.36.1
@@ -56,6 +59,7 @@ fetch() {                                  # fetch <url> -> descomprime en $SRC
     [ -f "$file.extracted" ] || { tar -xf "$file" -C "$SRC" && touch "$file.extracted"; }
 }
 
+# Descarga, verificacion y extraccion de las tres fuentes.
 cd "$SRC"
 fetch "$UBOOT_URL"
 fetch "$LINUX_URL"
@@ -74,6 +78,7 @@ done
 # ---------------------------------------------------------------- U-Boot
 echo ">> U-Boot $UBOOT_VER (socfpga_de1_soc_defconfig)"
 UB="$SRC/u-boot-$UBOOT_VER"
+# Configuracion base de la placa (compila fuera del arbol de fuentes, en O=).
 make -C "$UB" CROSS_COMPILE=$CROSS O="$B/u-boot" socfpga_de1_soc_defconfig >/dev/null
 # El defconfig no define bootcmd (probado en la tarjeta el 12 nov: U-Boot se quedaba en
 # el prompt). Se arranca con el distro boot, que encuentra boot.scr en la FAT; 1 s de
@@ -87,6 +92,7 @@ make -C "$UB" CROSS_COMPILE=$CROSS O="$B/u-boot" -j"$JOBS" > "$B/u-boot.log" 2>&
 cp "$B/u-boot/u-boot-with-spl.sfp" "$OUT/"
 
 # ---------------------------------------------------------------- aplicacion
+# Aplicacion del HPS (sw/hps/Makefile), enlazada estatica.
 echo ">> hps_player"
 make -C "$HERE/sw/hps" ARM_CC=${CROSS}gcc > "$B/hps_player.log" 2>&1 \
     || { cat "$B/hps_player.log"; exit 1; }
@@ -134,6 +140,8 @@ EOF
 
 # ---------------------------------------------------------------- kernel
 echo ">> Linux $LINUX_VER (socfpga_defconfig + sw/hps/linux/kernel.fragment)"
+# Configuracion: socfpga_defconfig + kernel.fragment (con la ruta real del
+# initramfs.list), mezclados con merge_config.sh. Luego se compila el zImage.
 KS="$SRC/linux-$LINUX_VER"
 KB="$B/linux"
 mkdir -p "$KB"
@@ -153,6 +161,7 @@ cpp -nostdinc -undef -D__DTS__ -x assembler-with-cpp -I "$DTS_DIR" -I "$KS/inclu
 "$KB/scripts/dtc/dtc" -I dts -O dtb -q -o "$OUT/de1_soc_audio.dtb" "$B/de1_soc_audio.dts.pp"
 
 # ---------------------------------------------------------------- boot.scr
+# boot.cmd -> boot.scr (cabecera de imagen de U-Boot de tipo script).
 mkimage -A arm -T script -C none -n "reproductor" -d "$LNX/boot.cmd" "$OUT/boot.scr" >/dev/null
 
 echo ">> Listo en build/hps/out:"

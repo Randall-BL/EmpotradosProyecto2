@@ -6,23 +6,31 @@
 #
 # Compilar:  scripts/build-quartus.sh
 
+# ---- Dispositivo y opciones generales ----
+# FPGA de la DE1-SoC (Cyclone V SE con HPS), entidad superior y carpeta de salida.
 set_global_assignment -name FAMILY "Cyclone V"
 set_global_assignment -name DEVICE 5CSEMA5F31C6
 set_global_assignment -name TOP_LEVEL_ENTITY DE1_SoC_top
 set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
 set_global_assignment -name NUM_PARALLEL_PROCESSORS ALL
+# Rango de temperatura comercial (0-85 C) y modelo termico para el analisis de
+# potencia (PowerPlay).
 set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
 set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
 set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "23 MM HEAT SINK WITH 200 LFPM AIRFLOW"
 set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
+# El pin nCEO queda como E/S normal despues de configurar.
 set_global_assignment -name CYCLONEII_RESERVE_NCEO_AFTER_CONFIGURATION "USE AS REGULAR IO"
 
 # ---- Fuentes ----
+# Top-level, SoC generado (.qip) y restricciones de tiempo.
 set_global_assignment -name VERILOG_FILE DE1_SoC_top.v
 set_global_assignment -name QIP_FILE ../soc/gen/synthesis/audio_soc.qip
 set_global_assignment -name SDC_FILE audio_player.sdc
 
 # ---- Reloj ----
+# Cada senal lleva su pin (set_location_assignment) y su estandar electrico
+# (IO_STANDARD); los de usuario de la placa son 3.3-V LVTTL.
 set_location_assignment PIN_AF14 -to CLOCK_50
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to CLOCK_50
 

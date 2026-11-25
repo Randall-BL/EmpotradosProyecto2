@@ -9,8 +9,8 @@
 
 void     seg7_init(uintptr_t base);                       /* encendido, 00:00, sin cancion */
 void     seg7_set_time(uintptr_t base, uint32_t seconds); /* >= 6000 se muestra 99:59 */
-void     seg7_set_track(uintptr_t base, uint32_t track, int show);
-void     seg7_enable(uintptr_t base, int on);
+void     seg7_set_track(uintptr_t base, uint32_t track, int show); /* show = 0 lo apaga */
+void     seg7_enable(uintptr_t base, int on);                     /* apaga todos los displays */
 uint32_t seg7_shown_bcd(uintptr_t base);                  /* {M1,M0,S1,S0} mostrado */
 
 #endif /* DRIVERS_SEG7_H */

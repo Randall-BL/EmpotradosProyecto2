@@ -21,22 +21,30 @@ SONGS = [
     (44100, 2, 587.33), (48000, 2, 659.25),
 ]
 PATTERN = [0, 4, 7, 12, 7, 4]          # semitonos del arpegio (acorde mayor)
-NOTE_S = 0.25
+NOTE_S = 0.25                          # duracion de cada nota (s)
 
 
 def chunk(cid: bytes, body: bytes) -> bytes:
+    """Chunk RIFF: id + tamano + cuerpo, con el byte de relleno si el largo es impar."""
     pad = b"\x00" if len(body) % 2 else b""
     return cid + struct.pack("<I", len(body)) + body + pad
 
 
 def info(title: str, artist: str, album: str) -> bytes:
+    """Chunk LIST/INFO con INAM (titulo), IART (artista) e IPRD (album)."""
     def field(fid: bytes, text: str) -> bytes:
+        """Subchunk de texto latin-1 terminado en byte 0."""
         return chunk(fid, text.encode("latin-1") + b"\x00")
     return chunk(b"LIST", b"INFO" + field(b"INAM", title) + field(b"IART", artist) +
                  field(b"IPRD", album))
 
 
 def melody(rate: int, ch: int, base: float, seconds: float) -> bytes:
+    """PCM de 16 bits de un arpegio sobre la nota base, durante seconds segundos.
+
+    Cada nota dura NOTE_S y sigue PATTERN (semitonos). La envolvente sube rapido y cae
+    suave. En estereo el canal derecho suena una octava abajo, para distinguirlos.
+    """
     n = int(rate * seconds)
     note_len = int(rate * NOTE_S)
     out = bytearray()
@@ -56,6 +64,7 @@ def melody(rate: int, ch: int, base: float, seconds: float) -> bytes:
 
 
 def main() -> None:
+    """Escribe las 10 pistas de SONGS en la carpeta (argv[1]) con la duracion argv[2]."""
     out = sys.argv[1] if len(sys.argv) > 1 else "build/hps/music"
     seconds = float(sys.argv[2]) if len(sys.argv) > 2 else 20.0
     os.makedirs(out, exist_ok=True)

@@ -9,10 +9,15 @@ Las ganancias quedan en Q15 (32768 = 1.0) y se aplican como (muestra * g) >> 15.
 Uso: python3 scripts/gen_volume_table.py > /dev/stdout
      (pegar la salida en sw/common/src/volume.c, tabla volume_gain_q15)
 """
-STEPS = 32
-STEP_DB = 2.0
+STEPS = 32         # escalones del potenciometro (igual a VOLUME_STEPS)
+STEP_DB = 2.0      # decibeles entre escalones
 
 def gains():
+    """Lista de STEPS ganancias Q15: 0 para el escalon 0 y 10^(dB/20) para los demas.
+
+    El escalon i vale -(STEPS-1-i)*STEP_DB dB; el ultimo (0 dB) se limita a 32767 para
+    que quepa en 15 bits.
+    """
     out = []
     for i in range(STEPS):
         if i == 0:
@@ -24,6 +29,7 @@ def gains():
     return out
 
 def main():
+    """Imprime la tabla como arreglo C listo para pegar en volume.c."""
     g = gains()
     print(f"/* Generada por scripts/gen_volume_table.py: {STEPS} escalones de {STEP_DB:g} dB,")
     print(f" * de -{(STEPS - 2) * STEP_DB:g} dB (escalon 1) a 0 dB; el escalon 0 es silencio. */")

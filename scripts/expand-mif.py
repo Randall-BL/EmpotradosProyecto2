@@ -13,10 +13,18 @@ Uso: python3 scripts/expand-mif.py archivo.mif [...]   (reescribe en sitio)
 import re
 import sys
 
+# Linea de contenido: (indentacion)(direccion) : (valores);(resto).
 LINE = re.compile(r"^(\s*)(\w+)\s*:\s*([^;]*);(.*)$")
 
 
 def expand(path):
+    """Expande en sitio las lineas con varios valores de un .mif. Devuelve cuantas cambio.
+
+    Lee ADDRESS_RADIX para interpretar y escribir las direcciones en la misma base.
+    Solo toca lineas "dir : v0 v1 ...;" dentro de CONTENT BEGIN ... END; (no los rangos
+    "[a..b]"); cada valor pasa a su propia linea con la direccion dir + i. Si nada
+    cambio, el archivo no se reescribe.
+    """
     text = open(path, encoding="latin-1").read().splitlines()
     radix = "UNS"
     for l in text:

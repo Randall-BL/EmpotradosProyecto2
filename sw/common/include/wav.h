@@ -34,13 +34,15 @@
 #define WAV_FLAG_META_ID3   (1u << 2)     /* algun metadato salio de ID3 */
 #define WAV_FLAG_EXTENSIBLE (1u << 3)     /* fmt WAVE_FORMAT_EXTENSIBLE */
 
+/* Lector de archivo con acceso aleatorio (FatFs, FILE* o buffer). */
 typedef struct {
-    void *ctx;
+    void *ctx;                            /* estado del lector */
     uint32_t size;                        /* tamano total del archivo en bytes */
     /* Lee hasta n bytes desde off. Devuelve los bytes leidos (< n si se acaba). */
     uint32_t (*read)(void *ctx, uint32_t off, uint8_t *buf, uint32_t n);
 } wav_reader_t;
 
+/* Resultado de wav_parse(). */
 typedef struct {
     uint16_t channels;                    /* 1 o 2 */
     uint16_t bits;                        /* 16 */
@@ -72,10 +74,11 @@ void wav_fmt_mmss(char *out, uint32_t seconds);
 
 /* Lector sobre un buffer en memoria (pruebas del PC y archivos ya cargados). */
 typedef struct {
-    const uint8_t *buf;
-    uint32_t len;
+    const uint8_t *buf;                   /* contenido del archivo */
+    uint32_t len;                         /* bytes en buf */
 } wav_mem_t;
 
+/* Arma en r un lector sobre buf (m guarda el buffer y debe vivir mientras se use r). */
 void wav_mem_reader(wav_reader_t *r, wav_mem_t *m, const uint8_t *buf, uint32_t len);
 
 #endif /* COMMON_WAV_H */

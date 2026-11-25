@@ -14,7 +14,7 @@ module tb_adc #(
     parameter bit LTC = 0
 );
     logic clk = 1'b0, rst_n = 1'b0;
-    always #10 clk = ~clk;
+    always #10 clk = ~clk;                      // 50 MHz
 
     wire [9:0] led;
     wire adc_sclk, adc_cs_n, adc_din, adc_dout;
@@ -41,11 +41,13 @@ module tb_adc #(
         .vga_R          (), .vga_G  (), .vga_B  ()
     );
 
+    // Modelo del chip ADC conectado a los pines del IP.
     adc_model #(.LTC(LTC)) chip (
         .cs_n (adc_cs_n), .sclk (adc_sclk), .din (adc_din), .dout (adc_dout)
     );
 
     int errors = 0;
+    // Posiciones del potenciometro que se prueban: extremos, mitad y dos intermedias.
     localparam logic [11:0] POT [5] = '{12'h000, 12'hFFF, 12'h800, 12'h3A5, 12'hC3C};
 
     initial begin
@@ -56,6 +58,8 @@ module tb_adc #(
         chip.ch_value[0] = 12'h123;
         #200 rst_n = 1'b1;
 
+        // Para cada posicion: se fija el canal 0 y se espera (hasta 300 us) que LEDR
+        // muestre los 10 bits altos.
         foreach (POT[i]) begin
             chip.ch_value[0] = POT[i];
             fork

@@ -22,35 +22,41 @@
 // una muestra y lee el resultado sin sondear. Toda lectura tiene un ciclo de espera
 // (dato registrado). Solo accesos de 32 bits.
 module filtro_audio #(
-    parameter COEF_FILE = ""
+    parameter COEF_FILE = ""               // .hex opcional con los coeficientes iniciales
 ) (
-    input  wire        clk,
-    input  wire        reset,
+    input  wire        clk,                // reloj del sistema (50 MHz)
+    input  wire        reset,              // reset sincrono, activo en alto
 
-    input  wire [2:0]  avs_address,
-    input  wire        avs_read,
-    input  wire        avs_write,
-    input  wire [31:0] avs_writedata,
-    output reg  [31:0] avs_readdata,
-    output wire        avs_waitrequest
+    // Esclavo Avalon-MM (direccion en palabras de 32 bits)
+    input  wire [2:0]  avs_address,        // registro 0..7 (ver tabla de arriba)
+    input  wire        avs_read,           // pedido de lectura
+    input  wire        avs_write,          // pedido de escritura
+    input  wire [31:0] avs_writedata,      // dato a escribir
+    output reg  [31:0] avs_readdata,       // dato leido (registrado)
+    output wire        avs_waitrequest     // 1 = el maestro debe mantener el pedido
 );
-    localparam [15:0] VERSION  = 16'h0100;
+    localparam [15:0] VERSION  = 16'h0100;  // version 1.0 (se lee en STATUS)
     localparam        MAX_TAPS = 128;
 
+    // Direcciones de los registros (en palabras).
     localparam A_CTRL = 3'd0, A_STATUS = 3'd1, A_NTAPS = 3'd2, A_GAIN = 3'd3,
                A_CADDR = 3'd4, A_CDATA = 3'd5, A_DIN = 3'd6, A_DOUT = 3'd7;
 
-    reg        bypass, bank;
-    reg  [7:0] ntaps;
-    reg [15:0] gain;
+    // Registros de configuracion que ve el software.
+    reg        bypass, bank;               // CTRL[0], CTRL[1]
+    reg  [7:0] ntaps;                      // NTAPS
+    reg [15:0] gain;                       // GAIN
     reg  [7:0] coef_addr;                  // {banco, indice}
-    reg [31:0] din;
-    reg        sat_sticky, ready;
+    reg [31:0] din;                        // ultima entrada escrita en DATA_IN
+    reg        sat_sticky, ready;          // STATUS.SAT (pegajoso) y "hay resultado"
 
+    // Salidas del nucleo.
     wire        busy, done, core_sat;
     wire [15:0] y_l, y_r, coef_rdata;
 
     // ---------------------------------------------------------------- espera
+    // Accesos que deben esperar a que el nucleo este libre: escribir una muestra,
+    // escribir un coeficiente, pedir CLEAR, leer el resultado o leer un coeficiente.
     wire blocking_wr = avs_write && (avs_address == A_DIN || avs_address == A_CDATA ||
                                      (avs_address == A_CTRL && avs_writedata[2]));
     wire blocking_rd = avs_read && (avs_address == A_DOUT || avs_address == A_CDATA);
@@ -61,6 +67,8 @@ module filtro_audio #(
     assign avs_waitrequest = (avs_write && blocking_wr && busy) ||
                              (avs_read && (rd_wait || (blocking_rd && busy)));
 
+    // rd_wait alterna 1 -> 0 en cada lectura aceptada: el primer ciclo espera y el
+    // segundo entrega avs_readdata ya registrado.
     always @(posedge clk) begin
         if (reset)
             rd_wait <= 1'b1;
@@ -71,6 +79,7 @@ module filtro_audio #(
     end
 
     // ---------------------------------------------------------------- nucleo
+    // Pulsos de un ciclo hacia fir_core, derivados de escrituras aceptadas.
     wire start = wr_ok && avs_address == A_DIN;
     wire clear = wr_ok && avs_address == A_CTRL && avs_writedata[2];
     wire coef_we = wr_ok && avs_address == A_CDATA;
@@ -98,6 +107,7 @@ module filtro_audio #(
     );
 
     // ---------------------------------------------------------------- registros
+    // Escrituras del procesador y actualizacion de READY / SAT.
     always @(posedge clk) begin
         if (reset) begin
             bypass     <= 1'b1;            // arranca en bypass: el audio pasa sin filtrar
@@ -134,6 +144,7 @@ module filtro_audio #(
     end
 
     // ---------------------------------------------------------------- lectura
+    // Multiplexor de lectura registrado (el dato sale un ciclo despues, ver rd_wait).
     always @(posedge clk) begin
         if (avs_read) begin
             case (avs_address)
