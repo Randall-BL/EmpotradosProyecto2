@@ -28,7 +28,7 @@
 
 module tb_vga;
     logic clk = 1'b0, rst_n = 1'b0;
-    always #10 clk = ~clk;
+    always #10 clk = ~clk;                // 50 MHz
 
     wire [9:0] led;
     wire vga_clk, hs, vs, blank_n, sync_n;
@@ -71,12 +71,14 @@ module tb_vga;
     // ---- 1. Texto en el stream del Character Buffer ----
     localparam int DUMP_LINES = (FIRST_ROW + NROWS) * 8;   // filas 0..12 de la pantalla
     int pix = -1;                        // indice del pixel en el cuadro (desde el SOP)
-    int frame = 0;
-    int lit [NROWS][80];
+    int frame = 0;                       // cuadros vistos
+    int lit [NROWS][80];                 // pixeles encendidos por celda de las filas revisadas
     bit img [DUMP_LINES][W];             // captura de las lineas 0..103 del cuadro
     realtime t_rows_start = 0;           // cuando salio la primera linea de las filas
     bit rows_done = 0;                   // el cuadro actual ya paso las filas revisadas
 
+    // Cada pixel aceptado del stream: se calcula su (x, y), la celda de texto (8x8
+    // pixeles) a la que pertenece y se cuenta si esta encendido.
     always @(posedge dut.char_buf.clk)
         if (dut.char_buf.stream_valid && dut.char_buf.stream_ready) begin
             if (dut.char_buf.stream_startofpacket) begin
@@ -98,12 +100,15 @@ module tb_vga;
         end
 
     // ---- 2. Temporizacion y pixeles en los pines ----
-    realtime t_fall [$];
-    realtime t_rise_last;
+    realtime t_fall [$];                 // instantes de cada flanco de bajada de HS
+    realtime t_rise_last;                // ultimo flanco de subida de HS
+    // Pixeles de la linea actual, lineas contadas, lineas con ancho malo/bueno y
+    // pixeles encendidos vistos en los pines.
     int px = 0, line = 0, bad_width = 0, good_lines = 0, pins_lit = 0;
     bit prev_blank = 0;
     always @(negedge hs) t_fall.push_back($realtime);
     always @(posedge hs) t_rise_last = $realtime;
+    // Cuenta pixeles activos por linea (entre flancos de BLANK_N) en el reloj de video.
     always @(posedge vga_clk) begin
         if (blank_n && !prev_blank) px = 0;
         if (!blank_n && prev_blank) begin
@@ -119,8 +124,10 @@ module tb_vga;
         prev_blank = blank_n;
     end
 
-    realtime t_done;
+    realtime t_done;                     // cuando el software termino de dibujar
 
+    // Control: espera al software, luego a un cuadro completo dibujado despues, y
+    // compara texto y temporizacion.
     initial begin
         $display("TB_VGA: inicio");
         #200 rst_n = 1'b1;
@@ -164,6 +171,7 @@ module tb_vga;
             $display("Captura de la pantalla: build/sim/vga_pantalla.pbm (%0d x %0d)", W, DUMP_LINES);
         end
 
+        // Comparacion celda por celda: encendida si y solo si la referencia no es espacio.
         for (int rr = 0; rr < NROWS; rr++) begin
             automatic int bad = 0;
             for (int c = 0; c < 80; c++) begin

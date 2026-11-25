@@ -24,15 +24,17 @@
 #include "irq.h"
 #include "timebase.h"
 
-#define LED_STAGE_OUT   0x2AAu
-#define LED_STAGE_READY 0x300u
-#define LED_KEY_EVENT   0x100u
-#define LED_SW_EVENT    0x200u
+/* Valores de LEDR que marcan cada etapa (el testbench los espera). */
+#define LED_STAGE_OUT   0x2AAu  /* etapa 1: patron alternado en las salidas */
+#define LED_STAGE_READY 0x300u  /* etapa 3: interrupciones listas */
+#define LED_KEY_EVENT   0x100u  /* etapa 4: hubo IRQ de botones */
+#define LED_SW_EVENT    0x200u  /* etapa 4: hubo IRQ de switches */
 
-#define SW_MASK         0x3FFu
+#define SW_MASK         0x3FFu  /* SW[9:0] */
 #define SW_SETTLE_MS    20u     /* mayor que el rebote tipico de un switch (< 10 ms) */
-#define SW_SETTLE_CYC   (SW_SETTLE_MS * (ALT_CPU_CPU_FREQ / 1000u))
+#define SW_SETTLE_CYC   (SW_SETTLE_MS * (ALT_CPU_CPU_FREQ / 1000u))   /* la espera en ciclos */
 
+/* Flancos acumulados por las ISR y consumidos por el lazo principal. */
 static volatile uint32_t key_events;
 static volatile uint32_t sw_events;
 
@@ -43,6 +45,7 @@ static void key_isr(void *ctx)
     key_events |= pio_edges_take(PIO_KEY_BASE);
 }
 
+/* ISR de los switches: acumula los flancos en sw_events. */
 static void sw_isr(void *ctx)
 {
     (void)ctx;
@@ -65,11 +68,12 @@ static uint32_t sw_read_stable(void)
     return value;
 }
 
+/* Recorre las 4 etapas descritas en la cabecera. */
 int main(void)
 {
     uint32_t sw;
 
-    /* Etapa 1: salidas. */
+    /* Etapa 1: salidas. Se queda asi hasta que el testbench suba algun switch. */
     pio_write(PIO_LED_BASE, LED_STAGE_OUT);
     while ((sw = sw_read_stable()) == 0) {
     }
@@ -92,6 +96,8 @@ int main(void)
     /* Etapa 4: eventos. */
     for (;;) {
         if (key_events != 0) {
+            /* Se toma y borra key_events con la IRQ apagada para no perder un flanco
+             * que llegue entre la lectura y el borrado. */
             irq_disable(PIO_KEY_IRQ_INTERRUPT_CONTROLLER_ID, PIO_KEY_IRQ);
             uint32_t ev = key_events;
             key_events = 0;

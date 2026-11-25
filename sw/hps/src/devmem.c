@@ -1,19 +1,24 @@
+/* Acceso a registros del HPS y a shm por mmap de /dev/mem. Ver devmem.h. */
 #include "devmem.h"
 
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
-#define PAGE 0x1000u
+#define PAGE 0x1000u                       /* tamano de pagina: unidad minima de mmap */
 
+/* Registro de 32 bits en un bloque mapeado, por desplazamiento en bytes. */
 #define REG(base, off) ((base)[(off) / 4u])
 
+/* Mapea span bytes de la direccion fisica phys. NULL si mmap falla. */
 static volatile void *map(int fd, uint32_t phys, uint32_t span)
 {
     void *p = mmap(NULL, span, PROT_READ | PROT_WRITE, MAP_SHARED, fd, (off_t)phys);
     return p == MAP_FAILED ? NULL : (volatile void *)p;
 }
 
+/* Abre /dev/mem (O_SYNC: sin cache, cada acceso llega al bus) y mapea FPGA
+ * Manager, Reset Manager y shm. Si algo falla deshace todo y devuelve -1. */
 int devmem_open(devmem_t *d)
 {
     d->fd = open("/dev/mem", O_RDWR | O_SYNC);
@@ -29,6 +34,7 @@ int devmem_open(devmem_t *d)
     return 0;
 }
 
+/* Deshace los mapeos que existan, cierra el archivo y deja d como "cerrado". */
 void devmem_close(devmem_t *d)
 {
     if (d->fpgamgr)
@@ -44,11 +50,13 @@ void devmem_close(devmem_t *d)
     d->fd = -1;
 }
 
+/* Lee el modo de la FPGA: solo en modo usuario el puente responde. */
 int devmem_fpga_ready(const devmem_t *d)
 {
     return (REG(d->fpgamgr, FPGAMGR_STAT) & FPGAMGR_MODE_MASK) == FPGAMGR_MODE_USER;
 }
 
+/* Borra el bit de reset del puente liviano (lectura-modificacion-escritura). */
 void devmem_lwbridge_enable(devmem_t *d)
 {
     REG(d->rstmgr, RSTMGR_BRGMODRST) &= ~BRGMODRST_LWH2F;

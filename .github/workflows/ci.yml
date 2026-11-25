@@ -4,6 +4,7 @@
 # de forma nativa con scripts/test-all.sh antes de cada PR (PR-11).
 name: ci
 
+# Se ejecuta en cada push y PR a main/develop, y a mano desde la pestana Actions.
 on:
   push:
     branches: [main, develop]
@@ -11,9 +12,11 @@ on:
     branches: [main, develop]
   workflow_dispatch:
 
+# Solo lectura del repositorio (minimo privilegio).
 permissions:
   contents: read
 
+# Un push nuevo a la misma rama cancela la corrida anterior que siga en curso.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -24,6 +27,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
+      # Descarga el repositorio y prepara buildx (necesario para la cache de capas).
       - uses: actions/checkout@v4
 
       - uses: docker/setup-buildx-action@v3
@@ -52,6 +56,8 @@ jobs:
         run: docker run --rm -v "$PWD":/work -w /work empotrados-dev:local make lint 2>&1 | tee lint.log
         shell: bash -o pipefail {0}
 
+      # "success() || failure()": cada paso corre aunque el anterior falle, para tener
+      # todos los resultados en una sola corrida.
       - name: make test
         if: success() || failure()
         run: docker run --rm -v "$PWD":/work -w /work empotrados-dev:local make test 2>&1 | tee test.log

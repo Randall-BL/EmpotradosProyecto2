@@ -8,7 +8,7 @@
 
 module tb_shm;
     logic clk = 1'b0, rst_n = 1'b0;
-    always #10 clk = ~clk;
+    always #10 clk = ~clk;                      // 50 MHz
     wire [9:0] led;
     wire sda;
     pullup (sda);
@@ -23,6 +23,8 @@ module tb_shm;
         .vga_R (), .vga_G (), .vga_B ()
     );
 
+    // Suelta el reset y espera el resultado en LEDR (0x2A0 = bien, 0x2Ex = fallo x),
+    // con un limite de 20 ms simulados.
     initial begin
         $display("TB_SHM: inicio");
         #200 rst_n = 1'b1;

@@ -13,7 +13,7 @@
 #include <stdint.h>
 
 #define VOLUME_STEPS     32u     /* escalones de 2 dB; 0 = silencio, 31 = 0 dB */
-#define VOLUME_ADC_MAX   4095u
+#define VOLUME_ADC_MAX   4095u   /* lectura maxima del ADC de 12 bits */
 #define VOLUME_HYSTERESIS 24u    /* cuentas del ADC: evita que el escalon tiemble */
 
 typedef struct {

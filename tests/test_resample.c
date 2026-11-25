@@ -5,16 +5,20 @@
 #include "resample.h"
 #include "test.h"
 
-#define N_IN 4410u
+#define N_IN 4410u                         /* cuadros de entrada (0.1 s a 44.1 kHz) */
 
+/* Entradas de prueba (estereo y mono) y dos salidas para comparar. La salida tiene
+ * lugar para x7 (el peor caso es x6, de 8 kHz). */
 static int16_t in_st[N_IN * 2];
 static int16_t in_mono[N_IN];
 static uint32_t out_a[N_IN * 7];
 static uint32_t out_b[N_IN * 7];
 
+/* Canal izquierdo / derecho de un cuadro empaquetado. */
 static int16_t left(uint32_t f)  { return (int16_t)f; }
 static int16_t right(uint32_t f) { return (int16_t)(f >> 16); }
 
+/* Rampas faciles de verificar: L = 7i, R = -5i, mono = 3i. */
 static void fill(void)
 {
     for (uint32_t i = 0; i < N_IN; ++i) {
@@ -131,6 +135,7 @@ static void test_no_room(void)
     CHECK_EQ(used, 0);
 }
 
+/* Prepara las entradas y corre todas las pruebas del remuestreo. */
 int main(void)
 {
     fill();

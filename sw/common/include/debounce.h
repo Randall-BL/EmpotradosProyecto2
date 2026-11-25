@@ -12,15 +12,16 @@
 
 #include <stdint.h>
 
-#define DEB_KEYS      4u
-#define DEB_WINDOW_MS 50u
+#define DEB_KEYS      4u                /* KEY0..KEY3 */
+#define DEB_WINDOW_MS 50u               /* flancos a menos de 50 ms del anterior = rebote */
 
 typedef struct {
-    uint32_t last_ms[DEB_KEYS];
-    uint8_t seen[DEB_KEYS];
+    uint32_t last_ms[DEB_KEYS];           /* instante del ultimo flanco aceptado de cada boton */
+    uint8_t seen[DEB_KEYS];               /* 1 si el boton ya tuvo algun flanco aceptado */
     uint32_t rejected;                    /* flancos descartados (para medir) */
 } deb_t;
 
+/* Olvida la historia: el siguiente flanco de cada boton se acepta. */
 void deb_init(deb_t *d);
 
 /* 1 si el flanco del boton key en now_ms se acepta. */

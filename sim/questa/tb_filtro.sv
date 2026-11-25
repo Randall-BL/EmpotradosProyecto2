@@ -8,7 +8,7 @@
 
 module tb_filtro;
     logic clk = 1'b0, rst_n = 1'b0;
-    always #10 clk = ~clk;
+    always #10 clk = ~clk;                      // 50 MHz
     wire [9:0] led;
     wire [6:0] hex [6];
     wire sda;
@@ -26,6 +26,7 @@ module tb_filtro;
         .hex_hex3 (hex[3]), .hex_hex4 (hex[4]), .hex_hex5 (hex[5])
     );
 
+    // Decodifica un display (activo en bajo) al caracter que muestra.
     function automatic string digit(input logic [6:0] s);
         case (s)
         7'b1000000: return "0";  7'b1111001: return "1";  7'b0100100: return "2";
@@ -36,6 +37,7 @@ module tb_filtro;
     endfunction
 
     int errors = 0;
+    // Control: espera el fin del programa (0x0D0 bien / 0x0DF fallo) y lee displays.
     initial begin
         string shown;
         $display("TB_FILTRO: inicio");

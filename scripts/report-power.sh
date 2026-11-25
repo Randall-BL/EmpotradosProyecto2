@@ -15,6 +15,7 @@ source "$HERE/scripts/env.sh" >/dev/null
 cd "$HERE/hw/quartus"
 [ -f output_files/audio_player.sof ] || { echo "ERROR: corra primero scripts/build-quartus.sh" >&2; exit 1; }
 
+# Tasa de conmutacion supuesta en las entradas y opciones del Power Analyzer.
 TOGGLE="${TOGGLE:-12.5%}"
 ARGS=(--default_input_io_toggle_rate="$TOGGLE" --use_vectorless_estimation=on)
 if [ -n "${VCD:-}" ]; then

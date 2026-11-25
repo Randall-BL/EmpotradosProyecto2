@@ -4,18 +4,21 @@
 # una lectura fuera de un buffer o un desborde con signo hace fallar la prueba.
 # Sin sanitizers (p. ej. otro compilador):  make -C tests SAN=
 # Los WAV de prueba se generan en build/tests/data con tests/data/gen_wavs.py.
+# Herramientas y banderas (se pueden cambiar desde la linea de comandos).
 CC      ?= gcc
 PYTHON  ?= python3
 SAN     ?= -fsanitize=address,undefined -fno-sanitize-recover=all
 CFLAGS  ?= -std=c11 -Wall -Wextra -Werror -O2 -g
 CFLAGS  += $(SAN) -I../sw/common/include
 LDFLAGS += $(SAN)
+# Carpetas: binarios, WAV generados, fuentes portables y del HPS.
 BUILD   := ../build/tests
 DATA    := $(BUILD)/data
 C       := ../sw/common/src
 HPS     := ../sw/hps/src
 HDRS    := $(wildcard ../sw/common/include/*.h) test.h
 
+# Programas de prueba; cada uno es tests/<nombre>.c.
 TESTS   := test_volume test_screen test_tone test_dsp \
            test_wav test_fsm test_input test_shm test_app test_resample \
            test_producer
@@ -41,6 +44,8 @@ LIBS_test_tone  := -lm
 DEFS_test_tone  := -D_DEFAULT_SOURCE
 
 .PHONY: all build clean
+# all: compila todo, genera los WAV y corre cada prueba (se detiene en la primera que
+# falle por "set -e"). Cada prueba recibe la carpeta de datos como argumento.
 all: build $(DATA)/.stamp
 	@set -e; for t in $(TESTS); do \
 	    echo "== $$t"; \
@@ -50,10 +55,14 @@ all: build $(DATA)/.stamp
 
 build: $(addprefix $(BUILD)/,$(TESTS))
 
+# Regla generica: build/tests/<t> depende de tests/<t>.c y de las fuentes que lista
+# SRC_<t> / EXTRA_<t>. SECONDEXPANSION permite usar $$* (el nombre) en las
+# dependencias.
 .SECONDEXPANSION:
 $(BUILD)/%: %.c $$(addprefix $(C)/,$$(SRC_$$*)) $$(EXTRA_$$*) $(HDRS) | $(BUILD)
 	$(CC) $(CFLAGS) $(DEFS_$*) -o $@ $< $(addprefix $(C)/,$(SRC_$*)) $(EXTRA_$*) $(LDFLAGS) $(LIBS_$*)
 
+# Los WAV se regeneran solo si cambia el script (el .stamp marca que ya se hizo).
 $(DATA)/.stamp: data/gen_wavs.py | $(BUILD)
 	$(PYTHON) data/gen_wavs.py $(DATA)
 	@touch $@

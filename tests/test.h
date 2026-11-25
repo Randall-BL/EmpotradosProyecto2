@@ -13,9 +13,13 @@
 #include <stdio.h>
 #include <string.h>
 
+/* Contadores globales: comprobaciones fallidas, comprobaciones hechas y funciones de
+ * prueba con al menos un fallo. */
 static int test_failures;
 static int test_checks;
 static int test_case_failures;
+
+/* Los macros usan do { ... } while (0) para comportarse como una sola sentencia. */
 
 #define CHECK(cond) do { \
     test_checks++; \
@@ -25,6 +29,7 @@ static int test_case_failures;
     } \
 } while (0)
 
+/* Se convierten a long long para poder comparar e imprimir cualquier entero. */
 #define CHECK_EQ(a, b) do { \
     long long va_ = (long long)(a), vb_ = (long long)(b); \
     test_checks++; \
@@ -44,6 +49,7 @@ static int test_case_failures;
     } \
 } while (0)
 
+/* Si la cantidad de fallos cambio durante fn, la prueba se reporta como FALLO. */
 #define RUN(fn) do { \
     int before_ = test_failures; \
     fn(); \
@@ -51,6 +57,7 @@ static int test_case_failures;
     printf("%-6s %s\n", test_failures == before_ ? "OK" : "FALLO", #fn); \
 } while (0)
 
+/* Expresion con coma: imprime el resumen y vale 1 si hubo fallos (codigo de salida). */
 #define TEST_REPORT() ( \
     printf("%s: %d comprobaciones, %d fallos\n", test_failures ? "FALLO" : "PASA", \
            test_checks, test_failures), \

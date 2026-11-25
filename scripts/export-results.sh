@@ -8,10 +8,13 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Carpeta de destino y commit actual (se anota en cada resultado).
 DST="$HERE/docs/verificacion/resultados"
 mkdir -p "$DST"
 COMMIT="$(git -C "$HERE" rev-parse --short HEAD)"
 
+# Un archivo de resultado por transcript: cabecera con origen y fecha, y solo la
+# parte del testbench (entre "inicio" y PASS/FAIL).
 for log in "$HERE"/build/sim/tb_*.log "$HERE"/build/sim/rtl_*.log; do
     [ -f "$log" ] || continue
     name="$(basename "$log" .log)"
@@ -28,6 +31,7 @@ for log in "$HERE"/build/sim/tb_*.log "$HERE"/build/sim/rtl_*.log; do
     echo "$name: $r"
 done
 
+# Salida de las pruebas del PC, sin las lineas de make.
 {
     echo "# Pruebas en el PC (make -C tests)"
     echo "# $(date '+%Y-%m-%d %H:%M'), commit $COMMIT"

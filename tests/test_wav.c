@@ -9,6 +9,7 @@
 #include "test.h"
 #include "wav.h"
 
+/* Carpeta de los WAV de prueba y buffer para cargar un archivo entero en memoria. */
 static const char *data_dir = "../build/tests/data";
 static uint8_t file_buf[512 * 1024];
 
@@ -21,6 +22,8 @@ static uint32_t file_read(void *ctx, uint32_t off, uint8_t *buf, uint32_t n)
     return (uint32_t)fread(buf, 1, n, f);
 }
 
+/* Analiza data_dir/name con el lector sobre FILE* y comprueba que el lector en
+ * memoria da exactamente el mismo resultado. Devuelve el error de wav_parse. */
 static err_t parse_file(const char *name, wav_info_t *info)
 {
     char path[512];
@@ -47,6 +50,7 @@ static err_t parse_file(const char *name, wav_info_t *info)
     return e;
 }
 
+/* Lecturas little-endian con y sin comprobacion de limites. */
 static void test_le(void)
 {
     const uint8_t b[] = { 0x34, 0x12, 0x78, 0x56, 0xFF };
@@ -67,6 +71,8 @@ static void test_le(void)
     CHECK(!le_fourcc_eq((const uint8_t *)"RIFX", "RIFF"));
 }
 
+/* Las cuatro frecuencias soportadas, mono y estereo: campos de formato, posicion del
+ * PCM, cuadros, duracion y metadatos. */
 static void test_valid_formats(void)
 {
     wav_info_t w;
@@ -109,6 +115,7 @@ static void test_valid_formats(void)
     CHECK_EQ(w.frames, 9600);
 }
 
+/* Chunks desconocidos y de tamano impar: se saltan respetando el relleno. */
 static void test_chunks(void)
 {
     wav_info_t w;
@@ -127,6 +134,7 @@ static void test_chunks(void)
     CHECK_STR(w.title, "Impar");               /* el relleno se respeta */
 }
 
+/* Metadatos de LIST/INFO e ID3 (con sus codificaciones) y valores de respaldo. */
 static void test_metadata(void)
 {
     wav_info_t w;
@@ -171,6 +179,7 @@ static void test_metadata(void)
     CHECK_STR(z.title, "Ya tenia");
 }
 
+/* Archivos cortados: datos incompletos se aceptan marcados; cabecera incompleta no. */
 static void test_truncated(void)
 {
     wav_info_t w;
@@ -183,6 +192,8 @@ static void test_truncated(void)
     CHECK_EQ(parse_file("no_data.wav", &w), ERR_FORMAT);
 }
 
+/* Formatos validos pero no soportados (ERR_UNSUPPORTED) y archivos que no son WAV
+ * (ERR_FORMAT). */
 static void test_rejected(void)
 {
     wav_info_t w;
@@ -230,6 +241,7 @@ static void test_every_cut(void)
     CHECK_EQ(bad, 0);
 }
 
+/* Calculo de duracion, formato MM:SS y textos de error. */
 static void test_duration_fmt(void)
 {
     char b[6];
@@ -244,6 +256,7 @@ static void test_duration_fmt(void)
     CHECK_STR(err_str((err_t)42), "DESCONOCIDO");
 }
 
+/* argv[1] = carpeta con los WAV generados por tests/data/gen_wavs.py. */
 int main(int argc, char **argv)
 {
     if (argc > 1)

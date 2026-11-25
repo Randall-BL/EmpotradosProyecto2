@@ -6,8 +6,9 @@
 #include "shm_proto.h"
 #include "test.h"
 
-static shm_t shm;
+static shm_t shm;                          /* memoria compartida en RAM */
 
+/* Tamano total y desplazamientos de la tabla y del ring iguales al mapa de memoria. */
 static void test_layout(void)
 {
     CHECK_EQ(sizeof(shm_t), SHM_SIZE);
@@ -15,6 +16,8 @@ static void test_layout(void)
     CHECK_EQ((char *)&shm.ring[0] - (char *)&shm, SHM_RING_OFF);
 }
 
+/* Arranque del HPS, publicacion de la tabla, envio y ack de un comando, version
+ * distinta y limites de track_count. */
 static void test_handshake(void)
 {
     volatile shm_t *s = &shm;
@@ -139,6 +142,7 @@ static void test_switch_track(void)
     CHECK_EQ(shm_nios_avail(s, q4), SHM_RING_FRAMES);
 }
 
+/* Corre todas las pruebas del protocolo. */
 int main(void)
 {
     RUN(test_layout);

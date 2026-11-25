@@ -8,8 +8,9 @@
 
 module tb_seg7_time;
     logic clk = 1'b0, reset = 1'b1;
-    always #10 clk = ~clk;
+    always #10 clk = ~clk;                      // 50 MHz
 
+    // Senales del bus Avalon-MM que maneja el testbench (hace de procesador).
     logic [1:0]  address = '0;
     logic        read = 1'b0, write = 1'b0;
     logic [31:0] writedata = '0;
@@ -25,6 +26,7 @@ module tb_seg7_time;
 
     int errors = 0, checks = 0;
 
+    // Escritura Avalon de un ciclo en el registro a.
     task automatic wr(input int a, input logic [31:0] d);
         @(posedge clk); address <= a; writedata <= d; write <= 1'b1;
         @(posedge clk); write <= 1'b0;
@@ -46,11 +48,14 @@ module tb_seg7_time;
         endcase
     endfunction
 
+    // Lo que muestran los 6 displays como "PP MM:SS" (pista, minutos, segundos).
     function automatic string shown();
         return {digit(hex[5]), digit(hex[4]), " ", digit(hex[3]), digit(hex[2]), ":",
                 digit(hex[1]), digit(hex[0])};
     endfunction
 
+    // Escribe secs en TIME, espera que termine la conversion (STATUS.BUSY = 0) y
+    // compara los displays con exp.
     task automatic show_time(input int secs, input string exp);
         logic [31:0] st;
         wr(1, secs);
@@ -63,12 +68,14 @@ module tb_seg7_time;
             $display("OK    TIME = %4d s -> '%s'", secs, shown());
     endtask
 
+    // Compara lo que muestran los displays con exp, sin escribir nada.
     task automatic expect_shown(input string what, input string exp);
         checks++;
         if (shown() != exp) begin errors++; $error("%s: '%s', se esperaba '%s'", what, shown(), exp); end
         else $display("OK    %s -> '%s'", what, shown());
     endtask
 
+    // Secuencia: reset, tiempos tipicos y limites, numero de pista, apagado y STATUS.
     initial begin
         logic [31:0] d;
         $display("TB_SEG7_TIME: inicio");

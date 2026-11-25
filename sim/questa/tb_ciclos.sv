@@ -7,10 +7,10 @@
 
 module tb_ciclos;
     logic clk = 1'b0, rst_n = 1'b0;
-    always #10 clk = ~clk;
+    always #10 clk = ~clk;                      // 50 MHz
     wire [9:0] led;
     wire sda;
-    pullup (sda);
+    pullup (sda);                               // pull-up del I2C
 
     audio_soc dut (
         .clk_clk (clk), .reset_reset_n (rst_n),
@@ -22,6 +22,8 @@ module tb_ciclos;
         .vga_R (), .vga_G (), .vga_B ()
     );
 
+    // Suelta el reset, imprime cada cambio de LEDR y espera el fin del programa
+    // (LEDR = 0x0E0) con un limite de 40 ms simulados.
     initial begin
         $display("TB_CICLOS: inicio");
         #200 rst_n = 1'b1;

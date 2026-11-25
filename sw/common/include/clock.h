@@ -12,6 +12,7 @@
 
 #include <stdint.h>
 
+/* Estado del acumulador. */
 typedef struct {
     uint32_t last;                        /* ultima lectura del contador */
     uint32_t frac;                        /* ciclos que todavia no completan 1 ms */

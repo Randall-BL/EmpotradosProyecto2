@@ -11,7 +11,7 @@
 #define TONE_TABLE_SIZE 1024u   /* 2 KB; sin interpolacion la SNR es ~49 dB */
 
 typedef struct {
-    uint32_t phase;
+    uint32_t phase;             /* acumulador de fase (2^32 = un ciclo) */
     uint32_t step;              /* f * 2^32 / fs */
 } tone_t;
 

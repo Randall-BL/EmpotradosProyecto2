@@ -14,7 +14,7 @@
 #include <stdint.h>
 #include "evq.h"
 
-#define KEYS_MASK 0xFu
+#define KEYS_MASK 0xFu                 /* KEY[3:0] */
 
 /* Limpia flancos viejos, registra la ISR y habilita las IRQ de los 4 botones.
  * Devuelve 0 si se pudo registrar la ISR. */

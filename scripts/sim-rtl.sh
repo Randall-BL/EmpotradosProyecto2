@@ -11,20 +11,26 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Nombre del modulo (obligatorio) y su testbench.
 NAME="${1:?uso: scripts/sim-rtl.sh <nombre> [gui]}"
 TB="$HERE/sim/questa/rtl/tb_$NAME.sv"
 [ -f "$TB" ] || { echo "ERROR: no existe $TB" >&2; exit 1; }
 source "$HERE/scripts/env.sh" >/dev/null
 
+# Carpeta de trabajo limpia (libreria "work" de Questa) y transcript.
 WORK="$HERE/build/sim/rtl_$NAME.d"
 LOG="$HERE/build/sim/rtl_$NAME.log"
 rm -rf "$WORK"; mkdir -p "$WORK"; cd "$WORK"
 vlib work >/dev/null
+# Comandos de Questa: compilar todo el RTL propio y el tb, y elaborar el tb con
+# visibilidad completa (+acc) y la carpeta de vectores como argumento +VEC.
 DO="vlog -sv -quiet $HERE/hw/rtl/*.v $TB; vsim -voptargs=+acc tb_$NAME +VEC=$HERE/sim/vectors"
 if [ "${2:-}" = "gui" ]; then
     vsim -gui -do "$DO; add wave -r /tb_$NAME/dut/*; run -all"
     exit 0
 fi
+# Modo consola: corre hasta $finish, muestra las lineas relevantes y el codigo de
+# salida depende de que aparezca "PASS".
 vsim -c -do "$DO; run -all; quit -f" > "$LOG" 2>&1 || true
 grep -E "^# (TB_|OK |Latencia|Comprobaciones|\*\* (Error|Fatal))" "$LOG" | sed 's/^# //'
 grep -q "TB_[A-Z0-9_]*: PASS" "$LOG"

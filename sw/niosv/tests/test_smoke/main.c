@@ -18,6 +18,7 @@
 #include <stdint.h>
 #include "system.h"   /* generado por el BSP: define las bases (XXX_BASE) */
 
+/* Saluda por la JTAG UART, escribe patrones en LEDR y lee los switches. */
 int main(void)
 {
     for (int i = 0; i < 5; ++i) {
@@ -37,6 +38,7 @@ int main(void)
     volatile uint32_t *pio_out = (volatile uint32_t *)PIO_LED_BASE;
     volatile uint32_t *pio_in  = (volatile uint32_t *)PIO_SW_BASE;
 
+    /* Tres patrones de prueba para LEDR. */
     const uint32_t patrones[] = { 0x01, 0xA5, 0xFF };
     for (unsigned i = 0; i < sizeof patrones / sizeof patrones[0]; ++i) {
         *pio_out = patrones[i];                /* escribe el registro de datos */

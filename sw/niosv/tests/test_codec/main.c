@@ -17,17 +17,19 @@
  * (~12 ms); cada lectura del estado tarda unos pocos ciclos a 50 MHz. */
 #define TIMEOUT 5000000u
 
+/* Inicializa el codec, lo silencia y lo reactiva; el resultado queda en LEDR. */
 int main(void)
 {
     int rc;
 
-    pio_write(PIO_LED_BASE, 0x0C1);
+    pio_write(PIO_LED_BASE, 0x0C1);        /* etapa: probando el codec */
     rc = codec_init(AV_CONFIG_BASE, TIMEOUT);
     if (rc == CODEC_OK)
         rc = codec_mute(AV_CONFIG_BASE, 1, TIMEOUT);
     if (rc == CODEC_OK)
         rc = codec_mute(AV_CONFIG_BASE, 0, TIMEOUT);
 
+    /* 0x0C0 = todo bien; 0x0E0 | codigo = fallo (codigo = -rc). */
     pio_write(PIO_LED_BASE, rc == CODEC_OK ? 0x0C0u : (0x0E0u | ((uint32_t)-rc & 0xFu)));
     for (;;) {
     }

@@ -1,7 +1,9 @@
 # Componente de Platform Designer del modulo propio filtro_audio (HW-17).
 # RTL: filtro_audio.v + fir_core.v. Registros: docs/hw/modulo-filtro.md.
+# Version de la API de componentes de Platform Designer que usa este archivo.
 package require -exact qsys 16.1
 
+# Identidad del componente tal como aparece en el catalogo de Platform Designer.
 set_module_property NAME filtro_audio
 set_module_property VERSION 1.0
 set_module_property DISPLAY_NAME "Filtro FIR de audio (propio)"
@@ -10,6 +12,7 @@ set_module_property GROUP "Proyecto II"
 set_module_property AUTHOR "CE-1113 Proyecto II"
 set_module_property EDITABLE false
 
+# Archivos HDL para sintesis (QUARTUS_SYNTH) y para simulacion (SIM_VERILOG).
 add_fileset QUARTUS_SYNTH QUARTUS_SYNTH "" ""
 set_fileset_property QUARTUS_SYNTH TOP_LEVEL filtro_audio
 add_fileset_file filtro_audio.v VERILOG PATH filtro_audio.v TOP_LEVEL_FILE
@@ -26,6 +29,7 @@ add_parameter COEF_FILE STRING ""
 set_parameter_property COEF_FILE HDL_PARAMETER true
 set_parameter_property COEF_FILE VISIBLE false
 
+# Reloj y reset de entrada (el reset se suelta de forma sincrona con clk).
 add_interface clk clock end
 set_interface_property clk clockRate 0
 add_interface_port clk clk clk Input 1
@@ -35,12 +39,14 @@ set_interface_property reset associatedClock clk
 set_interface_property reset synchronousEdges DEASSERT
 add_interface_port reset reset reset Input 1
 
+# Esclavo Avalon-MM "s1": direcciones en palabras de 32 bits.
 add_interface s1 avalon end
 set_interface_property s1 addressUnits WORDS
 set_interface_property s1 associatedClock clk
 set_interface_property s1 associatedReset reset
 set_interface_property s1 bitsPerSymbol 8
 set_interface_property s1 maximumPendingReadTransactions 0
+# readLatency 0 + waitrequest: el modulo decide cuando el dato esta listo.
 set_interface_property s1 readLatency 0
 set_interface_property s1 readWaitTime 0
 set_interface_property s1 writeWaitTime 0

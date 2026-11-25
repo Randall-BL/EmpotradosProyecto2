@@ -10,6 +10,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$HERE/scripts/env.sh" >/dev/null
 ELF="${1:-$HERE/build/niosv/app/build/audio_player.elf}"
 [ -f "$ELF" ] || { echo "ERROR: no existe $ELF; corra scripts/build-niosv.sh" >&2; exit 1; }
+# Tamano de la RAM on-chip del Nios V: 128 KB.
 RAM=131072
 
 echo "## Secciones de $(basename "$ELF")"
@@ -19,6 +20,7 @@ echo "|---|---|"
 # Solo las secciones que ocupan la RAM (sin depuracion ni metadatos).
 riscv32-unknown-elf-size -A "$ELF" | \
     awk '$1 ~ /^\.(entry|exceptions|text|rodata|rwdata|sdata|sbss|bss)/ && $2 > 0 {printf "| `%s` | %d |\n", $1, $2}'
+# Totales de text, data y bss (segunda linea de la salida de "size").
 read -r TEXT DATA BSS _ < <(riscv32-unknown-elf-size "$ELF" | awk 'NR==2 {print $1, $2, $3}')
 USED=$((TEXT + DATA + BSS))
 echo
@@ -29,5 +31,6 @@ echo "## Simbolos mas grandes"
 echo
 echo "| Simbolo | Bytes | Tipo |"
 echo "|---|---|---|"
+# Los 12 simbolos mas grandes (tamano en hex convertido a decimal).
 riscv32-unknown-elf-nm --size-sort -S -r "$ELF" | \
     awk 'NR <= 12 {printf "| `%s` | %d | %s |\n", $4, strtonum("0x" $2), $3}'

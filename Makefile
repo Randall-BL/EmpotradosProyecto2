@@ -25,12 +25,17 @@ ARM_CC     ?= arm-linux-gnueabihf-gcc
 COMPOSE    := docker compose -f docker/compose.yml
 export HOST_UID := $(shell id -u)
 export HOST_GID := $(shell id -g)
+# (Arriba: shell de las recetas, carpeta de salida, HDL propio que se analiza,
+# carpetas con pruebas cocotb, compilador ARM y comando de docker compose. UID/GID
+# del usuario se exportan para que el contenedor cree archivos con el mismo dueno.)
 
 .PHONY: all ci test sim lint lint-hdl audit hps clean help docker-build docker-shell
 
+# Objetivo por defecto = lo mismo que la CI.
 all: ci
 ci: lint test sim hps
 
+# Imprime la ayuda del encabezado (lineas 2 a 19 de este archivo).
 help:
 	@sed -n '2,19p' Makefile
 
@@ -58,12 +63,15 @@ sim:
 # ---------------------------------------------------------------- lint (NV-17)
 lint: lint-hdl audit
 
+# Verilator en modo solo-analisis, con todas las advertencias, para cada modulo
+# propio; lint.vlt tiene las exenciones justificadas.
 lint-hdl:
 	@set -e; for t in $(RTL_TOPS); do \
 	    echo "== verilator --lint-only -Wall $$t"; \
 	    verilator --lint-only -Wall -I$(RTL) $(RTL)/lint.vlt --top-module $$t $(RTL)/*.v; \
 	done
 
+# Comprueba que el software no use el HAL salvo para interrupciones.
 audit:
 	scripts/audit-hal.sh
 
@@ -83,11 +91,14 @@ hps:
 	    file $(BUILD)/hps/common/wav.o; \
 	fi
 
+# Borra los productos de estos objetivos (no toca Quartus ni el Nios V).
 clean:
 	$(MAKE) -C tests clean
 	rm -rf $(BUILD)/sim/cocotb $(BUILD)/hps/common
 
 # ---------------------------------------------------------------- contenedor
+# Contenedor: construir la imagen, abrir una terminal, o correr cualquier objetivo
+# (docker-<obj> -> make <obj> dentro del contenedor).
 docker-build:
 	$(COMPOSE) build
 

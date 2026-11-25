@@ -11,9 +11,11 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$HERE/scripts/env.sh" >/dev/null
+# Carpeta del proyecto Quartus e imagen de la RAM del Nios V.
 QDIR="$HERE/hw/quartus"
 HEX="$HERE/build/niosv/app/build/ram.hex"
 
+# Requisitos previos: SoC generado y software compilado.
 [ -f "$HERE/hw/soc/gen/synthesis/audio_soc.qip" ] || { echo "ERROR: corra primero scripts/build-soc.sh" >&2; exit 1; }
 [ -f "$HEX" ] || { echo "ERROR: falta $HEX; corra primero scripts/build-niosv.sh" >&2; exit 1; }
 
@@ -28,6 +30,8 @@ quartus_sh --flow compile audio_player > "$QDIR/output_files.log" 2>&1 || {
     exit 1
 }
 
+# Resumen de recursos del fitter y slack de cada reloj; si algun slack es negativo
+# se avisa y se sale con codigo 2.
 STA="$QDIR/output_files/audio_player.sta.rpt"
 echo ">> Resumen:"
 grep -E "Total logic elements|Logic utilization|Total registers|Total block memory bits|Total DSP Blocks|Total pins" \
