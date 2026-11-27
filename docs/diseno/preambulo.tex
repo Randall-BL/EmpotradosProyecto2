@@ -1,0 +1,44 @@
+% Preambulo de la version PDF (pandoc -H). Misma paleta y estilo que el Proyecto I.
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,fit,backgrounds,calc}
+\usepackage{etoolbox}
+\usepackage{caption}
+\captionsetup{font=small,labelfont=bf,width=.92\linewidth}
+\definecolor{cLog}{RGB}{31,102,168}
+\definecolor{cPot}{RGB}{193,84,26}
+\definecolor{cOwn}{RGB}{31,138,91}
+\definecolor{cGris}{RGB}{120,120,120}
+\tikzset{
+  blk/.style ={draw,rounded corners=2pt,align=center,inner sep=4pt,minimum height=9mm,font=\small},
+  blkl/.style={blk,draw=cLog,fill=cLog!8},
+  blkp/.style={blk,draw=cPot,fill=cPot!8},
+  blkn/.style={blk,draw=cGris,fill=black!3},
+  ln/.style  ={-{Latex[length=2mm]},thick},
+}
+\setlength{\parskip}{0.45em}
+\setlength{\parindent}{0pt}
+\emergencystretch=4em
+\renewcommand{\arraystretch}{1.18}
+% Tablas y codigo un poco mas chicos para que quepan en el ancho de la pagina.
+\AtBeginEnvironment{longtable}{\small}
+\AtBeginEnvironment{Shaded}{\small}
+\AtBeginEnvironment{verbatim}{\small}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Proyecto II --- Documento de diseño}
+\fancyhead[R]{\small CE-1113 Sistemas Empotrados}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+% Simbolos que Noto Serif no trae: se toman de DejaVu Sans.
+\usepackage{newunicodechar}
+\newfontfamily\simbolos{DejaVu Sans}[Scale=0.92]
+\newunicodechar{→}{{\simbolos →}}
+\newunicodechar{↔}{{\simbolos ↔}}
+\newunicodechar{−}{{\simbolos −}}
+\newunicodechar{≈}{{\simbolos ≈}}
+\newunicodechar{≤}{{\simbolos ≤}}
+\newunicodechar{≥}{{\simbolos ≥}}
+\newunicodechar{⌈}{{\simbolos ⌈}}
+\newunicodechar{⌉}{{\simbolos ⌉}}
+\newunicodechar{✔}{{\simbolos\color{cOwn}✔}}

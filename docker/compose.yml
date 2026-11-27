@@ -1,0 +1,47 @@
+# Servicio de desarrollo (DK-05). Uso desde la raiz del repositorio:
+#   make docker-build             construye la imagen con el UID/GID del usuario
+#   make docker-shell             terminal dentro del contenedor
+#   make docker-ci                lint + test + sim + hps dentro del contenedor
+# o directamente:  docker compose -f docker/compose.yml run --rm dev make test
+#
+# HOST_UID/HOST_GID los exporta el Makefile raiz; si se llama a docker compose a mano
+# y el usuario no es 1000:1000, exportarlos antes (export HOST_UID=$(id -u) ...).
+services:
+  # Contenedor de desarrollo y CI (docker/Dockerfile).
+  dev:
+    image: empotrados-dev:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        USER_UID: ${HOST_UID:-1000}
+        USER_GID: ${HOST_GID:-1000}
+    # Corre con el UID/GID del anfitrion: lo que genere en /work queda del usuario.
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    volumes:
+      - ..:/work            # DK-03: el repositorio se monta, no se copia a la imagen
+    working_dir: /work
+    environment:
+      - HOME=/home/dev
+    # init: un proceso init reenvia senales y recoge zombis; stdin/tty: terminal
+    # interactiva para make docker-shell.
+    init: true
+    stdin_open: true
+    tty: true
+
+  # Construccion del arranque del HPS: U-Boot, kernel y BusyBox (docker/hps.Dockerfile).
+  hps:
+    image: empotrados-hps:local
+    build:
+      context: .
+      dockerfile: hps.Dockerfile
+      args:
+        USER_UID: ${HOST_UID:-1000}
+        USER_GID: ${HOST_GID:-1000}
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    volumes:
+      - ..:/work
+    working_dir: /work
+    environment:
+      - HOME=/home/dev
+    init: true

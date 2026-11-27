@@ -1,0 +1,1106 @@
+# TODO — Proyecto II: SoC Reproductor de Audio (co-diseño HW/SW)
+
+**Curso:** CE-1113 Sistemas Empotrados — TEC · **Profesor:** Dr.-Ing. Jeferson González Gómez
+**Plataforma:** Altera DE1-SoC · Platform Designer · Quartus Prime Lite 25.1std
+**Fecha de entrega:** 2 de diciembre de 2026 · **Última revisión de este plan:** 7 de noviembre de 2026
+
+## Cómo leer este plan
+
+- `[ ]` pendiente · `[~]` en progreso · `[x]` hecho.
+- **OBL** obligatorio · **OPC** opcional / crédito extra · **EVID** genera evidencia que va
+  al repositorio · `#n` issue del board (de la versión anterior de este plan; las tareas
+  marcadas *issue nuevo* todavía no tienen issue).
+- Cada tarea tiene un identificador (`HW-07`, `NV-04`…). `⟵ X` significa "depende de X".
+  `→` indica cuándo se da por terminada.
+- `A·2` después del identificador: persona responsable (A–D) y peso de la tarea (1 pequeña,
+  2 media, 3 grande). `Todos`: cada persona lo hace sobre su propio trabajo. Las tareas ya
+  hechas no llevan etiqueta. Ver [Reparto del trabajo](#reparto-del-trabajo).
+- Referencias al enunciado (`proyecto-2-reproductor-audio-2026ii.pdf`):
+
+| Código | Sección del PDF | Pág. |
+|---|---|---|
+| §2 | Descripción general (plataforma, procesadores, HAL mínimo, Taller 9) | 2 |
+| §3-F | Especificación → Funcionalidades del reproductor (contenido, control, visualización, procesamiento, rendimiento) | 3–4 |
+| §3-HW | Requerimientos de Hardware (solo hardware) | 4–5 |
+| §3-SW | Requerimientos de Software (solo software) | 5 |
+| §3-SIS | Requerimientos de Sistema (co-diseño: filtros, volumen, tiempo, visualización, control) | 5–6 |
+| §3-REC | Análisis de Recursos y Consumo | 6 |
+| §3-EXT | Crédito Extra (opcional) | 6 |
+| §4 | Material de apoyo | 7 |
+| §5 | Entregables y porcentajes | 7–8 |
+| GRUPO | Requisito acordado por el grupo, no está en el PDF (modularidad, contenedor, CI). Se indica a qué rubro del PDF aporta. | — |
+
+## Reglas transversales
+
+- **Sin HAL en el Nios V** [§3-SW p.5]: los periféricos se acceden con punteros `volatile`
+  a las bases de `system.h`; nada de `alt_*` ni `IOWR`/`IORD`. **Única excepción:**
+  `alt_ic_isr_register` y, si hace falta, `alt_ic_irq_enable`/`alt_ic_irq_disable` para las
+  interrupciones de los botones.
+- **Código portable y modular** [GRUPO → §5 p.7, documento de diseño de software]:
+  `sw/common/` no incluye `system.h`, no toca registros, no usa `malloc` y lee los datos
+  little-endian byte a byte. La lógica (parseo WAV, metadatos, playlist, máquina de
+  estados, filtros en software) vive ahí y se prueba en el PC; los drivers viven en
+  `sw/niosv/drivers/` y `sw/hps/drivers/`.
+- **Cada módulo HDL propio tiene su testbench** [§3-HW p.4 + GRUPO]. El HDL propio se
+  escribe portable (multiplicadores y memorias inferidos, sin primitivas de Altera) para
+  que corra en Icarus/cocotb dentro del contenedor y también en Questa.
+- **Estructura del repositorio:** `hw/` (HDL en `hw/rtl/`, Platform Designer en `hw/soc/`),
+  `sw/niosv/`, `sw/hps/`, `sw/common/`, `sim/` (cocotb y `.do` de Questa), `tests/`
+  (pruebas en C y `tests/data/`), `docker/`, `docs/`, `scripts/` (flujo nativo de Quartus).
+- **El contenedor no bloquea a Quartus:** la sección 8 es trabajo en paralelo. Quartus,
+  Platform Designer, el BSP del Nios V, Questa y la programación de la tarjeta se usan de
+  forma nativa ([docs/entorno-nativo.md](docs/entorno-nativo.md)).
+- **No se instala nada en las máquinas sin acordar antes la ubicación.**
+- **Git:** Conventional Commits, ramas `main`/`develop`/`feat/*` (ver `CONTRIBUTING.md`),
+  sin co-autores de IA en los commits.
+
+## Datos ya verificados que condicionan el diseño
+
+Revisado en la instalación local de Quartus 25.1std (`/opt/altera_lite/25.1std`) y en el
+Taller 9:
+
+1. **Los IP del University Program están instalados** en
+   `ip/altera/university_program/`: Audio (`altera_up_avalon_audio`), Audio and Video
+   Config, Audio PLL, ADC de la DE1-SoC (`altera_up_avalon_de1_soc_adc`), VGA controller,
+   Character Buffer y Pixel Buffer DMA, SDRAM PLL, RS232, Character LCD.
+2. **Frecuencias de muestreo:** el IP *Audio and Video Config* solo ofrece **8, 32, 48 y
+   96 kHz**; el PDF pide **8, 16 y 44.1 kHz**. El Audio PLL genera 12.288, 11.2896 y
+   12.0 MHz (entre otras), y el Config permite escribir registros del códec WM8731 en
+   tiempo de ejecución. 16 kHz y 44.1 kHz necesitan una decisión (CD-07).
+3. **El Nios V/m no tiene multiplicador por hardware:** es RV32I (`CORE_SUPPORTS_MULDIV 0`
+   en el IP; el BSP del Taller 9 compila con `-march=rv32i`). Cada multiplicación en
+   software es una llamada a `__mulsi3`. Esto pesa en CD-05 (volumen) y CD-12 (filtros en
+   software).
+4. **ADC:** el IP de ADC de la DE1-SoC soporta el AD7928 y el LTC2308 (parámetro interno
+   `isLTC`). Hay que confirmar qué chip trae nuestra revisión de la placa (HW-08).
+5. **SD:** el enunciado pide la SD "mediante el HPS" [§3-SW p.5]. En la DE1-SoC el zócalo
+   microSD está cableado al HPS (confirmar en el manual de Terasic, HW-05), así que el
+   Nios V no puede leerla sin un módulo externo.
+6. **Taller 9 reutilizado:** SoC base en Tcl, scripts de generación/compilación/simulación
+   y prueba de humo en C, ya copiados y adaptados
+   ([docs/reutilizado-taller9.md](docs/reutilizado-taller9.md)).
+
+---
+
+## Orden sugerido y dependencias
+
+```mermaid
+flowchart LR
+  M0[M0 Decisiones CD-01/02/07]
+  M0 --> M1[M1 SoC base en tarjeta]
+  M1 --> M2[M2 Tono de prueba por line-out]
+  M0 --> M3[M3 Modulo propio verificado aislado]
+  M0 --> M4[M4 HPS lee la SD y comparte datos]
+  M2 --> M5[M5 Reproductor basico]
+  M4 --> M5
+  M3 --> M6[M6 Filtros, volumen y UI]
+  M5 --> M6
+  M6 --> M7[M7 Arranque autonomo y mediciones]
+  M7 --> M8[M8 Documentacion y demo]
+  DK[Contenedor y CI, en paralelo] -.-> M3
+  DK -.-> M4
+```
+
+| Semana | Fechas | Objetivo |
+|---|---|---|
+| S1 | 29 oct – 4 nov | Cerrar CD-01, CD-02 y CD-07 (M0). SoC base con PIO definitivos y proyecto Quartus (HW-01..02, HW-19..23). Definir y construir el contenedor (DK-01..09). Empezar el parser WAV (SC-03..06). |
+| S2 | 5 – 11 nov | M1 y M2 en tarjeta. Módulo propio en HDL con cocotb (HW-11..14, DK-11..12) → M3. U-Boot SPL e imagen SD (HP-02..03). |
+| S3 | 12 – 18 nov | HPS ↔ Nios V (HW-05..06, HP-05..07) → M4. Reproductor básico con botones y playlist (IN-05..07) → M5. CI funcionando (DK-18..20). |
+| S4 | 19 – 25 nov | Filtros 2 y 3, volumen, VGA (IN-03, IN-04, IN-08) → M6. Arranque autónomo, mediciones, recursos y potencia (IN-09, PR-07..10, RP-*) → M7. Opcionales solo si M5 se cumplió antes del 18 nov y el profesor los aprobó. |
+| S5 | 26 nov – 2 dic | Congelar funciones el 30 nov. Documentación, README, videos, ensayo (DOC-*) → M8. PR final `develop` → `main`. |
+
+Camino crítico: **CD-01/CD-02 → HW-05 (HPS) → HP-02..07 → IN-05 → IN-06**. Es la
+parte con más incertidumbre técnica (arranque del HPS y canal con la FPGA); conviene
+empezar HP-02 en S1 aunque CD-02 no esté cerrado.
+
+---
+
+## Reparto del trabajo
+
+> Propuesta para 4 personas (A, B, C y D); cada letra se asocia a un integrante al cerrar
+> OR-02. El reparto es por área y de punta a punta: quien hace un bloque de hardware escribe
+> también su driver, lo prueba en la tarjeta y redacta su parte de la documentación.
+
+Cada tarea pendiente tiene un peso: **1** pequeña (medio día o menos), **2** media (1–2
+días), **3** grande (3 días o más). Suman 217 puntos sin contar los opcionales ni las
+tareas `Todos` (OR-04, GIT-02, GIT-05, PR-11), unos 54 por persona. Se reparte por puntos,
+no por cantidad de tareas: D tiene menos tareas, pero más grandes y en el camino crítico.
+
+| Persona | Área | Tareas | Puntos | Opcional |
+|---|---|---|---|---|
+| A | SoC y plataforma: Platform Designer, Quartus, periféricos de catálogo (audio, ADC, VGA) y sus drivers, pruebas en la tarjeta, recursos y potencia, README | 40 | 55 | OPC-03 (1) |
+| B | Hardware propio y DSP: módulo de filtro, `seg7_time`, punto fijo, verificación con cocotb y Questa, filtros en software, evidencias de los filtros | 33 | 54 | OPC-01 (3) |
+| C | Software de aplicación: `sw/common/` (WAV, playlist, FSM, cola), aplicación del Nios V (botones, switches, lazo principal), pruebas en C, contenedor y CI, mediciones | 39 | 54 | OPC-02 (3) |
+| D | HPS y arranque: partición, U-Boot e imagen de la SD, FAT32, productor del ring buffer, arranque autónomo, integración final, metodología de co-diseño | 29 | 54 | OPC-00 (1) |
+
+Tareas por persona (puntos por sección entre paréntesis):
+
+- **A** — OR-02, OR-05 (2) · GIT-03, GIT-04 (3) · CD-06, CD-07, CD-09 (5) · HW-01..04,
+  HW-06..09, HW-19..24 (19) · SC-11 (1) · NV-01, NV-06..08, NV-11, NV-16 (9) · IN-01..04
+  (4) · PR-05 (2) · RP-01..03, RP-05 (5) · DOC-04, DOC-06, DOC-09 (5)
+- **B** — CD-04, CD-05, CD-12..14 (8) · HW-10..18 (14) · SC-10 (3) · NV-09, NV-10, NV-15
+  (3) · IN-08 (1) · DK-09, DK-11..13 (7) · PR-02..04, PR-09, PR-10 (9) · RP-04 (2) · DOC-03,
+  DOC-05, DOC-07, DOC-10 (7)
+- **C** — CD-08, CD-10, CD-11 (3) · SC-01..09, SC-14 (12) · NV-02..05, NV-12..14, NV-17
+  (12) · IN-07 (2) · DK-01..07, DK-10, DK-14, DK-16..20 (20) · PR-07, PR-08 (3) · DOC-01 (2)
+- **D** — CD-01..03, CD-15, CD-16 (10) · HW-05 (3) · SC-12, SC-13 (4) · HP-01..10
+  (19) · IN-05, IN-06, IN-09 (6) · DK-08, DK-15 (2) · PR-01, PR-06 (4) · DOC-02, DOC-08,
+  DOC-11 (5)
+
+Foco de cada persona por semana (ver la tabla de semanas de arriba):
+
+| Semana | A | B | C | D |
+|---|---|---|---|---|
+| S1 | SoC base y proyecto Quartus (HW-01..03, HW-19..21), CD-06/07/09, material (OR-05), GIT-03/04 | CD-04/05/12..14, mapa de registros (HW-11), diseño del FIR (HW-12) | Contenedor (DK-01..07), parser WAV (SC-01..06), CD-08/10/11 | CD-01/02, HPS en el SoC (HW-05), U-Boot SPL (HP-01..02) |
+| S2 | Audio y códec (HW-07, NV-01, NV-06/07), carga del software (HW-22), IN-01/02 → M1, M2 | `seg7_time` y núcleo del filtro con cocotb (HW-10, HW-13/14, DK-09, DK-11..13) → M3 | `Makefile` (DK-10), playlist, FSM, cola y puertos (SC-07..09, SC-14), botones y switches (NV-02..05, NV-12), pruebas en C (DK-14) | Imagen SD (HP-03), ARM en el contenedor (DK-08, DK-15), CD-03, protocolo (SC-13), plan de pruebas (PR-01), canciones (PR-06) |
+| S3 | Canal HPS ↔ Nios V (HW-06), ADC y volumen (HW-08, SC-11, NV-08, IN-03), pruebas de drivers (PR-05), HW-04 si aplica | Verificación aislada (PR-02/03, HW-16), componente (HW-17), HW-15 si aplica, filtros en software (SC-10) | Canal del lado Nios V y lazo principal (NV-13/14), reproductor básico (IN-07) → M5, CI (DK-16..19) | SD y FAT32 (HP-05), tabla de pistas y productor (HP-06/07), IN-05/06 → M4 |
+| S4 | VGA (HW-09, NV-11, IN-04), componentes y mapas (HW-23/24, NV-16), recursos y potencia (RP-01..03, RP-05) | Filtros en la tarjeta (NV-09/10/15, IN-08), co-simulación (PR-04), evidencias (PR-09/10, HW-18), RP-04 | Auditoría sin HAL (NV-17), mediciones (PR-07), estabilidad (PR-08) | Arranque autónomo (HP-04, HP-08/09), SC-12 y HP-10 si aplican, sistema completo (IN-09) → M7 |
+| S5 | README (DOC-06), DOC-04, DOC-09 | DOC-03, DOC-05, DOC-07, presentación (DOC-10) | Documento de software (DOC-01), sección del contenedor (DK-20) | Metodología (CD-15/16, DOC-02), videos (DOC-08), PR final (DOC-11) |
+
+Puntos de contacto entre personas:
+
+- **A → todos:** `system.h` con los PIO definitivos (HW-02) y el mapa de memoria (CD-06)
+  antes de escribir drivers.
+- **A ↔ B ↔ D:** los tres tocan `hw/soc/build_system.tcl` (A el SoC y el canal, B el
+  componente propio en HW-17, D el HPS en HW-05); se avisa antes de abrir el PR para no
+  pisarse.
+- **C → B, D:** contenedor listo (DK-05) antes de DK-09 (B) y DK-08 (D).
+- **C ↔ D:** D usa el parser de C (SC-03..06) en HP-06; C usa el protocolo de D (SC-13) en
+  NV-13.
+- **B → C:** los filtros en software (SC-10) siguen la interfaz de puertos de C (SC-14) para
+  correr dentro del lazo principal (NV-14).
+- **Revisión:** el revisor por defecto de un PR es quien consume esa interfaz (p. ej. C
+  revisa SC-13, A revisa HW-17).
+- **Rebalanceo:** si una tarea condicional no hace falta (HW-04, HW-15, SC-05, SC-12, HP-10) o
+  alguien se atrasa, se reasigna en la revisión semanal y se cambia la letra en este plan.
+
+---
+
+## Estado de la persona A (SoC y plataforma) — 5 de noviembre de 2026
+
+Todo lo de A que no necesita la tarjeta ni el trabajo de otra persona está hecho y
+**verificado en simulación** (`scripts/test-all.sh --all`: PC, `tb_pio`, `tb_audio`,
+`tb_codec`, `tb_adc` con AD7928 y LTC2308, `tb_shm`, `tb_vga`). Resultados en el
+[README](README.md#verificación-sin-tarjeta).
+
+**Hecho:** GIT-03, GIT-04, CD-06, CD-07, CD-09, HW-01..04, HW-07..09, HW-19..21, HW-23,
+SC-11, NV-01, NV-06..08, NV-11, RP-01, RP-03.
+
+**Pendiente de A**, con lo que lo bloquea y el siguiente paso:
+
+| Tarea | Estado | Bloqueo | Siguiente paso |
+|---|---|---|---|
+| IN-01..IN-04, PR-05 | Programas de prueba listos y verificados en simulación | La tarjeta DE1-SoC | Correr `docs/pruebas-tarjeta.md` y anotar resultado y evidencia (foto/video) |
+| HW-22 | `scripts/update-sw.sh` probado; `scripts/program.sh` escrito | La tarjeta (programar por JTAG) | `scripts/program.sh` con la DE1-SoC conectada |
+| HW-06 | **Hecho** (12 nov): `hps.h2f_lw_axi_master` → `shm.s2`, probado en la tarjeta | — | — |
+| HW-24 | Mapa exportado del `.sopcinfo` (`scripts/report-memory-map.py`) | — (HW-05 listo el 12 nov) | Regenerar `docs/hw/mapa-memoria-generado.md` con el maestro del HPS |
+| NV-16 | Uso de RAM medido por programa (`scripts/report-memory.sh`) | NV-14 (C, lazo principal) | Medir la aplicación final y ubicar sus buffers |
+| RP-02 | Script listo (`report-resources.py --entity`) | HW-17 (B, módulo propio) | Correrlo con la instancia del filtro |
+| RP-05, DOC-04 | Análisis escrito en `docs/metricas/recursos-y-potencia.md` | RP-02 y RP-04 (B) | Agregar el costo del filtro en HW frente a SW |
+| DOC-06 | README con arquitectura, compilación, verificación y captura | CD-16, PR-10 y partes de B/C/D | Completar las secciones marcadas *(pendiente)* y agregar fotos/videos de la tarjeta |
+| DOC-09 | — | — | Definir el formato final de la documentación de diseño (PDF o `docs/`) |
+| OR-02 | A = Randall Bolaños | El grupo | Asociar B, C y D a integrantes y pasarlo al README |
+| OR-05 | Lista en `docs/material.md` | El grupo | Asignar responsables y conseguir el material |
+
+**Hallazgos que afectan a otras personas:**
+
+- **B:** el códec queda fijo a 48 kHz (CD-07): un solo juego de coeficientes. Hay 0 DSP
+  usados y 190 M10K libres; la memoria es el recurso que hay que cuidar. Base reservada para
+  el módulo propio y `seg7_time`: `0x0004_0100`–`0x0004_01FF`.
+- **C:** usar los drivers de `sw/niosv/drivers/` (sin HAL; el HAL solo en `irq.c`). El
+  relleno de la FIFO de audio por IRQ ya está probado (IRQ 4). `vga_text` no permite leer
+  la pantalla; guardar una copia en RAM si hace falta. El `printf` cuesta ~10 KB.
+- **D:** el HPS remuestrea todo a 48 kHz estéreo (CD-07). `shm.s2` queda libre para su
+  bridge. La autoinicialización del códec tarda ~71 ms tras el reset (cuenta para el
+  arranque < 10 s).
+
+---
+
+## Estado de la persona B (hardware propio y DSP) — 7 de noviembre de 2026
+
+> Trabajo hecho por Randall Bolaños mientras se asigna la persona B (OR-02).
+
+El módulo propio (`filtro_audio`: FIR estéreo de 2 bancos + ganancia) y `seg7_time` están
+diseñados, **verificados aislados** (puerta HW-16), integrados al SoC, compilados en Quartus
+cumpliendo tiempos y **co-simulados con el Nios V** (`tb_filtro`: autoprueba con 0
+diferencias). Reporte: [docs/hw/verificacion-filtro.md](docs/hw/verificacion-filtro.md).
+
+**Hecho:** CD-04, CD-05, CD-12, CD-13, CD-14, HW-10..18, SC-10, NV-09, NV-10, NV-15,
+PR-02, PR-03, PR-04, RP-02, RP-04.
+
+**Pendiente de B**, con lo que lo bloquea y el siguiente paso:
+
+| Tarea | Estado | Bloqueo | Siguiente paso |
+|---|---|---|---|
+| IN-08, PR-09, PR-10 | `test_filtros` listo (3 filtros con SW, volumen en GAIN, tiempo en HEX); respuesta en frecuencia ya medida en el RTL | La tarjeta (y IN-06 de D para hacerlo desde la SD) | Correr `docs/pruebas-tarjeta.md`, grabar el line-out y comparar con `docs/img/filtro-respuesta-medida.png` |
+| DK-09, DK-11..13 | Equivalentes hechos en Questa (`sim/questa/rtl/`); vectores en `sim/vectors/` listos para cocotb | — (DK-05 de C listo el 4 de noviembre) | Escribir los tests cocotb en `sim/cocotb/<modulo>/` leyendo los mismos vectores; `make docker-sim` |
+| DOC-03 | Filtro y `seg7_time` documentados (`docs/hw/`) | HW-24 (vista desde el HPS, D) | Agregar la dirección del módulo vista desde el HPS si aplica |
+| DOC-05 | `docs/herramientas.md` | DK-* (C) | Agregar Docker, cocotb y CI cuando existan |
+| DOC-07 | Diagramas en Mermaid dentro de los `.md` y WaveDrom en `docs/img/filtro-tiempos.json` | — | Exportar el WaveDrom a imagen (wavedrom-cli) |
+| DOC-10 | — | IN-09 (sistema completo) | Guion y ensayo de la presentación |
+| OPC-01 | — | OPC-00 (aprobación del profesor) | Ecualizador de ≥ 5 bandas reutilizando el MAC (quedan ~900 ciclos libres por muestra) |
+
+**Hallazgos que afectan a otras personas:**
+
+- **C:** la asignación de switches de `test_filtros` (SW[1:0]: bypass, pasa-bajos,
+  pasa-banda, reverberación) es provisional hasta CD-08. El volumen ya no se escala en
+  software: se escribe `vol.gain_q15` en `GAIN` con `filtro_set_gain` (CD-05). Para no
+  esperar al filtro, intercalar `filtro_write` / `audio_write_frame` / `filtro_read` (CD-04).
+  La reverberación (`dsp_reverb`, 54 ciclos por muestra) necesita ~9.4 KB de RAM para el
+  buffer de 50 ms.
+- **Todos:** el software se compila con `-O2` desde `build-niosv.sh` (antes salía sin
+  optimizar); el Nios V/m no implementa `mcycle`: para medir, leer `mtime`
+  (`ALT_CPU_MTIME_OFFSET`), que cuenta a 50 MHz.
+- **D:** el HPS debe entregar audio a 48 kHz (CD-07); el filtro asume esa frecuencia.
+
+---
+
+## Estado de la persona C (software de aplicación, contenedor y CI) — 7 de noviembre de 2026
+
+Todo lo de C que no necesita la tarjeta ni el HPS real está hecho y **verificado sin
+tarjeta**: 9 pruebas en el PC con ASan/UBSan (`make test`), la co-simulación del
+reproductor completo en el Nios V (`tb_player`) y `make docker-ci` en el contenedor.
+
+**Hecho:** CD-08, CD-10, CD-11, SC-01..09, SC-14, NV-02..05, NV-12, NV-14, NV-17, DK-01..07,
+DK-10, DK-14, DK-16..18, DK-20. Además el borrador de SC-13 (protocolo con el HPS, de D)
+porque NV-13 y NV-14 lo necesitaban.
+
+**Pendiente de C**, con lo que lo bloquea y el siguiente paso:
+
+| Tarea | Estado | Bloqueo | Siguiente paso |
+|---|---|---|---|
+| NV-13 | `shm_source.c` probado con el modelo del HPS (PC y `shm` real en `tb_player`) | HP-07 (D, productor real) | IN-05 con D: el HPS escribe un WAV y el Nios V lo recibe completo |
+| IN-07, PR-07, PR-08 | Aplicación lista; medido en simulación; procedimiento en `docs/pruebas-tarjeta.md` | La tarjeta e IN-06/IN-09 (D) | Correr el procedimiento con la SD y grabar video (60 fps) |
+| DK-19 | Pasos escritos en `docker/README.md` | Quien administra el repositorio | Activar el check `lint, test, sim, hps` en `main` y `develop` tras la primera corrida |
+| DOC-01 | `docs/software/diseno-software.md` | HP-07 (D) | Agregar el software del HPS |
+| NV-14 (medición) | `tb_player` mide la lógica pero con el modelo del HPS corriendo en el mismo Nios V | — | Medir en `tb_ciclos` los ciclos por cuadro del camino real (ring → reverberación → filtro → FIFO) contra el presupuesto de 1 041 ciclos a 48 kHz |
+| OPC-02 | — | OPC-00 | Solo si el profesor aprueba crédito extra |
+
+**Hallazgos que afectan a otras personas:**
+
+- **A:** la aplicación (`sw/niosv/src`) ocupa 31 708 B de 128 KB (24 %; 9.6 KB son la
+  reverberación): dato para NV-16. La prueba de humo pasó a `sw/niosv/tests/test_smoke`
+  y `scripts/sim-soc.sh` la sigue usando. `sw/common` ahora es `include/` + `src/`
+  (`build-niosv.sh`, `tests/Makefile` y las rutas de los docs ya están ajustados).
+  `screen.c` tiene `screen_draw_message()` para la fila 7.
+- **B:** el contenedor está listo (DK-05): `make docker-shell`, cocotb 1.9.2 + Icarus 12;
+  cada `sim/cocotb/<modulo>/Makefile` que se agregue lo corre `make sim` y la CI, con
+  resultados en `build/sim/cocotb/<modulo>/` (DK-09, DK-11..13). `make lint` pasa
+  Verilator `-Wall` sobre el HDL propio; la única advertencia (truncamiento intencional
+  en `seg7_time.v`) quedó exenta en `hw/rtl/lint.vlt` con su justificación. Para DOC-05:
+  Docker, cocotb y CI están en `docker/README.md` y `docker/versions.md`. La aplicación
+  usa SW0/SW1/SW2 uno por filtro (CD-08), no la codificación de `test_filtros`.
+- **D:** borrador del protocolo en `sw/common/include/shm_proto.h` (control de 64 B,
+  tabla de 32 pistas de 160 B, ring de 8 192 cuadros estéreo a 48 kHz en `0x8000`), con
+  las funciones del productor (`shm_hps_*`) ya probadas y un modelo de referencia
+  (`hps_model.c`). El parser WAV (`wav_parse` con un lector por desplazamiento, para
+  FatFs o `FILE*`) y `wav_meta_fallback` sirven tal cual para HP-06. `make hps` ya compila
+  `sw/common` con `arm-linux-gnueabihf-gcc` (única toolchain ARM del contenedor; sirve
+  para U-Boot y para las dos opciones de CD-02) hasta que exista `sw/hps/Makefile`.
+
+## Estado de la persona D (HPS y arranque) — 12 de noviembre de 2026
+
+**Probado en la tarjeta:** la DE1-SoC arranca sola desde la microSD. El SPL y U-Boot
+configuran la FPGA con el `.rbf`, Linux monta la SD, `hps_player` publica las 10 pistas en
+`shm` y el Nios V las reproduce con botones y filtros. Procedimiento y resultados en
+[docs/pruebas-tarjeta.md](docs/pruebas-tarjeta.md#arranque-del-hps-desde-la-sd-hp-02hp-08-in-0506--persona-d);
+decisiones en [CD-01](docs/decisiones/CD-01.md) y [CD-02](docs/decisiones/CD-02.md).
+
+**Hecho:** CD-01, CD-02, HW-05, HW-06 (con A), SC-12, SC-13, HP-01..03, HP-05..08,
+DK-08, DK-15.
+
+| Tarea | Estado | Bloqueo | Siguiente paso |
+|---|---|---|---|
+| HP-04, PR-07 (arranque) | Arranque autónomo funcionando | — | Cronometrar desde el encendido hasta la lista en pantalla (< 10 s) |
+| IN-05 | Streaming funcionando | — | Prueba con checksum (WAV conocido → Nios V) |
+| IN-06, PR-08 | Suena desde la SD | — | Una canción completa y la lista dos vueltas sin cortes ni subdesbordes |
+| HP-09 | Probado en PC (`test_producer`) | — | En la tarjeta: SD sin carpeta `music/`, un WAV dañado, < 10 archivos |
+| PR-06 | `scripts/convert-music.sh` + 10 canciones del grupo en `Musica/` (sin versionar) | Licencias | Decidir si se usan canciones de licencia libre y documentarlas en `docs/canciones.md` |
+| CD-03 | Buffers definidos en `shm_proto.h` (ring de 8 192 cuadros) | — | Escribir la tabla de latencias con lo medido |
+| HP-10 | — | CD-12 no asigna filtros al HPS | No aplica salvo que cambie CD-12 |
+
+**Hallazgos que afectan a otras personas:**
+
+- **Todos:** con 7 GB de RAM, Quartus y la compilación del kernel no deben correr a la vez
+  (la PC se cayó el 12 nov). El arranque del HPS se compila con `-e JOBS=2`.
+- **A:** `build-quartus.sh` ahora también genera `audio_player.rbf` (comprimido, para
+  MSEL = `01010`). Hay que dejar SW10 en `01010` para el arranque desde la SD; JTAG sigue
+  funcionando. Con la FPGA reconfigurada por JTAG, `hps_player` vuelve a publicar la tabla.
+- **Todos:** el registro `remap` del L3 no se debe escribir desde Linux, porque congela el
+  sistema. Lo hace U-Boot (CD-02).
+- **C:** las pruebas del reproductor en la tarjeta usan SW0/SW1/SW2 uno por filtro (CD-08);
+  la tabla de `test_filtros` tiene otro mapeo.
+
+## Lo que falta según el enunciado — revisado el 13 de noviembre de 2026
+
+Estado: ✅ hecho y probado en la tarjeta · 🟡 hecho, falta probar o medir · ❌ por hacer.
+El detalle de cada tarea está en su sección; esta lista es el punto de partida para
+retomar.
+
+**Funcionalidades (§3, p.3–4)**
+
+| Requisito | Estado | Qué falta | Tareas |
+|---|---|---|---|
+| ≥ 10 canciones en SD, WAV 16 bits 8/16/44.1 kHz | 🟡 | La SD tiene 14 pistas: 10 canciones (8 kHz mono, 16 kHz estéreo y mono, 44.1 kHz) y la prueba de sonidos a 8/16/44.1/48 kHz (`scripts/gen-cancion-prueba.py`), más un WAV de 24 bits que se descarta. Falta confirmar a oído y en la consola | HP-06, HP-09, SC-12 |
+| Metadatos: título, artista, álbum, duración | 🟡 | Etiquetas ID3 en los MP3 de `Musica/` y formato por canción en `Musica/canciones.tsv` (13 nov); falta verlos en la VGA | PR-06 |
+| Play, pausa, stop, anterior, siguiente por interrupciones | ✅ | — | IN-07 |
+| Avance automático al terminar una canción | 🟡 | Verlo en la tarjeta | IN-07 |
+| Tiempo MM:SS en 7 segmentos | ✅ | — | HW-10 |
+| Metadatos, canción N/total y filtro activo en VGA | 🟡 | Visto en un monitor el 13 nov (contador de subdesbordes); falta revisar cada campo con las canciones nuevas | IN-04, `test_vga` |
+| 3 filtros con switches, sin distorsión en bypass | ✅ a oído | Evidencias: respuesta en frecuencia y grabación del line-out | PR-09, PR-10 |
+| Volumen con potenciómetro en el ADC | 🟡 | Conseguir el potenciómetro y probarlo (ver abajo) | IN-03, PR-05 (`test_adc`) |
+| Arranque < 10 s, botones < 200 ms, filtro < 100 ms, canción < 2 s | 🟡 | Medir y registrar (video a 60 fps) | PR-07, HP-04 |
+| Estabilidad, sin cortes ni reinicios | 🟡 | Cortes de la SD corregidos el 13 nov (CD-02). Falta la lista completa dos vueltas | PR-08, IN-06 |
+
+**Hardware y software obligatorios (§3, p.4–5)**
+
+| Requisito | Estado | Qué falta | Tareas |
+|---|---|---|---|
+| Módulo propio en HDL con registros mapeados y FIR | ✅ | — | HW-11..14 |
+| Verificación aislada documentada | 🟡 | Testbench cocotb y evidencia en la documentación | DK-11..13, PR-02/03 |
+| SD mediante el HPS, SO mínimo sin interacción | ✅ | — | HP-05, HP-08 |
+| Nios V sin HAL (punteros directos) | 🟡 | `scripts/audit-hal.sh` sobre la versión final | NV-17 |
+| Cada componente del SoC justificado | 🟡 | Tabla final con el HPS incluido | HW-23, HW-24 |
+
+**Análisis de recursos y consumo (§3, p.6):** ❌ recursos del módulo propio por separado,
+potencia con PowerPlay del sistema final (ya con el HPS) y discusión HW/SW. RP-02, RP-04,
+RP-05, DOC-04.
+
+**Entregables (§5, p.7–8)**
+
+| Entregable | Peso | Estado | Qué falta |
+|---|---|---|---|
+| Presentación funcional | 60 % | ❌ | Guion y ensayo (DOC-10), videos (DOC-08), sistema completo sin PC (IN-09) |
+| Diseño de software + checklist de requisitos | 3 % | 🟡 | Agregar el software del HPS (DOC-01), plan de pruebas (PR-01) |
+| Metodología de diseño | 7 % | ❌ | Comparar dos arquitecturas (CD-15), diagramas HW/SW (CD-16), tabla de latencias (CD-03), DOC-02 |
+| Diseño del hardware personalizado | 4 % | 🟡 | DOC-03 |
+| Recursos y consumo | 3 % | 🟡 | DOC-04 (ver arriba) |
+| Herramientas de ingeniería | 3 % | 🟡 | Agregar los scripts del HPS (DOC-05) |
+| Flujo Git | 10 % | 🟡 | Merge del PR #42; PR final `develop` → `main` con `Closes #n` (DOC-11) |
+| README | 10 % | 🟡 | Fotos, videos, secciones *(pendiente)*; roles B, C, D (DOC-06, OR-02) |
+
+**Orden sugerido para retomar:**
+
+1. Material: potenciómetro (`docs/material.md`). El monitor VGA ya se usó el 13 nov.
+2. ~~Etiquetar las canciones con artista y álbum, y regenerar la SD~~ (hecho el 13 nov).
+3. Una sesión en la tarjeta con video: volumen, VGA, mediciones de PR-07, PR-08 y avance
+   automático. El mismo video sirve de evidencia para el README.
+4. Documentación: metodología (7 %) y README (10 %).
+
+**Potenciómetro (IN-03).** §3-SIS p.5 pide el volumen con un potenciómetro en un canal del
+ADC de la tarjeta (IP ADC Controller). El software ya lo lee (`adc` en el SoC, SC-11,
+NV-08). Sin él, CH0 queda al aire, lee ruido y el volumen varía solo. Se usa uno de
+**10 kΩ lineal (B10K)** de 3 patas, con 3 cables dupont hembra-hembra al conector del ADC
+**J15 "ADC CON"** (2×5 pines, junto al GPIO): un extremo a **5 V**, el otro a **GND** y el
+cursor (pata del medio) a **CH0**. Pinout esperado según Terasic (sin confirmar): pines
+1–8 = CH0–CH7, pin 9 = 5 V, pin 10 = GND. Antes de conectar, ubicar el pin 1 (pad cuadrado
+o marca en la serigrafía) y medir con multímetro cuál pin da 5 V y cuál es GND, o revisarlo
+en el manual de la DE1-SoC (sección "Analog-to-Digital Converter"). Si 5 V y GND se cruzan,
+el potenciómetro hace cortocircuito en un extremo. Se prueba con `test_adc`, y en LEDR debe verse el valor
+subir de un extremo al otro.
+
+---
+
+## 0. Arranque y organización — #30
+
+- [~] **OR-02** `A·1` Definir roles y responsables por sección de este plan. Reparto para 4
+      personas propuesto en [Reparto del trabajo](#reparto-del-trabajo); falta confirmarlo en
+      grupo, asociar cada letra a un integrante y pasarlo al README. *§5 p.8 (gestión)* →
+      tabla de roles en el README. **A = Randall Bolaños** (ya en el README); faltan B, C y D.
+- [x] **OR-03** Revisar el Taller 9 y copiar lo reutilizable. *§2 p.2* →
+      [docs/reutilizado-taller9.md](docs/reutilizado-taller9.md).
+- [ ] **OR-04** `Todos` Verificar en cada máquina Quartus 25.1std + Nios V/RiscFree + Questa con
+      `scripts/env.sh` (la sección "Verificar que todo responde" de
+      [docs/entorno-nativo.md](docs/entorno-nativo.md)). *§2 p.2* → los 4 comandos responden.
+- [~] **OR-05** `A·1` Conseguir el material: DE1-SoC, microSD (≥ 4 GB), lector de SD,
+      potenciómetro y cables para el conector del ADC, parlantes o audífonos, monitor VGA
+      (o LCD/TFT). *§3-F p.3–4, §3-SIS p.5* → lista con responsable.
+      Lista en [docs/material.md](docs/material.md); faltan responsables y conseguirlo.
+
+## 1. Repositorio y flujo Git — 10% — #1, #2
+
+- [x] **GIT-01** Ramas `main`/`develop`, protección de `main`, `CONTRIBUTING.md`, etiquetas,
+      hitos e issues de planeamiento, `.gitignore`. *§5 p.8*
+- [~] **GIT-02** `Todos` Estructura de directorios (ver "Reglas transversales"). Ya existen
+      `hw/soc/`, `scripts/`, `sim/questa/`, `sw/niosv/src/`, `docs/`; faltan `hw/rtl/`,
+      `sw/common/`, `sw/hps/`, `tests/`, `docker/`, que se crean con su primer archivo real.
+      *§5 p.8* · #2
+- [x] **GIT-03** Actualizar `CONTRIBUTING.md` a la estructura nueva: `software/` → `sw/`,
+      testbenches en `sim/` (no en `hw/tb/`), auditoría con
+      `grep -rnE 'IOWR|IORD|alt_' sw/niosv/` y ámbitos de commit `docker`, `ci`, `hps`,
+      `common`. Ajustar en `.gitignore` la regla `software/*bsp*/*`, que ya no aplica.
+      *§5 p.8* ⟵ GIT-02
+- [x] **GIT-04** Crear issues para las tareas nuevas de este plan (OR, CD, SC, HP, IN,
+      DK, PR, RP, DOC sin número) y asignarlas a hitos M0–M8. *§5 p.8* → todas las tareas OBL
+      tienen issue.
+- [ ] **GIT-05** `Todos` Una rama `feat/*` por issue, PR a `develop` con `Refs #n`, revisión
+      de otra persona antes del merge. Historial distribuido en el tiempo. *§5 p.8* (continuo)
+
+## 2. Co-diseño: análisis, alternativas y decisiones — #3, #4
+
+> Cada decisión se registra en `docs/decisiones/CD-xx.md`: alternativas (≥ 2), criterios
+> (rendimiento, latencia, recursos, complejidad), datos o mediciones, decisión y fecha.
+> Alimenta el documento de metodología (7%, §5 p.7).
+
+- [x] **CD-01** `D·2` Partición de procesadores. *§2 p.2, §3-SW p.5, §3-HW p.4* · #3
+      (OBL)
+      - A: híbrida. HPS lee la SD y deja PCM y metadatos en memoria compartida; el Nios V
+        atiende botones, máquina de estados, audio y visualización.
+      - B: solo HPS. Todo por el bridge liviano; interrupciones de la FPGA al GIC del HPS.
+      - C: solo Nios V con SD por SPI en GPIO. Choca con "SD mediante el HPS".
+      → decisión escrita. **Las secciones 5 y 6 asumen la alternativa A** porque es la única
+      que cumple "SD mediante el HPS" y deja el audio en manos de la FPGA.
+      **Decidido:** alternativa A, probada en la tarjeta (12 nov 2026) →
+      [docs/decisiones/CD-01.md](docs/decisiones/CD-01.md).
+- [x] **CD-02** `D·2` Software del HPS: bare metal (U-Boot SPL + aplicación propia, driver
+      SD/MMC + FatFs) vs Linux mínimo (Buildroot, aplicación con `mmap` de `/dev/mem`).
+      Criterios: arranque < 10 s, esfuerzo del driver SD, "SO mínimo sin interacción". *§3-SW
+      p.5, §3-F p.4* · #32 → decisión escrita. Define la toolchain del
+      contenedor (DK-02).
+      **Decidido:** Linux mínimo (U-Boot 2024.01, Linux 6.6.60, BusyBox en initramfs) →
+      [docs/decisiones/CD-02.md](docs/decisiones/CD-02.md).
+- [ ] **CD-03** `D·2` Camino de las muestras y presupuesto de latencia: SD → HPS → buffer
+      compartido → Nios V → filtro → FIFO del IP de Audio. Calcular tamaños de buffer: el
+      audio que ya pasó por el filtro y espera salir debe durar < 100 ms (cambio de filtro,
+      §3-F p.4) y el buffer previo debe cubrir el peor caso de lectura de la SD (sin cortes,
+      §3-F p.4). *§3-F p.4, §3-SIS p.5* ⟵ CD-01 · #3 → tabla de buffers con duración en ms
+      para 8/16/44.1 kHz.
+- [x] **CD-04** Conexión del filtro propio: mapeado a memoria (la CPU escribe la muestra
+      y lee el resultado) vs en línea por Avalon-ST antes del IP de Audio. Estimar la carga de
+      CPU con la frecuencia de muestreo máxima (accesos por segundo × ciclos por acceso).
+      *§3-HW p.4, §3-SIS p.5* ⟵ CD-03 · #3 → decisión con la estimación.
+- [x] **CD-05** Volumen: multiplicador en hardware (dentro del módulo propio) vs
+      escalado en software. Considerar que el Nios V/m no tiene `mul` (dato 3). *§3-SIS p.5* ·
+      #17 → decisión con ciclos medidos de `__mulsi3` o recursos estimados del multiplicador.
+- [x] **CD-06** Memoria: código y datos del Nios V en RAM on-chip (256 KB del Taller 9) vs
+      SDRAM de 64 MB de la FPGA vs DDR3 del HPS por el bridge F2H; dónde vive el buffer
+      compartido (RAM on-chip de doble puerto vs SDRAM). *§3-SW p.5 (gestión de memoria)*
+      ⟵ CD-01, CD-03 · #4 → mapa de memoria preliminar.
+- [x] **CD-07** Frecuencias de muestreo (dato 2). *§3-F p.3* · #37 →
+      [docs/decisiones/CD-07.md](docs/decisiones/CD-07.md): códec fijo a 48 kHz, remuestreo en el HPS.
+      - A: códec fijo a 48 kHz y remuestreo de 8k (×6), 16k (×3) y 44.1k (→48k).
+      - B: reconfigurar el códec por canción con el registro de direcciones/datos del IP de
+        Config: 8k nativo; 16k → 32k (×2); 44.1k con MCLK de 11.2896 MHz o modo USB a 12 MHz.
+      → prototipo en tarjeta de B con un tono a 44.1 kHz antes de decidir. Mono → duplicar
+      en ambos canales.
+- [x] **CD-08** Switches: lectura periódica (≤ 20 ms) vs interrupción por flanco;
+      asignación de switches a filtros y qué pasa con combinaciones inválidas. *§3-F p.4,
+      §3-SIS p.5* · #16 → tabla SW → filtro.
+      [docs/decisiones/CD-08.md](docs/decisiones/CD-08.md): encuesta cada 20 ms con
+      confirmación; SW0 pasa-bajos, SW1 pasa-banda, SW2 reverberación; inválida = bypass + LEDR9.
+- [x] **CD-09** Visualización: VGA con IP del University Program (Character Buffer 80×60)
+      vs controlador VGA propio en HDL vs LCD/TFT externo. *§3-F p.4, §3-SIS p.6* · #19
+      → decisión y boceto de la pantalla.
+- [x] **CD-10** Tiempo de reproducción: timer de hardware vs contar muestras enviadas al
+      códec (queda sincronizado con el audio y se detiene solo en pausa). *§3-SIS p.6* · #18
+      → decisión.
+      [CD-10](docs/decisiones/CD-10.md): cuadros enviados al códec / 48 000.
+- [x] **CD-11** Máquina de reproducción: software (en `sw/common/`, probada en el PC) vs
+      FSM en hardware. *§3-SIS p.6* · #14 → decisión.
+      [CD-11](docs/decisiones/CD-11.md): tabla de transiciones en `sw/common/src/fsm.c`.
+- [x] **CD-12** Ubicación de los filtros 2 y 3: Nios V (sin multiplicador), HPS (ARM con
+      NEON) o hardware. Medir ciclos por muestra del filtro en software antes de decidir.
+      *§3-SIS p.5* ⟵ CD-01, SC-10 · #16 → tabla de ciclos/muestra vs presupuesto
+      (ciclos de reloj / fs).
+- [x] **CD-13** HDL: Verilog-2005/SystemVerilog sintetizable (subconjunto que entiende
+      Icarus) vs VHDL (GHDL). Define el simulador del contenedor. *GRUPO → §5 p.8
+      herramientas* → decisión.
+- [x] **CD-14** Formato de punto fijo: muestras Q1.15, coeficientes (Q1.15 o Q2.14), ancho
+      del acumulador (16 + 16 + ⌈log2 N⌉ bits), redondeo y saturación. *§3-SIS p.5* · #9 →
+      documento con el análisis de error.
+- [x] **CD-15** `D·2` Comparar al menos dos arquitecturas completas (p. ej. A con filtros en
+      HW vs A con filtros en HPS) en una tabla de rendimiento, latencia, recursos y
+      complejidad. *§3 p.3, §5 p.7 (7%)* ⟵ CD-01..14, RP-04 · #3 (EVID)
+- [ ] **CD-16** `D·2` Diagramas de arquitectura de hardware (bloques del SoC) y de software
+      (módulos, flujo, ISR, comunicación HPS ↔ Nios V). *§5 p.8 (README)* ⟵ CD-01 · #4 (EVID)
+
+## 3. Hardware (FPGA)
+
+### 3.1 SoC base en Platform Designer — #5
+
+- [x] **HW-01** `hw/soc/build_system.tcl` es la única fuente de verdad del SoC. **Decidido
+      (29 oct):** el `.qsys` no se versiona (`.gitignore`); `scripts/build-soc.sh` lo
+      regenera cuando falta o cuando el Tcl es más nuevo, y avisa si el `.qsys` fue editado
+      en la GUI. Falta: escribir en `CONTRIBUTING.md` la regla "lo que se cambie en la GUI
+      se pasa al Tcl antes del commit" (junto con GIT-03). *§5 p.8 (compilación con
+      Platform Designer)* → regla escrita en `CONTRIBUTING.md`.
+- [x] **HW-02** PIO definitivos: `pio_key` (KEY[3:0], entrada, captura de flanco de
+      bajada, IRQ), `pio_sw` (SW[9:0], entrada; IRQ según CD-08) y `pio_led` (LEDR[9:0]);
+      quitar `pio_in`/`pio_out` del Taller 9. *§3-F p.3 (botones por interrupción), §3-SIS
+      p.5* · #5 (OBL) → `system.h` define `PIO_KEY_BASE`, `PIO_KEY_IRQ`, `PIO_SW_BASE`,
+      `PIO_LED_BASE`.
+- [x] **HW-03** Configurar el Nios V/m: pipeline sí/no (medir), tamaño de la RAM on-chip,
+      vector de reset, `timer_sw_agent`. *§2 p.2* ⟵ CD-06 · #5
+- [x] **HW-04** ~~Si CD-06 lo pide: SDRAM de 64 MB (`altera_up_avalon_sys_sdram_pll` +
+      controlador SDRAM) con los pines `DRAM_*`.~~ **No aplica:** CD-06 deja todo en RAM
+      on-chip (ver [docs/decisiones/CD-06.md](docs/decisiones/CD-06.md)). *§3-SW p.5* ⟵ CD-06 · #5
+
+### 3.2 HPS y canal HPS ↔ FPGA — #31
+
+- [x] **HW-05** `D·3` Agregar el componente HPS de Cyclone V con la configuración de la DE1-SoC
+      (DDR3, pines de SD/MMC, UART0, reloj) tomada del GHRD del System CD de Terasic;
+      habilitar el bridge liviano H2F y los que pida CD-06. Confirmar en el manual que la
+      microSD está cableada al HPS. *§3-SW p.5, §4 p.7* ⟵ CD-01 (OBL)
+      HPS con DDR3, SD/MMC, UART0 y puente liviano en `build_system.tcl`; probado en la
+      tarjeta (12 nov 2026).
+- [x] **HW-06** `A·2` Canal HPS ↔ Nios V: memoria compartida (según CD-06) + registros de
+      buzón para el handshake (comandos y punteros del ring buffer), y una IRQ si hace falta.
+      *§3-SW p.5* ⟵ HW-05, SC-13 (OBL) → dirección del canal vista por ambos procesadores,
+      documentada.
+      `hps.h2f_lw_axi_master` → `shm.s2` en `0xFF20_0000` (Nios V: `0x0002_0000`); el
+      HPS publica la tabla y el Nios V reproduce (12 nov 2026).
+
+### 3.3 Periféricos de catálogo — #6, #7
+
+- [x] **HW-07** Audio: Audio PLL (frecuencia según CD-07), IP de Audio (Memory-Mapped o
+      Streaming según CD-04) y Audio and Video Config (I2C al WM8731); exportar `AUD_*` y
+      `FPGA_I2C_*`. *§3-HW p.4 (audio en la FPGA), §4 p.7* ⟵ CD-04, CD-07 · #6 (OBL)
+- [x] **HW-08** ADC: IP de ADC de la DE1-SoC con el chip de nuestra revisión (AD7928 o
+      LTC2308), canal del potenciómetro; exportar `ADC_*`. *§3-SIS p.5, §4 p.7* · #6
+      (OBL)
+- [x] **HW-09** Visualización según CD-09 (p. ej. Video PLL + VGA Controller + Character
+      Buffer) y pines `VGA_*`. *§3-F p.4, §3-SIS p.6* ⟵ CD-09 · #7 (OBL)
+
+### 3.4 Displays de 7 segmentos — #18
+
+- [x] **HW-10** Módulo HDL `seg7_time` (en `hw/rtl/`) con esclavo Avalon-MM: registro
+      con el tiempo (segundos o BCD MM:SS), registro de control (encendido, blanking) y salida
+      a HEX3..HEX0 (HEX5..HEX4 libres para el número de canción). Testbench propio (DK-13).
+      *§3-HW p.4, §3-F p.3 (MM:SS)* (OBL) → el testbench verifica 00:00, 09:59, 59:59 y
+      el blanking.
+
+### 3.5 Módulo de hardware personalizado y filtro DSP propio — #8, #9, #10
+
+- [x] **HW-11** Mapa de registros con registros de control (habilitar, bypass, selección,
+      limpiar), estado (listo, ocupado, saturación, versión) y datos (muestra de entrada y
+      de salida, dirección y dato de coeficiente, número de taps, ganancia si CD-05 = HW), en
+      `docs/hw/modulo-filtro.md`. *§3-HW p.4* ⟵ CD-04, CD-05 · #8 (OBL)
+- [x] **HW-12** Diseñar el filtro obligatorio (p. ej. FIR pasa-bajos de N taps): script
+      `scripts/design_fir.py` que calcula y cuantiza los coeficientes según CD-14 y exporta la
+      tabla para HDL, C y cocotb. *§3-SIS p.5, §5 p.8 (herramientas)* ⟵ CD-14 · #9 (OBL) →
+      gráfico de respuesta ideal vs cuantizada.
+- [x] **HW-13** Núcleo del filtro en HDL propio (`hw/rtl/`): registros de retardo,
+      multiplicador-acumulador (secuencial con un bloque DSP, compartido entre canales, o
+      paralelo, justificado), redondeo y saturación, banco de coeficientes recargable. Sin IP
+      de filtrado del catálogo. *§3-SIS p.5* ⟵ HW-12 · #9 (OBL)
+- [x] **HW-14** Esclavo Avalon-MM del módulo según HW-11 (y Avalon-ST si CD-04 = en
+      línea). *§3-HW p.4* ⟵ HW-11, HW-13 · #8 (OBL)
+- [x] **HW-15** Volumen en hardware si CD-05 = HW: multiplicador de ganancia con
+      saturación dentro del módulo, antes del IP de Audio. *§3-SIS p.5* ⟵ CD-05 · #17
+- [x] **HW-16** Verificación aislada documentada **antes de integrar** (puerta de paso):
+      DK-11, DK-12 y PR-02 en verde, reporte PR-03 escrito. *§3-HW p.4* ⟵ DK-11, DK-12, PR-02,
+      PR-03 · #10 (OBL, EVID)
+- [x] **HW-17** Empaquetar el módulo como componente de Platform Designer (`*_hw.tcl` en
+      `hw/rtl/`) y agregarlo a `build_system.tcl`. *§3-HW p.4* ⟵ HW-16 · #8 (OBL)
+- [x] **HW-18** Diagrama de bloques y diagramas de tiempo (escritura de registro, muestra
+      entrando y saliendo, recarga de coeficientes), p. ej. con WaveDrom. *§5 p.7 (4%)* ⟵ HW-14
+      · #8 (EVID)
+
+### 3.6 Proyecto Quartus y tarjeta — #5
+
+- [x] **HW-19** Top-level `hw/DE1_SoC_top.v` que instancia `audio_soc` y un `.qsf` con
+      los pines tomados del `.qsf` de referencia del System CD de Terasic (solo los que se
+      usan). *§2 p.2, §4 p.7* ⟵ HW-02 · #5 (OBL)
+- [x] **HW-20** Restricciones de tiempo `.sdc`: reloj de 50 MHz, `derive_pll_clocks`,
+      `derive_clock_uncertainty`, rutas falsas para entradas asíncronas (KEY, SW). *§3-F p.4
+      (estabilidad)* ⟵ HW-19 · #5 → Timing Analyzer sin slack negativo en ningún reloj.
+- [x] **HW-21** Script `scripts/build-quartus.sh` (`quartus_sh --flow compile`) y
+      compilación limpia: sin errores, warnings críticos revisados. *§5 p.8 (compilación)* ⟵
+      HW-20 · #5 (OBL)
+- [x] **HW-22** `A·1` Cargar el software del Nios V: `ram.hex` dentro del `.sof` (actualizar
+      la MIF sin recompilar todo) o `niosv-download` por JTAG; script `scripts/program.sh` con
+      `quartus_pgm`. *§3-F p.4 (arranque)* ⟵ HW-21, NV-01 · #5
+      Probado en la tarjeta el 12 nov: `update-sw.sh` + `program.sh` (cable "DE-SoC").
+      `niosv-download`/OpenOCD no logran detener el Nios V ("unable to halt hart 0"):
+      se carga solo por el `.sof`.
+- [x] **HW-23** Tabla de justificación de **cada** componente del SoC (componente →
+      función → requisito) y quitar los que no tengan función (p. ej. la JTAG UART en la
+      versión final, salvo que se use para mediciones). *§3-HW p.5* ⟵ HW-01..17 · #5 (OBL,
+      EVID)
+- [~] **HW-24** `A·1` Mapa de memoria final visto desde el Nios V y desde el HPS (exportado de
+      Platform Designer). *§5 p.7–8* ⟵ HW-23 · #4 (EVID)
+
+## 4. Software portable `sw/common/` — #11, #12, #14
+
+> Sin `system.h`, sin registros, sin `malloc`. Compila con gcc del PC (pruebas),
+> `riscv32-unknown-elf-gcc` (Nios V) y la toolchain ARM (HPS). C11, `-Wall -Wextra`.
+
+- [x] **SC-01** Estructura `sw/common/include/` y `sw/common/src/`, prefijos de módulo y
+      códigos de error comunes. *GRUPO → §5 p.7 (documento de SW)* ⟵ GIT-02
+      [sw/common/README.md](sw/common/README.md) (prefijos) y `err.h` (códigos de error).
+- [x] **SC-02** Lectura little-endian segura (`le16`, `le32`) con comprobación de límites.
+      *§3-SW p.5* ⟵ SC-01
+- [x] **SC-03** Parser RIFF/WAVE: `fmt ` (PCM = 1, 16 bits, 1–2 canales, 8000/16000/44100
+      Hz), `data`, saltar chunks desconocidos respetando el relleno a tamaño par, rechazar
+      formatos no soportados con código de error. *§3-F p.3* ⟵ SC-02 · #12 (OBL) → pruebas
+      DK-14 en verde.
+- [x] **SC-04** Metadatos `LIST/INFO`: `INAM` (título), `IART` (artista), `IPRD`
+      (álbum), con recorte y terminación segura; valor de respaldo si faltan. *§3-F
+      p.3, §3-SW p.5* ⟵ SC-03 · #12 (OBL)
+- [x] **SC-05** ID3 dentro del WAV (`TIT2`, `TPE1`, `TALB`). *§3-F
+      p.3* ⟵ SC-03 · #12
+      ID3v2.3/2.4 en un chunk `id3 `; `LIST/INFO` tiene
+      prioridad y ID3 completa lo que falte.
+- [x] **SC-06** Duración total = bytes de datos / byte rate, y formateo MM:SS. *§3-F
+      p.3* ⟵ SC-03 · #12 (OBL)
+- [x] **SC-07** Playlist: ≥ 10 pistas, siguiente/anterior con vuelta al inicio, avance
+      automático al terminar, índice "n/total". *§3-F p.3* ⟵ SC-01 · #14 (OBL)
+- [x] **SC-08** Máquina de estados de reproducción (detenido, reproduciendo, pausado;
+      eventos play/pausa, stop, siguiente, anterior, fin de pista, error) como tabla de
+      transiciones que devuelve acciones, sin tocar hardware. *§3-F p.3, §3-SIS p.6* ⟵ CD-11,
+      SC-07 · #14 (OBL)
+- [x] **SC-09** Cola de eventos de un productor y un consumidor (ISR → lazo principal),
+      sin bloqueo. *§3-SW p.5 (interrupciones)* ⟵ SC-01 · #13
+- [x] **SC-10** Filtros en software en punto fijo (biquad forma directa I, ecualizador
+      de 3 bandas o notch/pasa-banda) y modelo del FIR igual bit a bit al HDL. *§3-SIS p.5* ⟵
+      CD-14 · #16 (OBL)
+- [x] **SC-11** Volumen: lectura del ADC de 12 bits → ganancia (curva logarítmica) y
+      escalado con saturación. *§3-SIS p.5* ⟵ CD-05 · #17 (OBL)
+- [x] **SC-12** `D·2` Remuestreo, si CD-07 lo pide. *§3-F p.3* ⟵ CD-07
+      `sw/common/src/resample.c` (a 48 kHz en el HPS, CD-07), `tests/test_resample.c`;
+      44.1 kHz suena bien en la tarjeta (12 nov 2026).
+- [x] **SC-13** `D·2` Protocolo HPS ↔ Nios V en un header común (`shm_proto.h`): versión,
+      tabla de pistas con metadatos, ring buffer con índices de productor y consumidor,
+      comandos; `_Static_assert` de tamaños y alineación (ambos son de 32 bits little-endian).
+      *§3-SW p.5* ⟵ CD-01, CD-06 (OBL)
+      **Borrador de C** en `sw/common/include/shm_proto.h` (lo necesitaban NV-13 y NV-14),
+      con productor y consumidor probados en `test_shm` y un modelo del HPS (`hps_model.c`).
+      D lo revisa y lo ajusta al escribir HP-06/HP-07.
+      Usado por los dos lados en la tarjeta (12 nov 2026).
+- [x] **SC-14** Interfaces de "puerto" (structs de punteros a función: salida de audio,
+      display, reloj) para que la lógica no dependa del hardware y se pueda probar con mocks.
+      *GRUPO → §5 p.7* ⟵ SC-01
+
+## 5. Software Nios V `sw/niosv/` — #13 a #19
+
+> Asume CD-01 = A. Drivers en `sw/niosv/drivers/`: un `.h`/`.c` por periférico, con
+> offsets y bits tomados de la documentación del IP, y un puntero `volatile` a la base de
+> `system.h`.
+
+- [x] **NV-01** Ajustes del BSP como opciones de `niosv-bsp` dentro de
+      `scripts/build-niosv.sh` (biblioteca C reducida, drivers reducidos, stdout por JTAG UART
+      solo para depuración, tamaño de pila, regiones de memoria según CD-06). *§3-SW p.5
+      (gestión de memoria)* ⟵ CD-06 · #15
+- [x] **NV-02** Compilar `sw/common/` dentro de la aplicación del Nios V (`--srcs` de
+      `niosv-app` o `CMakeLists.txt` propio) con `-std=c11 -Wall -Wextra`. *GRUPO* ⟵ SC-01 →
+      `scripts/build-niosv.sh` compila sin warnings.
+      `WERROR=1 scripts/build-niosv.sh` compila la aplicación y las pruebas sin warnings
+      (los headers del BSP se tratan como de sistema).
+- [x] **NV-03** Driver de botones: `interruptmask` y `edgecapture` (se limpia
+      escribiendo 1) por puntero, ISR registrada con `alt_ic_isr_register` que solo limpia la
+      fuente y encola el evento (SC-09). *§3-F p.3, §3-SW p.5* ⟵ HW-02 · #13 (OBL)
+- [x] **NV-04** Antirrebote: verificar en el manual de la DE1-SoC si KEY[3:0] ya traen
+      antirrebote; si no, ventana en software con la base de tiempo NV-12. *§3-F p.4
+      (< 200 ms)* ⟵ NV-03 · #13
+      KEY[3:0] traen antirrebote por hardware (disparador de Schmitt, manual de la DE1-SoC);
+      además, ventana de 50 ms por botón (`debounce.c`) que no agrega latencia.
+- [x] **NV-05** Switches (lectura periódica o IRQ según CD-08) → selección de filtro;
+      LEDs para el estado y el filtro activo. *§3-F p.4, §3-SIS p.5* ⟵ HW-02, CD-08 · #16
+      (OBL)
+- [x] **NV-06** Driver del IP de Audio: espacio libre de la FIFO, escritura de canal
+      izquierdo y derecho, limpieza de FIFOs; escritura no bloqueante de bloques de muestras.
+      *§3-HW p.4* ⟵ HW-07 · #14 (OBL)
+- [x] **NV-07** Driver del Audio and Video Config: inicializar el códec (salida de
+      línea, sin silencio, formato) y, si CD-07 = B, cambiar la frecuencia por canción. *§3-HW
+      p.4* ⟵ HW-07, CD-07 · #14 (OBL)
+- [x] **NV-08** Driver del ADC (actualización automática, canal del potenciómetro) +
+      volumen (SC-11 o registro de HW-15). *§3-SIS p.5* ⟵ HW-08 · #17 (OBL)
+- [x] **NV-09** Driver de 7 segmentos (registro de HW-10) que muestra MM:SS del tiempo
+      transcurrido. *§3-F p.3* ⟵ HW-10, CD-10 · #18 (OBL)
+- [x] **NV-10** Driver del módulo de filtro (modo, coeficientes, muestras o
+      configuración del flujo). *§3-HW p.4* ⟵ HW-17 · #9 (OBL)
+- [x] **NV-11** Driver de video (p. ej. escribir texto en (x, y) del Character Buffer) y
+      pantalla con título, artista, álbum, duración, "n/total", estado y filtro activo.
+      *§3-F p.4* ⟵ HW-09 · #19 (OBL)
+- [x] **NV-12** Base de tiempo por puntero a `mtime` del `timer_sw_agent` (milisegundos) y
+      `mcycle` para medir ciclos. *§3-SIS p.6* ⟵ HW-03 · #18
+- [~] **NV-13** `C·2` Lado Nios V del canal con el HPS (consumir el ring buffer, enviar
+      comandos de pista). *§3-SW p.5* ⟵ HW-06, SC-13 (OBL)
+      `shm_source.c` sobre el borrador de SC-13, verificado con el modelo del HPS en el PC
+      (`test_app`) y en la `shm` real del SoC (`tb_player`). Falta probarlo con el productor
+      real del HPS (IN-05, D).
+- [x] **NV-14** Lazo principal: eventos → FSM (SC-08) → acciones; bombeo de audio sin
+      cortes; refresco de pantalla y 7 segmentos limitado (p. ej. 10 Hz); contador de
+      underruns. *§3-SW p.5 (interfaz de usuario)* ⟵ NV-03..13 · #15 (OBL)
+      Lógica portable en `sw/common/src/app.c` (`test_app`), aplicación en
+      `sw/niosv/src/main.c`, co-simulada en el Nios V con `tb_player`. La prueba de humo
+      pasó a `sw/niosv/tests/test_smoke`.
+- [x] **NV-15** Autoprueba del módulo propio en el arranque: escribe vectores conocidos y
+      compara con la salida esperada (la "rutina de prueba en software" de §3-HW p.4).
+      *§3-HW p.4* ⟵ NV-10 · #10 (EVID)
+- [~] **NV-16** `A·1` Gestión de memoria: revisar el `.map` y `riscv32-unknown-elf-size`, ubicar
+      buffers en la memoria elegida y documentar el uso. *§3-SW p.5* ⟵ NV-14 · #15 (OBL, EVID)
+- [x] **NV-17** Auditoría sin HAL: `grep -rnE 'IOWR|IORD|alt_' sw/niosv/ sw/common/` solo
+      muestra `alt_ic_isr_register` / `alt_ic_irq_enable` / `alt_ic_irq_disable`. *§3-SW p.5*
+      (OBL) → agregar el chequeo a `make lint` (DK-10).
+      `scripts/audit-hal.sh`, en `make lint` y en la CI.
+
+## 6. Software HPS `sw/hps/` — #32
+
+> Asume CD-01 = A. Toolchain ARM dentro del contenedor (DK-02).
+
+- [x] **HP-01** `D·1` Ejecutar la decisión de CD-02 (bare metal o Linux mínimo) y fijar
+      versiones de U-Boot y, si aplica, Buildroot. *§3-SW p.5* ⟵ CD-02
+      Linux mínimo (CD-02); versiones fijas con SHA-256 en `sw/hps/linux/sources.sha256`.
+- [x] **HP-02** `D·3` U-Boot SPL para Cyclone V a partir del handoff de Quartus
+      (`hps_isw_handoff`) con el script `qts-filter` de U-Boot, compilado en el contenedor.
+      *§3-F p.4 (arranque)* ⟵ HW-05, HW-21, DK-08 → la tarjeta arranca el SPL desde la SD
+      (mensaje por UART0).
+      `scripts/build-hps-linux.sh` (contenedor `hps`). Usa `socfpga_de1_soc_defconfig`
+      (handoff del GHRD de Terasic, igual al HPS de HW-05) en lugar de `qts-filter`
+      (CD-02). SPL y U-Boot por UART0 OK (12 nov 2026).
+- [x] **HP-03** `D·2` Imagen de la SD con `scripts/make-sdimage.sh`: partición tipo A2 (SPL),
+      FAT32 (WAV, `.rbf`, aplicación o script de U-Boot) y, si es Linux, rootfs. El script
+      genera un archivo `.img`, nunca escribe en un dispositivo; la grabación se hace a mano.
+      *§3-F p.3 (≥ 10 canciones en SD)* ⟵ HP-02
+      `scripts/make-sdimage.sh` → `build/hps/sdcard.img` (A2 de 8 MiB + FAT32 de 512
+      MiB); grabada y probada (12 nov 2026).
+- [~] **HP-04** `D·2` Arranque autónomo: U-Boot configura la FPGA con el `.rbf` (convertido del
+      `.sof` con `quartus_cpf`, nativo), habilita los bridges y lanza la aplicación. *§3-F p.4
+      (< 10 s)* ⟵ HP-03
+      Funciona (12 nov 2026): U-Boot configura la FPGA con el `.rbf` (`build-quartus.sh`
+      lo genera), escribe `remap` y arranca Linux. Falta cronometrar < 10 s (PR-07).
+- [x] **HP-05** `D·3` Acceso a la SD y a FAT32: driver SD/MMC + FatFs (bare metal) o sistema de
+      archivos de Linux; en bare metal, región de los bridges como memoria de dispositivo en la
+      MMU (sin caché). *§3-SW p.5* ⟵ HP-01 · #11 (OBL)
+      Drivers del kernel (`dw_mmc` + `vfat`), SD montada solo lectura (12 nov 2026).
+- [x] **HP-06** `D·2` Recorrer la SD: ≥ 10 `.wav`, orden estable, parseo con `sw/common/`
+      (SC-03..06) y tabla de pistas publicada en memoria compartida. *§3-F p.3* ⟵ HP-05, SC-13
+      · #11 (OBL)
+      10 WAV de la SD publicados en `shm` (12 nov 2026); `tests/test_producer.c`.
+- [x] **HP-07** `D·2` Productor del ring buffer: lectura de PCM por bloques, atención de
+      comandos del Nios V (cambiar pista, stop) y fin de archivo. *§3-F p.3–4 (continuidad,
+      cambio < 2 s)* ⟵ HP-06, HW-06 (OBL)
+      `sw/hps/src/producer.c`; en la tarjeta suena y cambia de pista con KEY2/KEY3 (12
+      nov 2026). 13 nov: cortes de ~1 s por el límite de 100 ms del kernel en lecturas SD;
+      corregido con un parche a `dw_mmc` y lectura anticipada de 4 MiB
+      (`sw/hps/src/prefetch.c`), `SCHED_FIFO` y diagnóstico en la consola (CD-02).
+- [x] **HP-08** `D·1` Sin interacción con el SO: arranque automático, sin consola de usuario.
+      *§3-SW p.5* ⟵ HP-04 (OBL)
+      `sw/hps/linux/init` lanza `hps_player` sin consola (12 nov 2026). Shell solo con
+      `debugsh` en los bootargs (depuración).
+- [~] **HP-09** `D·1` Errores: SD ausente, archivo corrupto o no soportado (se salta y se
+      informa), menos de 10 archivos. *§3-F p.4 (estabilidad)* ⟵ HP-06
+      Probado en PC (`test_producer`: archivos no soportados se saltan, sin SD). La SD
+      lleva `11_Prueba_24bit_no_soportado.wav` (24 bits) para mostrar el descarte; falta
+      verlo en la consola de la tarjeta, y SD sin carpeta y WAV dañado.
+- [ ] **HP-10** `D·2` Filtros en el ARM, solo si CD-12 los asigna al HPS. *§3-SIS p.5* ⟵ CD-12
+
+## 7. Integración HW/SW en la tarjeta — #33 (IN-01..04), #34 (IN-05..09)
+
+- [x] **IN-01** `A·1` Prueba de humo en tarjeta: LEDs y 7 segmentos por puntero desde el Nios V.
+      *§3-HW p.4* ⟵ HW-02, HW-10, HW-22 (EVID foto)
+      OK el 12 nov (`test_pio`, `test_eco`, displays en `test_filtro`); falta la foto.
+- [~] **IN-02** `A·1` Tono senoidal generado por el Nios V por el line-out, sin SD. *§3-HW
+      p.4* ⟵ NV-06, NV-07 → se oye limpio en audífonos.
+      12 nov: suena (440 Hz / 1 kHz, KEY0) con algo de ruido; repetir con el potenciómetro
+      en CH0 (sin él el ADC flota y el volumen varía).
+- [~] **IN-03** `A·1` Potenciómetro → volumen sobre el tono. *§3-SIS p.5* ⟵ NV-08, IN-02
+- [~] **IN-04** `A·1` Pantalla con metadatos fijos. *§3-F p.4* ⟵ NV-11
+- [~] **IN-05** `D·2` El HPS lee un WAV de la SD y lo deja en memoria compartida; el Nios V lo
+      recibe completo (checksum). *§3-SW p.5* ⟵ HP-07, NV-13
+      El streaming funciona en la tarjeta (12 nov 2026); falta la prueba con checksum.
+- [~] **IN-06** `D·2` Reproducción de un WAV completo desde la SD, en bypass y sin cortes.
+      *§3-F p.3–4* ⟵ IN-02, IN-05
+      Suena desde la SD en la tarjeta (12 nov 2026). 13 nov: la canción 9 suena sin cortes
+      tras el parche del kernel (`ring vacio 0 veces`); falta la lista completa (PR-08).
+- [~] **IN-07** `C·2` Botones + FSM + playlist + avance automático con ≥ 10 canciones. *§3-F
+      p.3* ⟵ IN-06, NV-03, NV-14
+      Verificado sin tarjeta: `tb_player` (Nios V, 10 pistas, dos vueltas) y `test_app`.
+      Falta en la tarjeta con la SD (bloqueado por IN-06, D); procedimiento en
+      [docs/pruebas-tarjeta.md](docs/pruebas-tarjeta.md).
+- [~] **IN-08** `B·1` Filtros 1–3 seleccionables con switches durante la reproducción. *§3-F
+      p.4, §3-SIS p.5* ⟵ IN-06, NV-05, NV-10
+      12 nov: OK en la tarjeta con tonos (`test_filtros`: bypass, pasa-bajos, pasa-banda,
+      reverberación); falta con canciones desde la SD (IN-06).
+- [ ] **IN-09** `D·2` Sistema completo arrancando solo desde reset, sin PC conectado. *§3-F
+      p.4* ⟵ HP-04, IN-07, IN-08
+
+## 8. Contenedor Docker y CI (en paralelo, no bloquea Quartus) — #35
+
+> El contenedor no reemplaza a Quartus. Sirve para: toolchain del HPS, simulación del HDL
+> propio con cocotb, pruebas en C de `sw/common/` y CI. Aporta al rubro "Herramientas de
+> ingeniería" (§5 p.8) y a "configuración del entorno" del README (§5 p.8).
+> Docker ya está instalado en la máquina de Chris (`/usr/bin/docker`); confirmar en las demás.
+
+### 8.1 Definición
+
+- [x] **DK-01** Imagen base: `ubuntu:24.04` o `debian:bookworm-slim`, fijada por digest.
+      *GRUPO → §5 p.8* → decisión en `docker/README.md`.
+      `ubuntu:24.04` fijada por digest ([docker/README.md](docker/README.md)).
+- [x] **DK-02** Herramientas y versiones fijas (`apt` con `paquete=versión`, `pip` con
+      `==`) en `docker/versions.md`: make, cmake, gcc del host, toolchain ARM según CD-02
+      (`arm-none-eabi-gcc` para bare metal, `arm-linux-gnueabihf-gcc` para Linux; las dos solo
+      si caben), Icarus Verilog (o GHDL según CD-13), Verilator (lint), Python 3 + cocotb +
+      NumPy + SciPy + pytest, y herramientas para la imagen de la SD (`sfdisk`, `dosfstools`,
+      `mtools`, `u-boot-tools`). *GRUPO* ⟵ CD-02, CD-13
+      [docker/versions.md](docker/versions.md). Una sola toolchain ARM
+      (`arm-linux-gnueabihf`, sirve para las dos opciones de CD-02) por el límite de DK-07.
+- [x] **DK-03** El repositorio se monta como volumen en `/work`; usuario no root con el
+      UID/GID del anfitrión (argumentos de build) para que los archivos generados no queden de
+      root. *GRUPO*
+
+### 8.2 Construcción
+
+- [x] **DK-04** `docker/Dockerfile` liviano: usuario no root, una capa por grupo de
+      herramientas, sin caché de `apt` ni de `pip`. *GRUPO* ⟵ DK-01..03
+- [x] **DK-05** `docker/compose.yml` con el servicio `dev` (volumen, `working_dir`,
+      usuario). *GRUPO* ⟵ DK-04
+- [x] **DK-06** `.dockerignore` (`db/`, `incremental_db/`, `output_files/`, `hw/soc/gen/`,
+      `build/`, `*.sof`, `*.rbf`, WAV grandes). *GRUPO* ⟵ DK-04
+- [x] **DK-07** Tamaño de la imagen < 1 GB (`docker image ls`). Si se pasa: una sola
+      toolchain ARM o build multi-etapa. *GRUPO* ⟵ DK-04 → tamaño anotado en
+      `docker/README.md`.
+      999 MB en `docker image ls` (704 MB de archivos, 252 MB comprimida); con las dos
+      toolchains ARM pasaba de 2 GB.
+- [x] **DK-08** `D·1` "Hola mundo" ARM compilado en el contenedor; `file` muestra un ELF de ARM.
+      *GRUPO* ⟵ DK-05
+      `hps_player` y BusyBox: ELF ARM estáticos compilados en el contenedor `hps`.
+- [ ] **DK-09** `B·1` Simulación trivial con cocotb (p. ej. un contador) que pasa en Icarus
+      dentro del contenedor. *GRUPO* ⟵ DK-05
+
+### 8.3 Simulación y pruebas
+
+- [x] **DK-10** `Makefile` raíz: `make sim` (cocotb de todos los módulos HDL), `make test`
+      (pruebas en C), `make hps` (software del HPS), `make lint` (Verilator `--lint-only`,
+      auditoría NV-17), `make clean`; y atajos `make docker-build` / `make docker-shell`.
+      *GRUPO* ⟵ DK-09
+      Hecho antes que DK-09: `make sim` corre cada `sim/cocotb/<modulo>/Makefile` que
+      exista (hoy ninguno) y `make hps` compila `sw/common` para ARM hasta que exista
+      `sw/hps/Makefile`. Además `make ci` y `make docker-<objetivo>`.
+- [ ] **DK-11** `B·3` Testbench cocotb del filtro obligatorio contra el modelo NumPy/SciPy con
+      los mismos coeficientes cuantizados: impulso (salida = coeficientes), escalón (valor
+      final = suma de coeficientes), senoidales en banda de paso y de rechazo (atenuación
+      esperada), saturación con entradas extremas, reset y bypass (identidad). Tolerancia en
+      LSB justificada por el redondeo de CD-14. *§3-HW p.4* ⟵ HW-13, HW-12, DK-09 · #10 (OBL,
+      EVID)
+- [ ] **DK-12** `B·2` Testbench cocotb de la interfaz de registros Avalon-MM: valores de reset,
+      lectura/escritura de cada registro, bits de solo lectura, carga y relectura de
+      coeficientes, dirección inválida. *§3-HW p.4* ⟵ HW-14, DK-09 · #10 (OBL, EVID)
+- [ ] **DK-13** `B·1` Testbench cocotb de cada módulo HDL propio restante (`seg7_time`,
+      volumen si es HW, remuestreo si es HW). *GRUPO + §3-HW p.4* ⟵ HW-10, HW-15
+- [x] **DK-14** Pruebas en C de `sw/common/` (Unity vendorizado o un `test.h` mínimo) con archivos en `tests/data/` generados por `tests/data/gen_wavs.py`
+      (8/16/44.1 kHz, mono/estéreo, con y sin `LIST/INFO`, chunks extra y tamaños impares,
+      truncados, de 8 y 24 bits para el rechazo), compiladas con `-Werror` y sanitizers.
+      Cubren SC-03..11. *§3-SW p.5* ⟵ SC-03..11 · #12 (EVID)
+      `tests/test.h` mínimo (sin dependencias), 26 WAV generados y ASan +
+      UBSan en todas las pruebas, también las de A y B.
+- [x] **DK-15** `D·1` `make hps` compila el software del HPS (y el SPL si aplica) dentro del
+      contenedor. *§3-SW p.5* ⟵ HP-01, DK-08
+      `make hps` usa `sw/hps/Makefile`; el arranque completo con `scripts/build-hps-linux.sh`.
+- [x] **DK-16** Formas de onda (VCD/FST) y reportes JUnit (`results.xml`) en `build/sim/`;
+      `.gitignore` para `sim_build/`, `results.xml`, `*.vcd`, `*.fst`, `__pycache__/`.
+      Revisar que `*.hex` ignorado no tape coeficientes que se quieran versionar. *GRUPO* ⟵ DK-10
+
+### 8.4 CI
+
+- [x] **DK-17** `.github/workflows/ci.yml`: en cada `push` y `pull_request` hacia
+      `develop` y `main`, construir (o descargar de GHCR) la misma imagen con caché y correr
+      `make lint`, `make sim` y `make test` (y `make hps` como prueba de compilación). *GRUPO
+      → §5 p.8 (Git)* ⟵ DK-10..15
+- [x] **DK-18** Subir como artefactos los reportes, logs y formas de onda (VCD/FST),
+      también cuando fallan (`if: always()`), con tiempo de retención definido. *GRUPO* ⟵
+      DK-17
+- [~] **DK-19** `C·1` Hacer obligatorio el check de CI en la protección de `main` y `develop`
+      (lo configura quien administra el repositorio). *§5 p.8* ⟵ DK-17
+      Pasos en [docker/README.md](docker/README.md#hacer-obligatorio-el-check-dk-19); falta que
+      lo active quien administra el repositorio, después de la primera corrida en un PR.
+
+### 8.5 Documentación
+
+- [x] **DK-20** Sección "Contenedor" del README: cómo construir y usarlo, qué se hace
+      dentro (toolchain HPS, cocotb, pruebas C, CI) y qué fuera (Quartus, Platform Designer,
+      BSP del Nios V, Questa, programación), y por qué Quartus queda fuera: JTAG/USB-Blaster,
+      herramientas gráficas, tamaño de la instalación, licencia de Questa atada a la MAC. *§5
+      p.8 (README: entorno)* ⟵ DK-07
+
+## 9. Pruebas y verificación — #36
+
+- [ ] **PR-01** `D·2` Plan de pruebas en `docs/plan-pruebas.md`: por cada requisito del PDF,
+      método (simulación, prueba unitaria, tarjeta), criterio de aceptación y responsable. *§5
+      p.7 (lista de chequeo)*
+- [x] **PR-02** Verificación aislada del módulo propio en Questa (lo que pide §3-HW p.4
+      al pie de la letra): los mismos tests de DK-11/12 con `SIM=questa` de forma nativa si la
+      edición Starter lo permite, o un testbench SystemVerilog equivalente. *§3-HW p.4* ⟵
+      DK-11, DK-12 · #10 (OBL, EVID)
+- [x] **PR-03** Reporte de verificación del módulo (casos, resultados, capturas de
+      formas de onda) en `docs/hw/verificacion-filtro.md`, terminado antes de integrar. *§3-HW
+      p.4* ⟵ PR-02 · #10 (OBL, EVID)
+- [x] **PR-04** Co-simulación del SoC en Questa con el flujo del Taller 9
+      (`scripts/sim-soc.sh`): el Nios V escribe muestras al módulo propio y compara con
+      vectores dorados. Es la verificación conjunta HW/SW de §2. *§2 p.2, §3-HW p.4* ⟵ HW-17,
+      NV-15 (EVID)
+- [~] **PR-05** `A·2` Prueba en tarjeta de cada driver por separado (programa de prueba por
+      periférico) antes del lazo principal. *§3-SW p.5* ⟵ NV-03..13
+      12 nov: PIO, códec/audio, filtro y `seg7_time` OK en la tarjeta; faltan `test_adc`
+      (potenciómetro) y `test_vga` (monitor).
+- [~] **PR-06** `D·2` Colección de ≥ 10 canciones WAV de licencia libre (8/16/44.1 kHz, mono y
+      estéreo) con `LIST/INFO`, etiquetadas con un script; fuentes y licencias en
+      `docs/canciones.md`. *§3-F p.3* ⟵ SC-04 · #24 (OBL)
+      `scripts/convert-music.sh` convierte `Musica/` (no versionada) a WAV 16 bits/44.1
+      kHz con título. Las 10 canciones del grupo no son de licencia libre: falta decidir
+      si se documentan o se usan otras (`docs/canciones.md`).
+- [~] **PR-07** `C·2` Medir y registrar: arranque < 10 s, respuesta a botones < 200 ms, cambio
+      de filtro < 100 ms, cambio de canción < 2 s. Método: marcas de tiempo con
+      `mcycle`/`mtime` y un LED o GPIO que conmuta, más video a 60 fps o SignalTap. *§3-F p.4*
+      ⟵ IN-09 · #20 (OBL, EVID)
+      Instrumentado (LEDR6 cambia con cada botón aceptado) y medido sin tarjeta: el botón
+      se atiende en la misma vuelta del lazo, filtro ≤ 41 ms, canción < 2 s con el modelo
+      del HPS (`test_app`, `tb_player`). Falta en la tarjeta (`docs/pruebas-tarjeta.md`).
+- [~] **PR-08** `C·1` Estabilidad: la lista completa al menos dos vueltas sin reinicios y con el
+      contador de underruns en 0. *§3-F p.4* ⟵ IN-09 · #20 (OBL, EVID)
+      Contador de subdesbordes en LEDR5 y en la pantalla; dos vueltas sin subdesbordes en
+      `test_app` y `tb_player`. Falta en la tarjeta.
+- [~] **PR-09** `B·1` Calidad en bypass: grabar el line-out en un PC y comparar espectro y
+      nivel con el archivo original (sin recorte ni distorsión audible). *§3-F p.4* ⟵ IN-06 ·
+      #16 (EVID)
+- [~] **PR-10** `B·2` Evidencias de los filtros: respuesta en frecuencia medida con un barrido
+      (chirp) desde la SD frente a la teórica, espectrogramas y audio antes/después.
+      *§3-F p.4, §5 p.8 (README)* ⟵ IN-08 · #16 (OBL, EVID)
+- [ ] **PR-11** `Todos` Regresión antes de cada PR a `develop`: `make lint sim test`,
+      compilación de Quartus y auditoría sin HAL. *§5 p.8* ⟵ DK-10 (continuo)
+
+## 10. Recursos y potencia — #21
+
+- [x] **RP-01** Utilización del sistema completo (ALMs, registros, bits y bloques M10K,
+      bloques DSP) desde el reporte del Fitter; script que extrae la tabla. *§3-REC p.6* ⟵ HW-21
+      (OBL, EVID)
+- [x] **RP-02** *(bloqueada por HW-17; script listo: `report-resources.py --entity`)* Utilización del módulo propio por separado ("Resource Utilization by
+      Entity"). *§3-REC p.6* ⟵ HW-17, HW-21 (OBL, EVID)
+- [x] **RP-03** Potencia del sistema completo con el Power Analyzer de Quartus
+      (`quartus_pow`); documentar las tasas de conmutación supuestas o usar un VCD de
+      simulación. *§3-REC p.6* ⟵ HW-21 (OBL, EVID)
+- [x] **RP-04** Costo de mover un filtro de software a hardware: recursos y potencia del
+      módulo frente a ciclos por muestra del mismo filtro en software (medidos con `mcycle`).
+      *§3-REC p.6* ⟵ RP-02, CD-12
+- [~] **RP-05** `A·1` Discusión de cómo la partición HW/SW afectó recursos y potencia. *§3-REC
+      p.6, §5 p.8 (3%)* ⟵ RP-01..04 (OBL)
+
+## 11. Documentación y entregables — #22 a #25
+
+- [~] **DOC-01** `C·2` Documento de diseño de software: módulos, métodos, bibliotecas, API
+      (headers documentados), requisitos de software (del PDF y del profesor) y lista de
+      chequeo de cumplimiento. *§5 p.7 (3%)* ⟵ PR-01, NV-14, HP-07 · #22 (OBL)
+      [docs/software/diseno-software.md](docs/software/diseno-software.md); falta la parte
+      del HPS cuando exista (HP-07, D).
+- [x] **DOC-02** `D·2` Metodología de diseño del sistema: análisis del problema, investigación,
+      propuestas, comparación, evaluación y justificación del co-diseño (CD-01..16). *§5 p.7 (7%)*
+      ⟵ CD-15 · #22 (OBL)
+- [~] **DOC-03** `B·2` Diseño del hardware personalizado: diagrama de bloques, registros, mapa
+      de memoria, diagramas de tiempo y justificación. *§5 p.7 (4%)* ⟵ HW-11, HW-18, HW-24 ·
+      #22 (OBL)
+- [~] **DOC-04** `A·1` Análisis de recursos y consumo (RP-01..05). *§5 p.8 (3%)* ⟵ RP-05 · #22
+      (OBL)
+- [~] **DOC-05** `B·2` Herramientas de ingeniería: herramientas usadas (Quartus, Platform
+      Designer, Questa, Docker, cocotb, GitHub Actions), modelos y ecuaciones (FIR, punto
+      fijo, duración, volumen, presupuesto de latencia), scripts creados o modificados
+      (incluye [docs/reutilizado-taller9.md](docs/reutilizado-taller9.md)). *§5 p.8 (3%)* ·
+      #22 (OBL)
+- [~] **DOC-06** `A·3` `README.md`: instalación, compilación con Platform Designer, entorno
+      nativo ([docs/entorno-nativo.md](docs/entorno-nativo.md)) y contenedor (DK-20), uso del
+      sistema (botones y switches), diagramas de arquitectura HW y SW, interfaz del módulo
+      propio, mapas de memoria, evidencias de los filtros, resultados con capturas y videos.
+      *§5 p.8 (10%)* ⟵ CD-16, HW-24, PR-10 · #23 (OBL, EVID)
+- [~] **DOC-07** `B·1` Fuentes de los diagramas versionadas (draw.io o Mermaid) y exportadas en
+      `docs/img/`. *§5 p.8* ⟵ CD-16, HW-18
+- [ ] **DOC-08** `D·2` Videos demostrativos (arranque, controles, filtros, volumen, cambio de
+      canción) enlazados desde el README. *§5 p.8* ⟵ IN-09 · #23 (EVID)
+- [x] **DOC-09** `A·1` Formato final de la documentación de diseño (PDF aparte o en `docs/`). *§5 p.7*
+      → `docs/documento-diseno.md` (fuente) y `docs/documento-diseno.pdf` (`scripts/build-doc.sh`).
+- [ ] **DOC-10** `B·2` Presentación funcional: guion que recorra cada requisito de §3, ensayo
+      cronometrado, tarjeta SD de respaldo y video de respaldo por si falla el hardware.
+      *§5 p.7 (60%)* ⟵ IN-09 · #24 (OBL)
+- [ ] **DOC-11** `D·1` PR final `develop` → `main` con `Closes #n` de todos los issues
+      terminados. *§5 p.8* ⟵ todo lo anterior · #25 (OBL)
+
+## 12. Elementos opcionales (crédito extra) — #26, #27
+
+> El PDF exige acordar el puntaje con el profesor **antes** de empezar (§3-EXT p.6). Solo
+> se empiezan si M5 se cumplió y no comprometen lo obligatorio.
+
+- [ ] **OPC-00** `D·1` Acordar con el profesor cuál opción y cuántos puntos. *§3-EXT
+      p.6*
+- [ ] **OPC-01** `B·3` Ecualizador de ≥ 5 bandas en hardware DSP propio, ajustable en tiempo
+      real. *§3-EXT p.6* ⟵ OPC-00, HW-16 · #26 (OPC)
+      - [ ] Diseñar las bandas (biquads o FIR por banda) y las ganancias en punto fijo con un
+            script; gráfico de la respuesta combinada.
+      - [ ] HDL con ganancia por banda en registros; reutilizar el MAC de HW-13 si alcanzan
+            los ciclos por muestra.
+      - [ ] Ajuste en tiempo real con switches o pantalla, mostrando las ganancias en el VGA.
+      - [ ] Testbench cocotb por banda y combinado (DK-11 como plantilla); recursos y potencia
+            frente al filtro obligatorio (RP-04).
+- [ ] **OPC-02** `C·3` Transmisión o recepción de audio por UART o Bluetooth. *§3-EXT p.6* ⟵
+      OPC-00 · #27 (OPC)
+      - [ ] Ancho de banda: PCM de 16 bits a 8 kHz mono son 16 KB/s y no caben en 115200 baud
+            (≈ 11.5 KB/s); hace falta más baudios (el módulo debe soportarlos) o μ-law de
+            8 bits (8 KB/s).
+      - [ ] UART en la FPGA (IP RS232 del University Program o UART de Altera) o UART del
+            HPS, según CD-01.
+      - [ ] Protocolo con tramas, control de flujo y buffer contra jitter; fuente seleccionable
+            (SD o UART) desde la interfaz.
+      - [ ] Prueba con un script de PC que envía un WAV; medir pérdidas y latencia.
+- [ ] **OPC-03** `A·1` Mejoras sin puntaje (solo con tiempo de sobra, no requieren acuerdo): ID3
+      además de `LIST/INFO` (SC-05), vúmetro o espectro en el VGA, insignia de CI en el README.
+
+---
+
+## 13. Lista de comprobación de entregables y criterios de evaluación (§5, p. 7–8)
+
+| Entregable / criterio | Peso | Tareas que lo cubren | Resp. | Estado |
+|---|---|---|---|---|
+| Presentación funcional completa (según rúbrica) | 60% | IN-01..09, PR-07..10, DOC-10 | Todos (guion: B) | [ ] |
+| Documento de diseño de software (métodos, bibliotecas, API, requisitos, checklist) | 3% | SC-*, NV-*, HP-*, PR-01, DOC-01 | C | [ ] |
+| Metodología de diseño de sistema y justificación del co-diseño | 7% | CD-01..16, DOC-02 | D | [ ] |
+| Diseño del hardware personalizado (bloques, registros, mapa de memoria, tiempos, justificación) | 4% | HW-10..18, HW-24, PR-03, DOC-03 | B | [ ] |
+| Análisis de recursos y consumo con discusión de la partición | 3% | RP-01..05, DOC-04 | A | [ ] |
+| Herramientas de ingeniería (herramientas, modelos, ecuaciones, scripts propios o modificados) | 3% | HW-12, DK-*, OR-03, DOC-05 | B | [ ] |
+| Flujo Git: Conventional Commits, ramas main/develop/feat, issues | 10% | GIT-01..05, DK-17..19, DOC-11 | Todos (GIT-03/04: A, CI: C, PR final: D) | [ ] |
+| README: instalación, compilación con Platform Designer, entorno, uso | 10% (README) | DOC-06, DK-20 | A (contenedor: C) | [ ] |
+| README: diagramas de arquitectura HW y SW | ↑ | CD-16, DOC-07 | D (fuentes: B) | [ ] |
+| README: interfaz del módulo propio y mapas de memoria | ↑ | HW-11, HW-24 | B (mapas: A) | [ ] |
+| README: evidencias de los filtros, capturas y videos | ↑ | PR-09, PR-10, DOC-08 | B (videos: D) | [ ] |
+| Crédito extra (acordado antes con el profesor) | extra | OPC-00..02 | B, C (acuerdo: D) | [ ] |
+
+## 14. Trazabilidad de los requisitos del enunciado (§3)
+
+| Requisito (§3) | Pág. | Tareas |
+|---|---|---|
+| ≥ 10 canciones en la SD | 3 | HP-03, HP-06, PR-06 |
+| WAV de 16 bits a 8 / 16 / 44.1 kHz | 3 | SC-03, CD-07, SC-12, NV-07 |
+| Metadatos: título, artista, álbum, duración | 3 | SC-04..06, NV-11 |
+| Playlist anterior/siguiente con reproducción continua | 3 | SC-07, SC-08, IN-07 |
+| Play, pausa, stop, anterior, siguiente con botones por interrupción | 3 | HW-02, NV-03, SC-08, SC-09 |
+| Indicación del estado (reproduciendo, pausado, detenido) | 3 | NV-05, NV-11 |
+| Avance automático a la siguiente canción | 3 | SC-07, HP-07, IN-07 |
+| Tiempo transcurrido MM:SS en 7 segmentos | 3 | HW-10, NV-09, CD-10 |
+| Metadatos en LCD/VGA/TFT | 4 | CD-09, HW-09, NV-11 |
+| Número de canción actual y total | 4 | SC-07, NV-11 |
+| Indicación del filtro activo | 4 | NV-05, NV-11 |
+| ≥ 3 filtros seleccionables que se oyen | 4 | HW-13, SC-10, CD-12, IN-08 |
+| Selección por switches en tiempo real | 4 | HW-02, CD-08, NV-05 |
+| Bypass sin distorsión audible | 4 | PR-09 |
+| Cambio de filtro < 100 ms | 4 | CD-03, PR-07 |
+| Arranque < 10 s tras el reset | 4 | HP-04, PR-07 |
+| Respuesta a botones < 200 ms | 4 | NV-04, PR-07 |
+| Estabilidad sin cortes ni reinicios | 4 | CD-03, NV-14, PR-08 |
+| Cambio de canción < 2 s | 4 | HP-07, PR-07 |
+| HW: módulo propio con registros de control, estado y datos mapeados a memoria | 4 | HW-11, HW-14, HW-17 |
+| HW: verificación aislada documentada antes de integrar | 4 | HW-16, DK-11, DK-12, PR-02, PR-03, NV-15 |
+| HW: audio por la FPGA (IP de Audio), no por el HPS | 4 | HW-07, NV-06 |
+| HW: control directo de los 7 segmentos | 4 | HW-10 |
+| HW: todo componente con función justificada | 5 | HW-23 |
+| SW: SD mediante el HPS | 5 | HW-05, HP-05 |
+| SW: interrupciones de los botones | 5 | NV-03 |
+| SW: parseo de metadatos | 5 | SC-03..06 |
+| SW: interfaz de usuario que coordina todo | 5 | NV-14 |
+| SW: gestión y optimización del mapa de memoria | 5 | CD-06, NV-01, NV-16 |
+| SW: Nios V con punteros a `system.h`, sin `alt_*` ni `IOWR`/`IORD` | 5 | NV-03..13, NV-17 |
+| SW: HPS con SO mínimo sin interacción | 5 | CD-02, HP-08 |
+| SIS: ≥ 1 filtro en HDL propio (no software, no IP de catálogo) | 5 | HW-12..17 |
+| SIS: volumen con potenciómetro en el ADC | 5 | HW-08, CD-05, SC-11, NV-08 |
+| SIS: control temporal | 6 | CD-10, NV-12 |
+| SIS: interfaz de visualización | 6 | CD-09, HW-09, NV-11 |
+| SIS: control de reproducción (FSM HW o SW) | 6 | CD-11, SC-08 |
+| Recursos: sistema completo y módulo propio por separado | 6 | RP-01, RP-02 |
+| Potencia con el Power Analyzer | 6 | RP-03 |
+| Discusión del efecto de la partición | 6 | RP-04, RP-05 |

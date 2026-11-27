@@ -1,0 +1,74 @@
+# tb_player
+# Transcript: build/sim/tb_player.log, 2026-11-07 19:19, commit 4382c4f
+
+TB_PLAYER: inicio
+[11000] LEDR = 0x000  pista -1
+[5522230000] OK    tabla del HPS recibida: pista  1
+[5522230000] OK    arranca detenido (LEDR7/8 apagados)
+[5522231000] LEDR = 0x000  pista 1
+[5540651000] LEDR = 0x000  pista 2
+[5548590000] OK    KEY3 siguiente (detenido): aceptado en 26.4 us
+[5548591000] LEDR = 0x040  pista 2
+[6248590000] OK    siguiente: pista  2
+[6267891000] LEDR = 0x040  pista 1
+[6275830000] OK    KEY2 anterior: aceptado en 27.2 us
+[6275831000] LEDR = 0x000  pista 1
+[6975830000] OK    anterior: pista  1
+[7037911000] LEDR = 0x000  pista 10
+[7045850000] OK    KEY2 anterior desde la 01: aceptado en 70.0 us
+[7045851000] LEDR = 0x040  pista 10
+[7745850000] OK    vuelta hacia atras: pista 10
+[7765071000] LEDR = 0x040  pista 1
+[7773010000] OK    KEY3 siguiente desde la 10: aceptado en 27.2 us
+[7773011000] LEDR = 0x000  pista 1
+[8473010000] OK    vuelta hacia adelante: pista  1
+[8473010000] OK    navegar detenido no reproduce
+[10642410000] OK    KEY0 play: aceptado en 2169.4 us
+[10642411000] LEDR = 0x0c0  pista 1
+[11342410000] OK    reproduciendo (LEDR7)
+[13021971000] LEDR = 0x0c0  pista 2
+[15488771000] LEDR = 0x0c0  pista 3
+[17965351000] LEDR = 0x0c0  pista 4
+[20435011000] LEDR = 0x0c0  pista 5
+[22911351000] LEDR = 0x0c0  pista 6
+[25381011000] LEDR = 0x0c0  pista 7
+[27857571000] LEDR = 0x0c0  pista 8
+[30327231000] LEDR = 0x0c0  pista 9
+[32803631000] LEDR = 0x0c0  pista 10
+[35273851000] LEDR = 0x0c0  pista 1
+[37750111000] LEDR = 0x0c0  pista 2
+[40219871000] LEDR = 0x0c0  pista 3
+[42696191000] LEDR = 0x0c0  pista 4
+[45166031000] LEDR = 0x0c0  pista 5
+[47635691000] LEDR = 0x0c0  pista 6
+[50112031000] LEDR = 0x0c0  pista 7
+[52581691000] LEDR = 0x0c0  pista 8
+[55058251000] LEDR = 0x0c0  pista 9
+[57527911000] LEDR = 0x0c0  pista 10
+[60004911000] LEDR = 0x0c0  pista 1
+[60004911000] OK    avance automatico: 20 cambios de pista (2 vueltas)
+[60089310000] OK    KEY0 pausa: aceptado en 84.4 us
+[60089311000] LEDR = 0x100  pista 1
+[60789310000] OK    pausado (LEDR8)
+[65789310000] OK    en pausa la pista no avanza (5 ms)
+[65910730000] OK    KEY0 reanudar: aceptado en 121.4 us
+[65910731000] LEDR = 0x0c0  pista 1
+[66610730000] OK    reanuda (LEDR7)
+[68157051000] LEDR = 0x0c0  pista 2
+[68232450000] OK    KEY1 stop: aceptado en 1621.7 us
+[68232451000] LEDR = 0x000  pista 2
+[68932450000] OK    detenido (LEDR7/8 apagados)
+[68932450000] OK    tiempo en 00:00 (00:00)
+[69234310000] OK    SW0 -> pasa-bajos (LEDR0)
+[69234311000] LEDR = 0x001  pista 2
+[69634070000] OK    SW1 -> pasa-banda (LEDR1)
+[69634071000] LEDR = 0x002  pista 2
+[72165330000] OK    SW2 -> reverberacion (LEDR2)
+[72165331000] LEDR = 0x004  pista 2
+[72376730000] OK    SW0+SW1 invalido -> bypass y LEDR9
+[72376731000] LEDR = 0x200  pista 2
+[72784550000] OK    SW abajo -> bypass sin alerta
+[72784550000] OK    sin subdesbordes (LEDR5 apagado)
+Respuesta maxima boton -> LED: 2169.4 us reales (requisito < 200 ms)
+[72784550000] OK    respuesta a botones < 200 ms
+TB_PLAYER: PASS

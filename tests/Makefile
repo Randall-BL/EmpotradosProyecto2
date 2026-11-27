@@ -1,0 +1,74 @@
+# Pruebas en el PC de la logica portable (sw/common/), DK-14.   Uso: make -C tests
+#
+# Mismas banderas que exige CONTRIBUTING.md, con -Werror y sanitizers (ASan + UBSan):
+# una lectura fuera de un buffer o un desborde con signo hace fallar la prueba.
+# Sin sanitizers (p. ej. otro compilador):  make -C tests SAN=
+# Los WAV de prueba se generan en build/tests/data con tests/data/gen_wavs.py.
+# Herramientas y banderas (se pueden cambiar desde la linea de comandos).
+CC      ?= gcc
+PYTHON  ?= python3
+SAN     ?= -fsanitize=address,undefined -fno-sanitize-recover=all
+CFLAGS  ?= -std=c11 -Wall -Wextra -Werror -O2 -g
+CFLAGS  += $(SAN) -I../sw/common/include
+LDFLAGS += $(SAN)
+# Carpetas: binarios, WAV generados, fuentes portables y del HPS.
+BUILD   := ../build/tests
+DATA    := $(BUILD)/data
+C       := ../sw/common/src
+HPS     := ../sw/hps/src
+HDRS    := $(wildcard ../sw/common/include/*.h) test.h
+
+# Programas de prueba; cada uno es tests/<nombre>.c.
+TESTS   := test_volume test_screen test_tone test_dsp \
+           test_wav test_fsm test_input test_shm test_app test_resample \
+           test_producer
+
+# Fuentes de sw/common que usa cada prueba.
+SRC_test_volume := volume.c
+SRC_test_screen := screen.c
+SRC_test_tone   := tone.c
+SRC_test_dsp    := dsp.c
+SRC_test_wav    := wav.c le.c err.c
+SRC_test_fsm    := fsm.c playlist.c
+SRC_test_input  := evq.c switches.c debounce.c clock.c
+SRC_test_shm    := shm_proto.c
+SRC_test_resample := resample.c
+# El productor del HPS es C estandar + POSIX: se prueba aqui contra un shm en RAM.
+SRC_test_producer := resample.c shm_proto.c wav.c le.c err.c
+EXTRA_test_producer := $(HPS)/producer.c $(HPS)/prefetch.c
+DEFS_test_producer := -D_DEFAULT_SOURCE -pthread -I$(HPS)
+LIBS_test_producer := -pthread
+SRC_test_app    := app.c fsm.c playlist.c evq.c switches.c debounce.c shm_proto.c \
+                   shm_source.c hps_model.c screen.c volume.c dsp.c err.c
+LIBS_test_tone  := -lm
+DEFS_test_tone  := -D_DEFAULT_SOURCE
+
+.PHONY: all build clean
+# all: compila todo, genera los WAV y corre cada prueba (se detiene en la primera que
+# falle por "set -e"). Cada prueba recibe la carpeta de datos como argumento.
+all: build $(DATA)/.stamp
+	@set -e; for t in $(TESTS); do \
+	    echo "== $$t"; \
+	    $(BUILD)/$$t $(abspath $(DATA)); \
+	done
+# Las pruebas leen ../sim/vectors: se corren desde tests/ (make -C tests).
+
+build: $(addprefix $(BUILD)/,$(TESTS))
+
+# Regla generica: build/tests/<t> depende de tests/<t>.c y de las fuentes que lista
+# SRC_<t> / EXTRA_<t>. SECONDEXPANSION permite usar $$* (el nombre) en las
+# dependencias.
+.SECONDEXPANSION:
+$(BUILD)/%: %.c $$(addprefix $(C)/,$$(SRC_$$*)) $$(EXTRA_$$*) $(HDRS) | $(BUILD)
+	$(CC) $(CFLAGS) $(DEFS_$*) -o $@ $< $(addprefix $(C)/,$(SRC_$*)) $(EXTRA_$*) $(LDFLAGS) $(LIBS_$*)
+
+# Los WAV se regeneran solo si cambia el script (el .stamp marca que ya se hizo).
+$(DATA)/.stamp: data/gen_wavs.py | $(BUILD)
+	$(PYTHON) data/gen_wavs.py $(DATA)
+	@touch $@
+
+$(BUILD):
+	mkdir -p $@
+
+clean:
+	rm -rf ../build/tests

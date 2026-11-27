@@ -1,0 +1,25 @@
+# Ajustes sobre socfpga_defconfig (HP-02): rootfs en initramfs, FAT de la SD y /dev/mem.
+# Rootfs en RAM: el initramfs se arma con build/hps/initramfs.list y va comprimido
+# dentro del zImage.
+CONFIG_BLK_DEV_INITRD=y
+CONFIG_INITRAMFS_SOURCE="/work/build/hps/initramfs.list"
+CONFIG_INITRAMFS_COMPRESSION_GZIP=y
+# /dev lo llena el kernel solo (sin udev ni mdev).
+CONFIG_DEVTMPFS=y
+CONFIG_DEVTMPFS_MOUNT=y
+# Controlador de la microSD (Synopsys DesignWare MMC).
+CONFIG_MMC=y
+CONFIG_MMC_DW=y
+# FAT32 de la SD con nombres largos y las paginas de codigos que usa por defecto.
+CONFIG_VFAT_FS=y
+CONFIG_FAT_DEFAULT_CODEPAGE=437
+CONFIG_FAT_DEFAULT_IOCHARSET="iso8859-1"
+CONFIG_NLS_CODEPAGE_437=y
+CONFIG_NLS_ISO8859_1=y
+# /dev/mem para acceder a registros fisicos desde la aplicacion.
+CONFIG_DEVMEM=y
+# La aplicacion mapea el puente liviano (0xFF20_0000) y registros del HPS.
+# CONFIG_STRICT_DEVMEM is not set
+# Watchdog que deja activo el preloader: el kernel lo atiende para que no reinicie.
+CONFIG_DW_WATCHDOG=y
+CONFIG_WATCHDOG_HANDLE_BOOT_ENABLED=y

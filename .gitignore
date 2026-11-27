@@ -1,0 +1,99 @@
+# ─────────────────────────────────────────────
+#  Quartus / Platform Designer
+# ─────────────────────────────────────────────
+db/
+incremental_db/
+output_files/
+simulation/
+greybox_tmp/
+qdb/
+tmp-clearbox/
+.qsys_edit/
+*.qws
+*.rpt
+*.summary
+*.smsg
+*.done
+*.jdi
+*.sld
+*.pin
+*.pof
+*.sof
+*.rbf
+*.cdf
+*.qarlog
+c5_pin_model_dump.txt
+PLLJ_PLLSPE_INFO.txt
+# Salida generada por Platform Designer (se regenera desde el .qsys)
+*/soc_system/synthesis/
+*/soc_system/simulation/
+*.sopcinfo
+# Salida de scripts/build-soc.sh (RTL, testbench y listas de archivos del tb).
+# El .qsys tambien se genera: la fuente del SoC es hw/soc/build_system.tcl.
+hw/soc/*.qsys
+hw/soc/gen/
+hw/soc/*_tb.csv
+hw/soc/*_tb.spd
+
+# ─────────────────────────────────────────────
+#  Simulacion (Questa / ModelSim)
+# ─────────────────────────────────────────────
+work/
+libraries/
+transcript
+*.wlf
+vsim.wlf
+modelsim.ini
+*.vstf
+
+# cocotb + Icarus (DK-16): los resultados van a build/sim/cocotb/<modulo>/, pero si
+# alguien corre make dentro de sim/cocotb/<modulo>/ quedan junto al test.
+sim_build/
+results.xml
+*.vcd
+*.fst
+__pycache__/
+*.pyc
+
+# ─────────────────────────────────────────────
+#  Software Nios V / HPS
+# ─────────────────────────────────────────────
+build/
+*.o
+*.a
+*.elf
+*.objdump
+*.map
+*.hex
+*.srec
+# El BSP se regenera con niosv-bsp dentro de build/ (scripts/build-niosv.sh)
+
+# ─────────────────────────────────────────────
+#  Editores y sistema
+# ─────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+
+# Rutas locales de cada maquina para scripts/env.sh
+scripts/env.local.sh
+
+# Log y contenido de RAM que copia scripts/build-quartus.sh
+hw/quartus/output_files.log
+hw/quartus/update_mif.log
+
+# Captura de pantalla que escribe tb_vga (se convierte a PNG en docs/img)
+*.pbm
+
+# Coeficientes del RTL propio: los genera scripts/design_fir.py y se versionan
+!hw/rtl/*.hex
+
+# Canciones para la SD (pesadas, no se versionan; ver scripts/make-sdimage.sh)
+/Musica/
+
+# Lo que Quartus genera para el HPS al compilar (handoff y reportes de la DDR3).
+# U-Boot usa la configuracion de la DE1-SoC que trae su propio arbol (ver CD-02).
+hw/quartus/hps_isw_handoff/
+hw/quartus/hps_sdram_p0_*

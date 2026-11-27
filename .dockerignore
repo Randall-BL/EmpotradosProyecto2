@@ -1,0 +1,26 @@
+# DK-06: el contexto de build del contenedor no necesita el repositorio (se monta
+# como volumen en /work). Se excluye lo pesado por si se construye desde la raiz.
+# Control de versiones y salidas de compilacion.
+.git/
+build/
+db/
+incremental_db/
+output_files/
+hw/soc/gen/
+hw/soc/*.qsys
+hw/soc/*.sopcinfo
+**/db/
+**/incremental_db/
+**/output_files/
+**/sim_build/
+# Binarios grandes: bitstreams, audio, imagenes de SD, ondas y documentos.
+*.sof
+*.rbf
+*.pof
+*.wav
+*.img
+*.wlf
+*.vcd
+*.fst
+*.pdf
+docs/img/

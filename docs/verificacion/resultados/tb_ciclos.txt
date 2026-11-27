@@ -1,0 +1,22 @@
+# tb_ciclos
+# Transcript: build/sim/tb_ciclos.log, 2026-11-07 11:47, commit 536bb49
+
+TB_CICLOS: inicio
+[253550000] LEDR = 0x0f1
+[255450000] LEDR = 0x0f2
+[278990000] LEDR = 0x0f3
+[935390000] LEDR = 0x0f4
+[1129610000] LEDR = 0x0f5
+[1135950000] LEDR = 0x0f6
+[1139970000] LEDR = 0x0f7
+CICLOS lazo_vacio 21
+CICLOS volumen_mul 271
+CICLOS fir127 8181
+CICLOS biquad 2404
+CICLOS reverb 54
+CICLOS escritura_mmio 4294967280
+CICLOS lectura_mmio 1
+CICLOS lectura_shm 0
+CICLOS fin
+[2722930000] LEDR = 0x0e0
+TB_CICLOS: PASS

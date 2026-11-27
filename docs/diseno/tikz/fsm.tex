@@ -1,0 +1,16 @@
+% Maquina de reproduccion (equivale al Mermaid "fsm").
+\begin{tikzpicture}[font=\small,st/.style={blkl,circle,minimum size=2.5cm,inner sep=1pt},
+                    lab/.style={font=\footnotesize,align=center}]
+  \node[st] (S) at (0,0) {DETENIDO};
+  \node[st] (P) at (6,0) {REPRODU-\\CIENDO};
+  \node[st] (Z) at (3,-5.2) {PAUSADO};
+  \draw[ln] (-2.2,0) -- (S);
+  \draw[ln] (S) to[bend left=18] node[above,lab]{KEY0: carga y arranca} (P);
+  \draw[ln] (P) to[bend left=18] node[below,lab,pos=0.62]{KEY1: stop (tiempo a 0)} (S);
+  \draw[ln] (P) to[bend left=28] node[right,lab]{KEY0: pausa} (Z);
+  \draw[ln] (Z) -- node[sloped,above,lab,pos=0.45]{KEY0: reanuda} (P);
+  \draw[ln] (Z) to[bend left=20] node[left,lab]{KEY1} (S);
+  \draw[ln] (S) to[loop above,looseness=6] node[above,lab]{KEY2/KEY3: cambia la selección} (S);
+  \draw[ln] (P) to[loop above,looseness=6] node[above,lab]{KEY2/KEY3, fin de pista,\\error: cambia y carga} (P);
+  \draw[ln] (Z) to[loop below,looseness=6] node[below,lab]{KEY2/KEY3, error: cambia y carga, sin sonar} (Z);
+\end{tikzpicture}

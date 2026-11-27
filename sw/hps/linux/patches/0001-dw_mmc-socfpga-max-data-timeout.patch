@@ -1,0 +1,25 @@
+--- a/drivers/mmc/host/dw_mmc-pltfm.c
++++ b/drivers/mmc/host/dw_mmc-pltfm.c
+@@ -96,8 +96,21 @@
+ 	return 0;
+ }
+ 
++/*
++ * Read data timeout at the hardware maximum (0xFFFFFF card clocks, ~335 ms at 50 MHz),
++ * as U-Boot leaves it. The core caps SD reads at 100 ms; some SDHC cards exceed that on
++ * a few blocks, and every timeout ends in a card power cycle that stalls I/O for
++ * seconds. TMOUT[7:0] (response timeout) also stays at its maximum.
++ */
++static void dw_mci_socfpga_set_data_timeout(struct dw_mci *host,
++					    unsigned int timeout_ns)
++{
++	mci_writel(host, TMOUT, 0xFFFFFFFF);
++}
++
+ static const struct dw_mci_drv_data socfpga_drv_data = {
+-	.init		= dw_mci_socfpga_priv_init,
++	.init			= dw_mci_socfpga_priv_init,
++	.set_data_timeout	= dw_mci_socfpga_set_data_timeout,
+ };
+ 
+ static const struct of_device_id dw_mci_pltfm_match[] = {

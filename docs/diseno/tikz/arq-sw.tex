@@ -1,0 +1,35 @@
+% Arquitectura de software (equivale al diagrama Mermaid "arq-sw").
+\begin{tikzpicture}[font=\footnotesize,every node/.append style={font=\footnotesize}]
+  \node[blkn,minimum width=3.2cm] (pre) at (1.2,0) {\texttt{prefetch}\\hilo lector SD $\to$ DDR3};
+  \node[blkn,minimum width=3.2cm] (prod) at (5.4,0) {\texttt{producer}\\\texttt{wav} + \texttt{resample}};
+  \draw[ln] (pre) -- (prod);
+  \begin{scope}[on background layer]
+    \node[draw=cGris,dashed,rounded corners=4pt,fit=(pre)(prod),inner sep=7pt,
+      label={[font=\footnotesize\bfseries]above:HPS (\texttt{sw/hps}), Linux mínimo}] {};
+  \end{scope}
+  \node[blkp,minimum width=2.8cm] (shm) at (10.6,0) {\texttt{shm}\\\texttt{shm\_proto.h}};
+  \draw[ln] (prod) -- node[above]{ring} (shm);
+  % Nios V
+  \node[blkn,minimum width=2.0cm] (main) at (0,-2.4) {\texttt{main.c}};
+  \node[blkl,minimum width=3.2cm] (app) at (4.6,-2.4) {\texttt{app}: lazo principal\\\texttt{app\_step()}};
+  \node[blkl,minimum width=2.8cm] (src) at (10.6,-2.4) {\texttt{shm\_source}};
+  \node[blkn,minimum width=2.0cm] (evq) at (0,-4.4) {\texttt{evq}};
+  \node[blkl,minimum width=2.6cm] (fsm) at (3.2,-4.4) {\texttt{fsm} + \texttt{playlist}};
+  \node[blkl,minimum width=3.4cm] (aux) at (6.9,-4.4) {\texttt{switches}, \texttt{debounce},\\\texttt{volume}, \texttt{dsp}, \texttt{screen}};
+  \node[blkn,minimum width=2.8cm] (ports) at (10.6,-4.4) {\texttt{ports\_niosv}};
+  \node[blkn,minimum width=2.0cm] (keys) at (0,-6.4) {\texttt{keys} (ISR)};
+  \node[blkn,minimum width=6.4cm] (drv) at (8.0,-6.4) {drivers por puntero \texttt{volatile}: \texttt{audio}, \texttt{codec},\\\texttt{adc}, \texttt{filtro}, \texttt{seg7}, \texttt{vga\_text}, \texttt{pio}, \texttt{irq}};
+  \draw[ln] (main) -- (app);
+  \draw[ln] (app) -- (src);
+  \draw[ln] (app) -- (fsm);
+  \draw[ln] (app) -- (aux);
+  \draw[ln] (app.south east) -- (ports.north west);
+  \draw[ln] (keys) -- (evq);
+  \draw[ln] (evq.east) -- ++(0.35,0) |- ([yshift=-2mm]app.west);
+  \draw[ln] (ports) -- (ports |- drv.north);
+  \draw[ln,dashed] (shm) -- (src);
+  \begin{scope}[on background layer]
+    \node[draw=cLog,dashed,rounded corners=4pt,fit=(main)(src)(keys)(drv)(ports),inner sep=7pt,
+      label={[font=\footnotesize\bfseries,text=cLog]below:Nios V (\texttt{sw/niosv} + \texttt{sw/common})}] {};
+  \end{scope}
+\end{tikzpicture}

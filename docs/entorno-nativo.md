@@ -1,0 +1,111 @@
+# Entorno nativo: Quartus, Platform Designer, Nios V y Questa
+
+> Origen: sección "Requisitos" y "Configuración del entorno" del README del Taller 9
+> (ver [reutilizado-taller9.md](reutilizado-taller9.md)). Se adaptaron las rutas y los
+> nombres de los scripts a la estructura del proyecto.
+
+Estas herramientas se instalan y ejecutan **de forma nativa**, fuera del contenedor
+Docker: necesitan acceso al USB-Blaster (JTAG), tienen interfaz gráfica, ocupan
+decenas de GB y Questa usa una licencia node-locked a la MAC del equipo.
+
+## Requisitos
+
+- **Quartus Prime Lite 25.1std** (soporta Cyclone V / DE1-SoC y Nios V).
+- Componente **Nios V / RiscFree**: trae el toolchain `riscv32-unknown-elf` y las
+  utilidades `niosv-*`.
+- **Questa Altera Starter FPGA Edition** (simulador, incluido con Quartus).
+- Licencia de Questa (Starter es gratuita, node-locked). **La variable es
+  `SALT_LICENSE_SERVER`**, no `LM_LICENSE_FILE`.
+
+> No hay un simulador de instrucciones ("ISS") como en Nios II: la ejecución sin
+> tarjeta se hace por **simulación RTL** del SoC completo en Questa.
+
+## Configuración
+
+`scripts/env.sh` deja listas todas las variables (`source scripts/env.sh`). Los demás
+scripts lo cargan solos. Por defecto usa:
+
+| Variable | Valor por defecto | Cómo cambiarlo |
+|---|---|---|
+| `ALTERA_ROOT` | `/opt/altera_lite/25.1std`; si no existe, `~/altera_lite/25.1std` | `export ALTERA_ROOT=/ruta/a/altera_lite/25.1std` antes de llamar a los scripts |
+| `SALT_LICENSE_SERVER` | `~/altera_lite/LR-203954_License.dat` | `export SALT_LICENSE_SERVER=/ruta/a/su/licencia.dat` |
+
+Cada integrante deja sus propias rutas en `scripts/env.local.sh` (ignorado por Git), que
+`env.sh` carga antes de aplicar los valores por defecto:
+
+```bash
+# scripts/env.local.sh
+export ALTERA_ROOT=$HOME/altera_lite/25.1std
+export SALT_LICENSE_SERVER=$HOME/Descargas/LR-XXXXXX_License.dat
+```
+
+La licencia de Questa está atada a la MAC de cada máquina, así que cada quien usa la
+suya.
+
+### Rutas que agrega `env.sh` al `PATH`
+
+| Ruta | Herramientas |
+|---|---|
+| `quartus/bin` | `quartus_sh`, `quartus_pgm` |
+| `quartus/sopc_builder/bin` | `qsys-generate`, `qsys-script`, `qsys-edit`, `ip-catalog` |
+| `niosv/bin` | `niosv-bsp`, `niosv-app`, `niosv-download`, `elf2hex` |
+| `riscfree/toolchain/riscv32-unknown-elf/bin` | compilador RISC-V (`riscv32-unknown-elf-gcc`) |
+| `questa_fse/bin` | `vsim` (Questa) |
+| `riscfree/build_tools/cmake/bin` (al final) | `cmake` que trae RiscFree; lo usa `build-niosv.sh`, así no hace falta instalarlo |
+
+También fija `QSYS_ROOTDIR`, para no tomar por error una instalación vieja de Quartus.
+
+### Licencia de Questa (SALT, no FLEXlm)
+
+Si se usa `LM_LICENSE_FILE` (como en versiones viejas de ModelSim) aparece el error
+`Invalid license environment. Application closing.`: es el síntoma de no haber usado
+`SALT_LICENSE_SERVER`.
+
+La licencia Starter está atada a la MAC del equipo. Para confirmar que corresponde:
+
+```bash
+cat /sys/class/net/*/address                          # MACs del equipo
+grep -o 'HOSTID=[0-9a-f]*' "$SALT_LICENSE_SERVER"     # debe coincidir con una
+```
+
+### Verificar que todo responde
+
+```bash
+source scripts/env.sh
+riscv32-unknown-elf-gcc --version   # toolchain RISC-V
+qsys-generate --help                # Platform Designer
+niosv-bsp --help                    # utilidades Nios V
+vsim -version                       # Questa
+```
+
+## Flujo de trabajo
+
+```bash
+scripts/build-soc.sh        # .qsys desde hw/soc/build_system.tcl + RTL + .sopcinfo + testbench
+scripts/build-niosv.sh      # BSP (sw/niosv/bsp.tcl) + app de sw/niosv/src + ram.hex
+APP=test_pio scripts/build-niosv.sh   # un programa de prueba de sw/niosv/tests/
+scripts/build-quartus.sh    # proyecto Quartus completo: .sof + reportes + Timing Analyzer
+scripts/update-sw.sh        # solo cambia el software dentro del .sof (~20 s)
+scripts/program.sh          # programa la DE1-SoC por JTAG
+scripts/sim-soc.sh [gui]    # prueba de humo en Questa (printf por la JTAG UART)
+scripts/sim-tb.sh <nombre>  # testbench autoverificable: pio, audio, codec, adc, vga
+make -C tests               # pruebas en el PC de sw/common/
+python3 scripts/report-resources.py   # recursos por componente (Fitter)
+scripts/report-power.sh     # potencia (Power Analyzer)
+```
+
+`build-soc.sh` regenera `hw/soc/audio_soc.qsys` cuando falta o cuando
+`build_system.tcl` es más nuevo; `REGEN_QSYS=1` lo fuerza. El `.qsys` no se versiona:
+la fuente del SoC es el Tcl, así que lo que se cambie en la GUI de Platform Designer
+hay que pasarlo al Tcl. Tampoco se versiona el resto de la salida generada
+(`hw/soc/gen/`, `build/`, `*.sopcinfo`, `hw/quartus/output_files/`).
+
+Notas:
+
+- Los testbenches instancian `audio_soc` directamente (`sim/questa/tb_*.sv`); el
+  `audio_soc_tb` que genera Platform Designer no elabora con varios conduits.
+- La simulación del SoC completo corre a ~1 minuto por milisegundo simulado (los
+  modelos de los PLL dominan). `tb_codec` tarda ~15 min porque el I²C del IP va a 24 kHz.
+- `sim-soc.sh` elabora con `-voptargs=+acc` para poder graficar señales internas.
+- El BSP se crea con `--no-default` (ver `sw/niosv/bsp.tcl`): el driver HAL del IP de
+  Audio invalida el BSP del Nios V, y de todos modos no se usa ningún driver HAL.
