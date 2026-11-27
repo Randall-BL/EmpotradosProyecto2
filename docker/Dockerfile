@@ -25,7 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates=20260816ubuntu0.24.04.2 \
         make=4.3-4.1build2 \
         gcc=4:13.2.0-7ubuntu1 \
-        libc6-dev=2.39-0ubuntu8.9 \
+        libc6-dev=2.39-0ubuntu8.12 \
         file=1:5.45-3build1 \
     && rm -rf /var/lib/apt/lists/*
 
