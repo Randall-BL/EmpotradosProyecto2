@@ -19,6 +19,7 @@ static inline uint16_t le16(const uint8_t *p)
     return (uint16_t)(p[0] | ((uint16_t)p[1] << 8));
 }
 
+/* Entero de 32 bits little-endian en p[0..3]. */
 static inline uint32_t le32(const uint8_t *p)
 {
     return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) |

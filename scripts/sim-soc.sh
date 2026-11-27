@@ -26,11 +26,13 @@ if [ "${NOBUILD:-0}" != "1" ]; then
     cp "$HERE/build/niosv-test_smoke/app/build/ram.hex" "$MENTOR/ram.hex"
 fi
 
+# Scripts .do de Questa y comprobacion de que el modelo del SoC ya se genero.
 DO_DIR="$HERE/sim/questa"
 if [ ! -f "$MENTOR/msim_setup.tcl" ]; then
     echo "ERROR: falta el modelo de simulacion. Corra primero scripts/build-soc.sh" >&2
     exit 1
 fi
+# Se simula desde la carpeta del modelo generado, sin restos de corridas anteriores.
 cd "$MENTOR"
 rm -rf work ./*_lib transcript 2>/dev/null || true
 

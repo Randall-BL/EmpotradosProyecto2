@@ -32,11 +32,14 @@ meta() {
     awk -F'\t' -v k="$1" -v c="$2" '$0 !~ /^#/ && $1 == k { print $c; exit }' "$TSV"
 }
 
+# Recorre los formatos de audio conocidos (sin distinguir mayusculas; nullglob: un
+# patron sin archivos no se queda como texto literal).
 i=0
 shopt -s nullglob nocaseglob
 for f in "$IN"/*.{mp3,m4a,aac,flac,ogg,opus,wav}; do
     i=$((i + 1))
     base="$(basename "${f%.*}")"
+    # Metadatos del archivo original; canciones.tsv los reemplaza si tiene valor.
     title="$(ffprobe -v error -show_entries format_tags=title -of default=nw=1:nk=1 "$f" || true)"
     artist="$(ffprobe -v error -show_entries format_tags=artist -of default=nw=1:nk=1 "$f" || true)"
     album="$(ffprobe -v error -show_entries format_tags=album -of default=nw=1:nk=1 "$f" || true)"
@@ -45,6 +48,7 @@ for f in "$IN"/*.{mp3,m4a,aac,flac,ogg,opus,wav}; do
     v="$(meta "$base" 4)"; [ -z "$v" ] || album="$v"
     hz="$(meta "$base" 5)"; hz="${hz:-44100}"
     ch="$(meta "$base" 6)"; ch="${ch:-2}"
+    # Solo las frecuencias y canales que acepta el parser del reproductor.
     case "$hz" in 8000|16000|44100|48000) ;; *) echo "ERROR: $base: $hz Hz no soportado" >&2; exit 1 ;; esac
     case "$ch" in 1|2) ;; *) echo "ERROR: $base: $ch canales no soportado" >&2; exit 1 ;; esac
     [ -n "$title" ] || title="$base"
@@ -56,6 +60,8 @@ for f in "$IN"/*.{mp3,m4a,aac,flac,ogg,opus,wav}; do
     safe="$(printf '%s' "$base" | iconv -f utf-8 -t ascii//TRANSLIT 2>/dev/null | tr -c 'A-Za-z0-9_-' '_' | cut -c1-40)"
     dst="$OUT/$(printf '%02d' "$i")_${safe}.wav"
     echo ">> $base -> $(basename "$dst") ($hz Hz, $ch ch)"
+    # Conversion: sin video ni metadatos originales, PCM 16 bits LE, y los tres
+    # metadatos que ffmpeg escribe en LIST/INFO.
     ffmpeg -nostdin -loglevel error -y -i "$f" -vn -map_metadata -1 \
         -ac "$ch" -ar "$hz" -c:a pcm_s16le \
         -metadata title="$title" ${artist:+-metadata artist="$artist"} \

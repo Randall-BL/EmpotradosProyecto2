@@ -14,12 +14,19 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import signal
 
+# Raiz del repositorio, frecuencia de muestreo y nombre de cada banco en la grafica.
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 FS = 48000
 NAMES = ["pasa-bajos 1 kHz (banco 0)", "pasa-banda 1-4 kHz (banco 1)"]
 
 
 def main():
+    """Lee coeficientes y mediciones, grafica teoria contra medida y resume el error.
+
+    Los coeficientes salen de fir_coefs.hex (127 por banco, 16 bits en complemento a
+    2). La ganancia teorica se evalua en las mismas frecuencias medidas para comparar en
+    la banda de paso (> -3 dB) y en la de rechazo (< -50 dB).
+    """
     raw = [int(l, 16) for l in (ROOT / "hw/rtl/fir_coefs.hex").read_text().split()]
     coefs = [np.array([v - 65536 if v & 0x8000 else v for v in raw[b * 128:b * 128 + 127]]) / 32768
              for b in range(2)]

@@ -20,23 +20,25 @@ module adc_model #(
     parameter bit LTC = 0
 ) (
     input  wire        cs_n,     // ADC_CONVST
-    input  wire        sclk,
-    input  wire        din,
-    output logic       dout
+    input  wire        sclk,     // reloj serie que genera el IP
+    input  wire        din,      // configuracion: IP -> ADC
+    output logic       dout      // resultado: ADC -> IP
 );
+    // Valor de cada canal; por defecto 0x100, 0x200, ... para distinguirlos.
     logic [11:0] ch_value [0:7];
     initial foreach (ch_value[i]) ch_value[i] = 12'h100 * (i + 1);
 
-    int conversions = 0;
+    int conversions = 0;                       // conversiones hechas (para el tb)
 
     // ---------------- AD7928 ----------------
     generate if (!LTC) begin : g_ad7928
-        logic [15:0] out_sr;
-        logic [11:0] ctrl_sr;
-        int          nbits;
+        logic [15:0] out_sr;                   // trama de salida: 0, ADD[2:0], DB[11:0]
+        logic [11:0] ctrl_sr;                  // palabra de control recibida
+        int          nbits;                    // bits de la trama actual
         logic [2:0]  cur_ch = 3'd0, seq_max = 3'd0;
-        bit          seq = 0;
+        bit          seq = 0;                  // 1 = modo secuencia
 
+        // Inicio de trama: carga el resultado del canal actual.
         always @(negedge cs_n) begin
             out_sr = {1'b0, cur_ch, ch_value[cur_ch]};
             nbits  = 0;
@@ -45,6 +47,7 @@ module adc_model #(
         end
         always @(posedge cs_n) dout = 1'bz;
 
+        // Cada flanco de bajada: toma un bit de control y saca el siguiente de dato.
         always @(negedge sclk) if (!cs_n) begin
             if (nbits < 12) ctrl_sr = {ctrl_sr[10:0], din};
             nbits++;
@@ -63,11 +66,11 @@ module adc_model #(
             end
         end
     end else begin : g_ltc2308
-        logic [11:0] out_sr;
-        logic [5:0]  cfg_sr;
+        logic [11:0] out_sr;                   // resultado que se va sacando
+        logic [5:0]  cfg_sr;                   // palabra de configuracion recibida
         int          nbits;
-        logic [2:0]  next_ch = 3'd0, conv_ch = 3'd0;
-        logic [11:0] result = 12'd0;
+        logic [2:0]  next_ch = 3'd0, conv_ch = 3'd0;   // canal siguiente / convertido
+        logic [11:0] result = 12'd0;           // resultado de la ultima conversion
 
         // CONVST sube: convierte el canal que dejo la trama anterior.
         always @(posedge cs_n) begin
@@ -75,11 +78,13 @@ module adc_model #(
             result  = ch_value[conv_ch];
             conversions++;
         end
+        // CONVST baja: empieza la lectura del resultado.
         always @(negedge cs_n) begin
             out_sr = result;
             nbits  = 0;
             #5 dout = out_sr[11];
         end
+        // Flanco de subida: toma un bit de configuracion.
         always @(posedge sclk) if (!cs_n) begin
             if (nbits < 6) begin
                 cfg_sr = {cfg_sr[4:0], din};
@@ -88,6 +93,7 @@ module adc_model #(
             end
             nbits++;
         end
+        // Flanco de bajada: siguiente bit del resultado.
         always @(negedge sclk) if (!cs_n) begin
             out_sr = {out_sr[10:0], 1'b0};
             #5 dout = out_sr[11];

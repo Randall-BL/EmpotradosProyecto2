@@ -31,9 +31,10 @@
 
 #define WM8731_R5_DACMU      (1u << 3)   /* silencio digital del DAC */
 
-#define CODEC_OK          0
-#define CODEC_ERR_TIMEOUT (-1)
-#define CODEC_ERR_NACK    (-2)
+/* Codigos de retorno. */
+#define CODEC_OK          0               /* transferencia correcta */
+#define CODEC_ERR_TIMEOUT (-1)            /* el IP no respondio a tiempo */
+#define CODEC_ERR_NACK    (-2)            /* el codec no reconocio la transferencia */
 
 /* Espera a que termine la autoinicializacion (AIS) y quita la de-enfasis.
  * timeout: iteraciones de sondeo (cada una lee el registro de estado). */

@@ -16,7 +16,7 @@
 
 #define FILTRO_BANK_LOWPASS  0u    /* pasa-bajos 1 kHz */
 #define FILTRO_BANK_BANDPASS 1u    /* pasa-banda 1-4 kHz */
-#define FILTRO_GAIN_UNITY    0x8000u
+#define FILTRO_GAIN_UNITY    0x8000u   /* ganancia 1.0 en Q1.15 */
 
 /* Espera el borrado del reset, carga los coeficientes de sw/common/include/fir_coefs.h en los
  * dos bancos y deja el filtro en bypass, banco 0, 127 taps, ganancia 1.0. */
@@ -36,7 +36,9 @@ static inline uint32_t filtro_pack(int16_t l, int16_t r)
 {
     return ((uint32_t)(uint16_t)r << 16) | (uint16_t)l;
 }
+/* Entrega un par al filtro (arranca el calculo). */
 void     filtro_write(uintptr_t base, uint32_t lr);
+/* Lee el par filtrado; el bus espera si el calculo no termino. */
 uint32_t filtro_read(uintptr_t base);
 
 /* Devuelve 1 si alguna salida saturo desde la ultima llamada, y lo borra. */

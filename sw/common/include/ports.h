@@ -16,7 +16,7 @@
 
 /* Salida de audio: FIFO del codec, con el filtro de hardware en medio (CD-04). */
 typedef struct {
-    void *ctx;
+    void *ctx;                                        /* estado del driver */
     uint32_t depth;                                   /* capacidad de la FIFO en cuadros */
     uint32_t (*space)(void *ctx);                     /* cuadros que caben sin esperar */
     void (*write)(void *ctx, uint32_t lr);            /* un cuadro, empaquetado L | R<<16 */
@@ -26,21 +26,21 @@ typedef struct {
 typedef struct {
     void *ctx;
     void (*set_filter)(void *ctx, filter_id_t f);     /* FILTER_REVERB = bypass en HW */
-    void (*set_gain)(void *ctx, uint32_t gain_q15);
+    void (*set_gain)(void *ctx, uint32_t gain_q15);   /* 32768 = 1.0 */
 } fx_port_t;
 
 /* Reloj en milisegundos (NV-12). */
 typedef struct {
     void *ctx;
-    uint32_t (*now_ms)(void *ctx);
+    uint32_t (*now_ms)(void *ctx);                    /* ms desde el arranque (da la vuelta) */
 } clock_port_t;
 
 /* Indicadores: 7 segmentos (tiempo y numero de pista) y LEDs. */
 typedef struct {
     void *ctx;
-    void (*set_time)(void *ctx, uint32_t seconds);
+    void (*set_time)(void *ctx, uint32_t seconds);    /* tiempo transcurrido MM:SS */
     void (*set_track)(void *ctx, uint32_t number);    /* 1..99, 0 = apagado */
-    void (*set_leds)(void *ctx, uint32_t leds);
+    void (*set_leds)(void *ctx, uint32_t leds);       /* LEDR[9:0] */
 } panel_port_t;
 
 /* Entradas leidas por encuesta: switches y potenciometro. */
@@ -52,10 +52,10 @@ typedef struct {
 
 /* Datos de una pista para la pantalla. Los textos los mantiene la fuente. */
 typedef struct {
-    const char *title;
-    const char *artist;
-    const char *album;
-    uint32_t duration_s;
+    const char *title;                                /* titulo (nunca NULL) */
+    const char *artist;                               /* artista */
+    const char *album;                                /* album */
+    uint32_t duration_s;                              /* duracion total en segundos */
 } track_meta_t;
 
 /* Estado de la fuente (SRC_*). */
@@ -71,13 +71,15 @@ typedef struct {
 typedef struct {
     void *ctx;
     uint32_t (*state)(void *ctx);                     /* SRC_* */
-    uint32_t (*track_count)(void *ctx);
+    uint32_t (*track_count)(void *ctx);               /* pistas en la tabla */
     int (*track_meta)(void *ctx, uint32_t index, track_meta_t *out);  /* 0 = ok */
     void (*play)(void *ctx, uint32_t index);          /* desde el inicio */
-    void (*stop)(void *ctx);
+    void (*stop)(void *ctx);                          /* corta el flujo actual */
+    /* Copia hasta max cuadros L | R<<16 en frames; devuelve los copiados (0 = vacio). */
     uint32_t (*read)(void *ctx, uint32_t *frames, uint32_t max);
 } source_port_t;
 
+/* Todos los puertos juntos: es lo que recibe app_init(). */
 typedef struct {
     audio_port_t audio;
     fx_port_t fx;

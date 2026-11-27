@@ -9,8 +9,10 @@ Uso: python3 scripts/gen_sine_table.py   (pegar la salida en sw/common/src/tone.
 """
 import math
 
-N = 1024
+N = 1024           # muestras por periodo (indice de 10 bits)
 A = 16384          # -6 dBFS
+
+# Imprime la tabla como arreglo C, 8 valores por linea.
 
 print(f"/* Generada por scripts/gen_sine_table.py: {N} muestras, amplitud {A} (-6 dBFS). */")
 print(f"static const int16_t sine_table[TONE_TABLE_SIZE] = {{")

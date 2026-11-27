@@ -7,12 +7,13 @@
 #include <stdlib.h>
 #include "tone.h"
 
-static int failures;
+static int failures;                       /* comprobaciones fallidas */
 
 #define CHECK(cond) do { \
     if (!(cond)) { printf("FALLO %s:%d: %s\n", __FILE__, __LINE__, #cond); failures++; } \
 } while (0)
 
+/* Frecuencia (cruces por cero), amplitud, calidad (SNR) y paso de fase del tono. */
 int main(void)
 {
     /* 440 Hz a 48 kHz durante 1 s: 440 cruces por cero de subida (+-1). */

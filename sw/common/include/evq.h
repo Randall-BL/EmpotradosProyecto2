@@ -18,12 +18,13 @@
 #define EVQ_SIZE 16u                       /* potencia de 2 */
 
 typedef struct {
-    volatile uint8_t buf[EVQ_SIZE];
+    volatile uint8_t buf[EVQ_SIZE];        /* eventos (codigo de boton 0..3) */
     volatile uint32_t head;                /* lo escribe solo el productor */
     volatile uint32_t tail;                /* lo escribe solo el consumidor */
     volatile uint32_t dropped;             /* eventos perdidos por cola llena */
 } evq_t;
 
+/* Deja la cola vacia. */
 void evq_init(evq_t *q);
 
 /* Productor (ISR). ERR_FULL si no cabe (se cuenta en dropped). */
@@ -32,6 +33,7 @@ err_t evq_push(evq_t *q, uint8_t ev);
 /* Consumidor. ERR_EMPTY si no hay eventos. */
 err_t evq_pop(evq_t *q, uint8_t *ev);
 
+/* Eventos que esperan en la cola (head - tail). */
 uint32_t evq_count(const evq_t *q);
 
 #endif /* COMMON_EVQ_H */

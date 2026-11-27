@@ -14,10 +14,15 @@ import matplotlib.pyplot as plt
 
 
 def s16(v):
+    """Interpreta 16 bits sin signo como entero con signo (complemento a 2)."""
     return v - 0x10000 if v & 0x8000 else v
 
 
 def main():
+    """Lee el archivo de vectores (cabecera + "entrada salida" en hex) y grafica cada canal.
+
+    Cada palabra de 32 bits lleva L en los bits [15:0] y R en [31:16].
+    """
     src, dst = sys.argv[1], sys.argv[2]
     with open(src) as f:
         bank, ntaps, gain, bypass, n = map(int, f.readline().split())

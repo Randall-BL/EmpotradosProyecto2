@@ -16,6 +16,7 @@ QDIR="$HERE/hw/quartus"
 
 [ -f "$QDIR/output_files/audio_player.sof" ] || { echo "ERROR: corra primero scripts/build-quartus.sh" >&2; exit 1; }
 
+# Recompila el software y deja ram.hex donde lo busca Quartus.
 "$HERE/scripts/build-niosv.sh" > "$HERE/build/niosv-update.log" 2>&1 \
     || { echo "ERROR: fallo build-niosv.sh, ver build/niosv-update.log" >&2; exit 1; }
 cp "$HERE/build/niosv${APP:+-$APP}/app/build/ram.hex" "$QDIR/ram.hex"

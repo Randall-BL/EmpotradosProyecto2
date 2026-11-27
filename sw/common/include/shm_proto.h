@@ -37,12 +37,12 @@
 #include "err.h"
 
 #define SHM_MAGIC        0x31504853u      /* "SHP1" */
-#define SHM_VERSION      1u
-#define SHM_SIZE         0x10000u
-#define SHM_MAX_TRACKS   32u
+#define SHM_VERSION      1u               /* version del protocolo */
+#define SHM_SIZE         0x10000u         /* 64 KB de memoria compartida */
+#define SHM_MAX_TRACKS   32u              /* filas de la tabla de pistas */
 #define SHM_TEXT         48u              /* = WAV_TEXT_MAX */
-#define SHM_TRACKS_OFF   0x0040u
-#define SHM_RING_OFF     0x8000u
+#define SHM_TRACKS_OFF   0x0040u          /* desplazamiento de la tabla de pistas */
+#define SHM_RING_OFF     0x8000u          /* desplazamiento del ring de audio */
 #define SHM_RING_FRAMES  8192u            /* 170 ms a 48 kHz; potencia de 2 */
 
 /* hps_state */
@@ -52,35 +52,36 @@
 #define SHM_HPS_NO_TRACKS 3u              /* SD sin WAV validos */
 
 /* cmd (Nios V -> HPS) */
-#define SHM_CMD_NONE     0u
+#define SHM_CMD_NONE     0u               /* sin comando */
 #define SHM_CMD_PLAY     1u               /* cmd_arg = indice de pista */
-#define SHM_CMD_STOP     2u
+#define SHM_CMD_STOP     2u               /* detener el flujo */
 
 /* stream_state (HPS -> Nios V) */
-#define SHM_STREAM_IDLE    0u
-#define SHM_STREAM_RUNNING 1u
+#define SHM_STREAM_IDLE    0u             /* sin flujo (tras STOP o antes de PLAY) */
+#define SHM_STREAM_RUNNING 1u             /* el HPS esta escribiendo cuadros */
 #define SHM_STREAM_EOF     2u             /* ya se escribio el ultimo cuadro */
 #define SHM_STREAM_ERROR   3u             /* la pista no se pudo leer: se salta */
 
 typedef struct {
     /* ---- escribe el HPS ---- */
-    uint32_t magic;
-    uint32_t version;
-    uint32_t hps_state;
-    uint32_t track_count;
-    uint32_t ack_seq;
-    uint32_t stream_seq;
-    uint32_t stream_state;
-    uint32_t wr;
+    uint32_t magic;                       /* SHM_MAGIC cuando el control es valido */
+    uint32_t version;                     /* SHM_VERSION */
+    uint32_t hps_state;                   /* SHM_HPS_* */
+    uint32_t track_count;                 /* filas validas de la tabla */
+    uint32_t ack_seq;                     /* ultimo cmd_seq atendido */
+    uint32_t stream_seq;                  /* comando al que pertenece el flujo del ring */
+    uint32_t stream_state;                /* SHM_STREAM_* */
+    uint32_t wr;                          /* indice libre de escritura del ring */
     /* ---- escribe el Nios V ---- */
-    uint32_t cmd;
-    uint32_t cmd_arg;
-    uint32_t cmd_seq;
-    uint32_t rd;
-    uint32_t underruns;
-    uint32_t reserved[3];
+    uint32_t cmd;                         /* SHM_CMD_* */
+    uint32_t cmd_arg;                     /* argumento (indice de pista para PLAY) */
+    uint32_t cmd_seq;                     /* +1 en cada comando nuevo */
+    uint32_t rd;                          /* indice libre de lectura del ring */
+    uint32_t underruns;                   /* subdesbordes vistos por el Nios V */
+    uint32_t reserved[3];                 /* relleno hasta 64 B */
 } shm_ctrl_t;
 
+/* Una fila de la tabla de pistas (160 B). Textos terminados en '\0'. */
 typedef struct {
     char title[SHM_TEXT];
     char artist[SHM_TEXT];
@@ -92,9 +93,11 @@ typedef struct {
     uint32_t frames;                      /* cuadros a 48 kHz que se van a entregar */
 } shm_track_t;
 
+/* Imagen completa de los 64 KB de shm. */
 typedef struct {
     shm_ctrl_t ctrl;
     shm_track_t tracks[SHM_MAX_TRACKS];
+    /* Hueco libre entre la tabla y el ring (alinea el ring a 0x8000). */
     uint8_t pad[SHM_RING_OFF - sizeof(shm_ctrl_t) - SHM_MAX_TRACKS * sizeof(shm_track_t)];
     uint32_t ring[SHM_RING_FRAMES];
 } shm_t;

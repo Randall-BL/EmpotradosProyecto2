@@ -15,7 +15,7 @@
 
 #include <stdint.h>
 
-#define ADC_MAX 4095u
+#define ADC_MAX 4095u                  /* lectura maxima (12 bits) */
 
 /* Activa la conversion continua de los canales configurados en el SoC. */
 void adc_init(uintptr_t base);

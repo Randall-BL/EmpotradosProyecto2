@@ -1,6 +1,8 @@
 #!/bin/sh
 # init del rootfs minimo del HPS (HP-08): monta la SD y lanza la aplicacion, sin
 # consola de usuario. Si la aplicacion termina, la vuelve a lanzar.
+# Sistemas de archivos virtuales: /proc (procesos y cmdline), /sys y /dev (los
+# dispositivos los crea el kernel con devtmpfs).
 mount -t proc proc /proc
 mount -t sysfs sysfs /sys
 mount -t devtmpfs devtmpfs /dev 2>/dev/null
@@ -11,6 +13,7 @@ while [ ! -b /dev/mmcblk0p1 ] && [ $i -lt 50 ]; do
     sleep 0.1
     i=$((i + 1))
 done
+# Particion FAT de la SD, solo lectura: un corte de energia no la puede corromper.
 if mount -t vfat -o ro /dev/mmcblk0p1 /mnt/sd; then
     echo "init: SD montada"
 else
@@ -27,6 +30,8 @@ case " $(cat /proc/cmdline) " in
     ;;
 esac
 
+# Arranque normal: el reproductor en un lazo sin fin (si termina o se cae, se
+# relanza al segundo).
 while true; do
     /usr/bin/hps_player /mnt/sd/music
     echo "init: hps_player termino ($?); reiniciando"

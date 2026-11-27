@@ -12,6 +12,8 @@
 #   export ALTERA_ROOT=$HOME/altera_lite/25.1std
 #   export SALT_LICENSE_SERVER=$HOME/Descargas/LR-XXXXXX_License.dat
 
+# Carpeta de este script (sirve aunque se haga "source" desde otro lado) y, si existe,
+# la configuracion local de la maquina.
 _ENV_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 [ -f "$_ENV_DIR/env.local.sh" ] && source "$_ENV_DIR/env.local.sh"
@@ -29,6 +31,8 @@ if [ ! -d "$ALTERA_ROOT/quartus" ]; then
     return 1 2>/dev/null || exit 1
 fi
 
+# Variables que esperan las herramientas de Altera y PATH con Quartus, Platform
+# Designer, utilidades del Nios V, compilador RISC-V y Questa.
 export QUARTUS_ROOTDIR="$ALTERA_ROOT/quartus"
 export QSYS_ROOTDIR="$QUARTUS_ROOTDIR/sopc_builder/bin"
 export PATH="$QUARTUS_ROOTDIR/bin:$QUARTUS_ROOTDIR/sopc_builder/bin:$ALTERA_ROOT/niosv/bin:$ALTERA_ROOT/riscfree/toolchain/riscv32-unknown-elf/bin:$ALTERA_ROOT/questa_fse/bin:$PATH"

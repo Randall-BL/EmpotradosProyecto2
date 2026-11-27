@@ -31,25 +31,28 @@
 #define SCREEN_ROWS 13u              /* filas que usa la pantalla */
 #define SCREEN_FIELD_MAX 48u         /* largo maximo mostrado de titulo/artista/album */
 
+/* Puerto de salida de texto. */
 typedef struct {
     void *ctx;
     /* Escribe s en (x, y) y rellena con espacios hasta width celdas. */
     void (*print)(void *ctx, uint32_t x, uint32_t y, const char *s, uint32_t width);
 } screen_port_t;
 
+/* Estado que se muestra (mismo orden que fsm_state_t). */
 typedef enum {
     SCREEN_STOPPED = 0,
     SCREEN_PLAYING,
     SCREEN_PAUSED
 } screen_state_t;
 
+/* Datos de la cancion actual para screen_draw_track(). */
 typedef struct {
     const char *title;
     const char *artist;
     const char *album;
     uint32_t duration_s;
     uint32_t track;                  /* 1..total */
-    uint32_t total;
+    uint32_t total;                  /* pistas en la lista */
 } screen_track_t;
 
 /* Marco, titulo de la aplicacion y ayuda de los controles (una vez). */

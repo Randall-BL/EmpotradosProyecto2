@@ -13,7 +13,7 @@
 #include <stdint.h>
 #include "err.h"
 
-#define PLAYLIST_MIN_TRACKS 10u
+#define PLAYLIST_MIN_TRACKS 10u           /* minimo que pide el enunciado */
 
 typedef struct {
     uint32_t count;                       /* pistas en la lista */
@@ -37,6 +37,7 @@ int playlist_auto_advance(playlist_t *p);
 /* Numero para mostrar: 1..count (0 si la lista esta vacia). */
 uint32_t playlist_number(const playlist_t *p);
 
+/* 1 si la lista tiene al menos PLAYLIST_MIN_TRACKS pistas. */
 int playlist_meets_minimum(const playlist_t *p);
 
 #endif /* COMMON_PLAYLIST_H */

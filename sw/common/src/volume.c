@@ -1,3 +1,11 @@
+/*
+ * Control de volumen (SC-11). Ver volume.h.
+ *
+ * El rango del ADC (0..4095) se divide en 32 escalones iguales. Cada escalon tiene una
+ * ganancia de una tabla logaritmica (2 dB por escalon), porque el oido percibe el
+ * volumen en escala logaritmica: con una ganancia lineal casi todo el recorrido del
+ * potenciometro sonaria "fuerte".
+ */
 #include "volume.h"
 
 /* Generada por scripts/gen_volume_table.py: 32 escalones de 2 dB,
@@ -12,6 +20,7 @@ static const uint16_t volume_gain_q15[VOLUME_STEPS] = {
 /* Cada escalon cubre 4096 / 32 = 128 cuentas del ADC. */
 #define COUNTS_PER_STEP ((VOLUME_ADC_MAX + 1u) / VOLUME_STEPS)
 
+/* Escalon (0..31) que corresponde a una lectura del ADC, sin histeresis. */
 static uint32_t step_of(uint32_t adc)
 {
     if (adc > VOLUME_ADC_MAX)
@@ -19,6 +28,7 @@ static uint32_t step_of(uint32_t adc)
     return adc / COUNTS_PER_STEP;     /* potencia de 2: el compilador usa un shift */
 }
 
+/* Ganancia Q15 de un escalon; un escalon fuera de rango se trata como el maximo. */
 uint32_t volume_gain_of_step(uint32_t step)
 {
     if (step >= VOLUME_STEPS)
@@ -26,12 +36,18 @@ uint32_t volume_gain_of_step(uint32_t step)
     return volume_gain_q15[step];
 }
 
+/* Arranca directamente en el escalon de la lectura adc. */
 void volume_init(volume_t *v, uint32_t adc)
 {
     v->step = step_of(adc);
     v->gain_q15 = volume_gain_of_step(v->step);
 }
 
+/*
+ * Procesa una lectura nueva del potenciometro. Si cae en otro escalon y se adentra
+ * al menos VOLUME_HYSTERESIS cuentas en el, se cambia de escalon y de ganancia y se
+ * devuelve 1; si no, se mantiene el escalon actual y se devuelve 0.
+ */
 int volume_update(volume_t *v, uint32_t adc)
 {
     uint32_t s = step_of(adc);
@@ -40,10 +56,12 @@ int volume_update(volume_t *v, uint32_t adc)
 
     /* Histeresis: solo se cambia si la lectura entra HYSTERESIS cuentas en el
      * escalon nuevo; el ruido del ADC en un borde no hace saltar el volumen. */
-    uint32_t lo = v->step * COUNTS_PER_STEP;
-    uint32_t hi = lo + COUNTS_PER_STEP;
+    uint32_t lo = v->step * COUNTS_PER_STEP;      /* primera cuenta del escalon actual */
+    uint32_t hi = lo + COUNTS_PER_STEP;           /* primera cuenta del siguiente */
+    /* Justo por encima del borde superior: todavia no se sube. */
     if (adc >= hi && adc < hi + VOLUME_HYSTERESIS)
         return 0;
+    /* Justo por debajo del borde inferior: todavia no se baja. */
     if (adc < lo && adc + VOLUME_HYSTERESIS >= lo)
         return 0;
 
@@ -52,6 +70,7 @@ int volume_update(volume_t *v, uint32_t adc)
     return 1;
 }
 
+/* Porcentaje aproximado del escalon actual (0 % a 100 %) para la barra de la pantalla. */
 uint32_t volume_percent(const volume_t *v)
 {
     /* Sin division ni multiplicacion por hardware en el Nios V/m: 100/31 ~= 3.2,
@@ -60,6 +79,7 @@ uint32_t volume_percent(const volume_t *v)
     return p > 100u ? 100u : p;
 }
 
+/* Multiplica una muestra por la ganancia Q15, redondea y satura a 16 bits. */
 int16_t volume_scale(int16_t s, uint32_t gain_q15)
 {
     int32_t y = ((int32_t)s * (int32_t)gain_q15 + (1 << 14)) >> 15;
@@ -70,6 +90,7 @@ int16_t volume_scale(int16_t s, uint32_t gain_q15)
     return (int16_t)y;
 }
 
+/* Aplica volume_scale() a n muestras del arreglo, en el mismo lugar. */
 void volume_apply(int16_t *samples, uint32_t n, uint32_t gain_q15)
 {
     for (uint32_t i = 0; i < n; ++i)

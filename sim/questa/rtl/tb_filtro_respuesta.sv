@@ -9,7 +9,7 @@
 
 module tb_filtro_respuesta;
     logic clk = 1'b0, reset = 1'b1;
-    always #10 clk = ~clk;
+    always #10 clk = ~clk;                      // 50 MHz
     logic [2:0]  address = '0;
     logic        read = 1'b0, write = 1'b0;
     logic [31:0] writedata = '0;
@@ -25,8 +25,11 @@ module tb_filtro_respuesta;
 
     localparam CTRL = 0, STATUS = 1, NTAPS = 2, GAIN = 3, CADDR = 4, CDATA = 5, DIN = 6, DOUT = 7;
     localparam real FS = 48000.0, PI = 3.14159265358979;
+    // NF frecuencias; por cada una se descartan SETTLE muestras (transitorio, > 127
+    // taps) y se miden MEAS.
     localparam int  NF = 30, SETTLE = 160, MEAS = 480;
 
+    // Escritura / lectura Avalon-MM respetando waitrequest.
     task automatic avs_wr(input int a, input logic [31:0] d);
         @(posedge clk); address <= a; writedata <= d; write <= 1'b1;
         do @(posedge clk); while (waitrequest);
@@ -38,6 +41,8 @@ module tb_filtro_respuesta;
         d = readdata; read <= 1'b0;
     endtask
 
+    // Carga los coeficientes, recorre bancos y frecuencias y escribe la ganancia en
+    // dB de cada una: 10 log10(potencia de salida / potencia de entrada).
     initial begin
         logic [15:0] h [0:255];
         logic [31:0] d;

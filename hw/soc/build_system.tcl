@@ -8,6 +8,7 @@
 # Regenerar el .qsys:  cd hw/soc && qsys-script --script=build_system.tcl
 # (scripts/build-soc.sh lo hace solo si falta el .qsys o con REGEN_QSYS=1)
 
+# API de Platform Designer 25.1; sistema "audio_soc" para la FPGA de la DE1-SoC.
 package require -exact qsys 25.1
 create_system audio_soc
 set_project_property DEVICE_FAMILY {Cyclone V}
@@ -139,15 +140,18 @@ set_instance_parameter_value video_pll vga_clk_en 1
 set_instance_parameter_value video_pll lcd_clk_en 0
 set_instance_parameter_value video_pll gui_resolution {VGA 640x480}
 
+# Character Buffer: guarda los 80x60 caracteres y genera el flujo de pixeles.
 add_instance char_buf altera_up_avalon_video_character_buffer_with_dma
 set_instance_parameter_value char_buf vga_device {On-board VGA DAC}
 set_instance_parameter_value char_buf enable_transparency 0
 set_instance_parameter_value char_buf resolution {80 x 60}
 
+# FIFO de doble reloj: pasa los pixeles del dominio de 50 MHz al de 25 MHz.
 add_instance video_fifo altera_up_avalon_video_dual_clock_buffer
 set_instance_parameter_value video_fifo color_bits 10
 set_instance_parameter_value video_fifo color_planes 3
 
+# Controlador VGA: sincronismos y color hacia el DAC ADV7123.
 add_instance vga altera_up_avalon_video_vga_controller
 set_instance_parameter_value vga board {DE1-SoC}
 set_instance_parameter_value vga device {VGA Connector}
@@ -171,6 +175,7 @@ add_instance seg7 seg7_time
 # La DDR3 y la temporizacion de la placa son las de la DE1-SoC (GHRD de Terasic,
 # las mismas que asume el preloader socfpga_de1_soc de U-Boot).
 add_instance hps altera_hps
+# Parametros de la controladora DDR3 (400 MHz, 32 bits) y retardos de la placa.
 foreach {param value} {
     HPS_PROTOCOL {DDR3}
     RATE {Full}
@@ -251,6 +256,8 @@ foreach {param value} {
 } {
     set_instance_parameter_value hps $param $value
 }
+# Puentes: solo el liviano HPS->FPGA. SD de 4 bits y UART0 sin control de flujo en
+# los pines dedicados del HPS (I/O Set 0).
 foreach {param value} {
     F2S_Width {0}
     S2F_Width {0}
@@ -268,10 +275,12 @@ foreach {param value} {
 # ============================================================================
 #  Conexiones de reloj y reset
 # ============================================================================
+# Perifericos del dominio de 50 MHz.
 foreach inst {audio av_config adc char_buf filtro seg7} {
     add_connection clk.clk $inst.clk
     add_connection clk.clk_reset $inst.reset
 }
+# Los PLL toman CLOCK_50 como referencia; la salida de video va a 25 MHz.
 add_connection clk.clk audio_pll.ref_clk
 add_connection clk.clk_reset audio_pll.ref_reset
 add_connection clk.clk video_pll.ref_clk
@@ -287,10 +296,12 @@ add_connection video_pll.reset_source vga.reset
 add_connection char_buf.avalon_char_source video_fifo.avalon_dc_buffer_sink
 add_connection video_fifo.avalon_dc_buffer_source vga.avalon_vga_sink
 
+# Procesador, JTAG UART y PIO.
 foreach inst {cpu juart pio_key pio_sw pio_led} {
     add_connection clk.clk $inst.clk
     add_connection clk.clk_reset $inst.reset
 }
+# Memorias: la RAM tiene un puerto; shm tiene dos (Nios V y HPS), ambos a 50 MHz.
 add_connection clk.clk ram.clk1
 add_connection clk.clk_reset ram.reset1
 add_connection clk.clk shm.clk1
@@ -303,11 +314,13 @@ add_connection clk.clk hps.h2f_lw_axi_clock
 # ============================================================================
 #  Avalon-MM y mapa de direcciones (docs/hw/mapa-memoria.md)
 # ============================================================================
+# map: conecta un maestro con un esclavo y fija la direccion base del esclavo.
 proc map {master slave base} {
     add_connection $master $slave
     set_connection_parameter_value $master/$slave baseAddress $base
 }
 
+# Nios V: codigo y datos en la RAM, shm en 0x2_0000 y perifericos desde 0x4_0000.
 map cpu.instruction_manager ram.s1                 0x00000000
 map cpu.data_manager        ram.s1                 0x00000000
 map cpu.data_manager        shm.s1                 0x00020000
@@ -331,6 +344,7 @@ map hps.h2f_lw_axi_master   shm.s2                 0x00000000
 # ============================================================================
 #  Interrupciones (receptor platform_irq_rx del Nios V)
 # ============================================================================
+# irq: conecta la interrupcion de un esclavo al Nios V con el numero dado.
 proc irq {slave num} {
     add_connection cpu.platform_irq_rx $slave
     set_connection_parameter_value cpu.platform_irq_rx/$slave irqNumber $num
@@ -345,11 +359,13 @@ irq audio.interrupt 4
 # ============================================================================
 #  Interfaces exportadas al top-level (hw/quartus/DE1_SoC_top.v)
 # ============================================================================
+# Reloj y reset de entrada del SoC.
 add_interface clk clock sink
 set_interface_property clk EXPORT_OF clk.clk_in
 add_interface reset reset sink
 set_interface_property reset EXPORT_OF clk.clk_in_reset
 
+# PIO hacia KEY, SW y LEDR.
 add_interface key conduit end
 set_interface_property key EXPORT_OF pio_key.external_connection
 add_interface sw conduit end
@@ -357,6 +373,7 @@ set_interface_property sw EXPORT_OF pio_sw.external_connection
 add_interface led conduit end
 set_interface_property led EXPORT_OF pio_led.external_connection
 
+# Codec (MCLK, datos I2S, I2C), ADC, VGA y displays.
 add_interface audio_clk clock source
 set_interface_property audio_clk EXPORT_OF audio_pll.audio_clk
 add_interface audio conduit end
@@ -376,4 +393,5 @@ set_interface_property hps_ddr EXPORT_OF hps.memory
 add_interface hps_io conduit end
 set_interface_property hps_io EXPORT_OF hps.hps_io
 
+# Escribe el .qsys (lo lee scripts/build-soc.sh para generar el HDL).
 save_system audio_soc.qsys

@@ -17,15 +17,17 @@
 // Salidas activas en bajo (segmento encendido = 0), orden {g, f, e, d, c, b, a} del
 // DE1-SoC (HEXn[0] = a ... HEXn[6] = g).
 module seg7_time (
-    input  wire        clk,
-    input  wire        reset,
+    input  wire        clk,                // reloj del sistema (50 MHz)
+    input  wire        reset,              // reset sincrono, activo en alto
 
-    input  wire [1:0]  avs_address,
+    // Esclavo Avalon-MM (sin waitrequest: lectura con 1 ciclo de latencia fija)
+    input  wire [1:0]  avs_address,        // registro 0..3
     input  wire        avs_read,
     input  wire        avs_write,
     input  wire [31:0] avs_writedata,
     output reg  [31:0] avs_readdata,
 
+    // Segmentos de cada display, activos en bajo
     output wire [6:0]  hex0,
     output wire [6:0]  hex1,
     output wire [6:0]  hex2,
@@ -35,23 +37,25 @@ module seg7_time (
 );
     localparam [7:0] VERSION = 8'h01;
 
-    reg        on, track_on;
-    reg [12:0] time_s;
-    reg [6:0]  track;
+    reg        on, track_on;               // CTRL[0], CTRL[1]
+    reg [12:0] time_s;                     // TIME: segundos escritos por el software
+    reg [6:0]  track;                      // TRACK: numero de cancion (0..99)
 
     // ---------------------------------------------------------------- conversion
     // Estados: restar 60 (minutos), restar 10 (decenas de segundo), restar 10
     // (decenas de minuto), listo. Con time_s < 6000 son <= 99 + 5 + 9 iteraciones.
     localparam C_IDLE = 2'd0, C_MIN = 2'd1, C_SEC = 2'd2, C_MTEN = 2'd3;
-    reg [1:0]  cst;
-    reg [12:0] rem;
-    reg [6:0]  mins;
-    reg [3:0]  s1, m1;
+    reg [1:0]  cst;                        // estado del convertidor (C_*)
+    reg [12:0] rem;                        // resto: segundos que faltan convertir
+    reg [6:0]  mins;                       // minutos (luego, unidades de minuto)
+    reg [3:0]  s1, m1;                     // decenas de segundo / de minuto
     reg [15:0] bcd;                        // lo que se muestra {M1, M0, S1, S0}
     reg [3:0]  t1, t0;                     // cancion en BCD
 
-    wire convert = avs_write && avs_address == 2'd1;
+    wire convert = avs_write && avs_address == 2'd1;   // escritura en TIME
 
+    // Convertidor secuencial: cada estado resta una "moneda" mientras pueda y cuenta.
+    // bcd solo cambia al terminar, asi el display nunca muestra un valor a medias.
     always @(posedge clk) begin
         if (reset) begin
             cst <= C_IDLE;
@@ -95,6 +99,7 @@ module seg7_time (
     end
 
     // ---------------------------------------------------------------- registros
+    // Escrituras del procesador.
     always @(posedge clk) begin
         if (reset) begin
             on       <= 1'b1;              // arranca mostrando 00:00
@@ -111,6 +116,7 @@ module seg7_time (
         end
     end
 
+    // Lectura registrada de los registros.
     always @(posedge clk)
         if (avs_read)
             case (avs_address)
@@ -131,7 +137,8 @@ module seg7_time (
         endcase
     endfunction
 
-    localparam [6:0] OFF = 7'b1111111;
+    // Cada display muestra su digito BCD si esta encendido; la cancion solo con TRACK.
+    localparam [6:0] OFF = 7'b1111111;      // todos los segmentos apagados
     assign hex0 = on ? seg(bcd[3:0])   : OFF;
     assign hex1 = on ? seg(bcd[7:4])   : OFF;
     assign hex2 = on ? seg(bcd[11:8])  : OFF;

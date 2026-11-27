@@ -1,5 +1,10 @@
+/* Textos de los codigos de error comunes (SC-01). Ver err.h. */
 #include "err.h"
 
+/*
+ * Devuelve un texto corto (16 caracteres como mucho) que describe e, apto para la
+ * pantalla VGA o la consola. Un valor que no es de err_t devuelve "DESCONOCIDO".
+ */
 const char *err_str(err_t e)
 {
     switch (e) {

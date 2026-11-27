@@ -5,6 +5,8 @@
 #include "playlist.h"
 #include "test.h"
 
+/* Playlist: lista vacia, vuelta al inicio/final, avance automatico, seleccion
+ * directa, minimo de 10 pistas y lista de una sola pista. */
 static void test_playlist(void)
 {
     playlist_t p;
@@ -38,6 +40,8 @@ static void test_playlist(void)
     CHECK_EQ(playlist_auto_advance(&p), 1);
 }
 
+/* Recorrido DETENIDO -> REPRODUCIENDO -> PAUSADO -> REPRODUCIENDO -> DETENIDO con
+ * las acciones exactas de cada transicion. */
 static void test_basic_flow(void)
 {
     playlist_t p;
@@ -68,6 +72,7 @@ static void test_basic_flow(void)
     CHECK_EQ(fsm_handle(&f, FSM_EV_ERROR), 0);
 }
 
+/* PREV/NEXT en cada uno de los tres estados. */
 static void test_navigation(void)
 {
     playlist_t p;
@@ -96,6 +101,7 @@ static void test_navigation(void)
     CHECK_EQ(fsm_handle(&f, FSM_EV_TRACK_END), 0);     /* no puede terminar en pausa */
 }
 
+/* Fin de pista reproduciendo: avanza y reproduce; da la vuelta cada 10 pistas. */
 static void test_auto_advance(void)
 {
     playlist_t p;
@@ -118,6 +124,8 @@ static void test_auto_advance(void)
     CHECK_EQ(p.current, 0);
 }
 
+/* Pistas que no se pueden leer: salto, detencion si fallan todas, y reinicio de la
+ * cuenta de errores con fin de pista o accion del usuario. */
 static void test_errors(void)
 {
     playlist_t p;
@@ -156,6 +164,8 @@ static void test_errors(void)
     CHECK_EQ(p.current, (before + 1) % 4);
 }
 
+/* Eventos invalidos, lista vacia y 10 000 eventos al azar: la FSM nunca queda en un
+ * estado o pista invalidos. */
 static void test_robustness(void)
 {
     playlist_t p;
@@ -179,6 +189,7 @@ static void test_robustness(void)
     }
 }
 
+/* Corre todas las pruebas de la playlist y la FSM. */
 int main(void)
 {
     RUN(test_playlist);

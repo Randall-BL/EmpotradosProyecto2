@@ -33,32 +33,40 @@ import pathlib
 import numpy as np
 from scipy import signal
 
+# Raiz del repositorio y parametros fijos del filtro.
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-FS = 48000
-NTAPS = 127
-MAX_TAPS = 128
-Q = 15
+FS = 48000          # frecuencia de muestreo (Hz)
+NTAPS = 127         # etapas de cada filtro (impar: retardo de grupo entero)
+MAX_TAPS = 128      # tamano de cada banco en el hardware
+Q = 15              # bits fraccionarios (Q1.15)
 
 
 # ---------------------------------------------------------------- diseno
 def design():
+    """Disena los dos filtros en punto flotante con scipy (ventana de Kaiser, beta = 6).
+
+    Devuelve un diccionario nombre -> coeficientes; el orden es el de los bancos (0, 1).
+    """
     lp = signal.firwin(NTAPS, 1000, window=("kaiser", 6.0), fs=FS)
     bp = signal.firwin(NTAPS, [1000, 4000], pass_zero=False, window=("kaiser", 6.0), fs=FS)
     return {"pasa-bajos 1 kHz": lp, "pasa-banda 1-4 kHz": bp}
 
 
 def quantize(h):
+    """Cuantiza coeficientes reales a Q1.15: redondea h * 2^15 y satura a 16 bits con signo.
+    """
     q = np.round(h * (1 << Q)).astype(np.int64)
     return np.clip(q, -(1 << Q), (1 << Q) - 1)
 
 
 # ------------------------------------------------- modelo bit a bit del HW
 def sat16(v):
+    """Satura un entero al rango de 16 bits con signo (-32768..32767)."""
     return max(-32768, min(32767, int(v)))
 
 
 class FirModel:
-    """Modelo exacto del datapath de hw/rtl/fir_filter.v (un canal)."""
+    """Modelo exacto del datapath de hw/rtl/fir_core.v (un canal)."""
 
     def __init__(self, coefs, ntaps):
         self.h = [int(c) for c in coefs[:ntaps]]
@@ -67,6 +75,11 @@ class FirModel:
         self.sat = False
 
     def step(self, x, bypass=False, gain=32768):
+        """Procesa una muestra igual que el hardware y devuelve la salida con ganancia.
+
+        La linea de retardo se desplaza siempre (tambien en bypass). Marca self.sat si el
+        FIR o la etapa de ganancia saturan.
+        """
         self.dl = [int(x)] + self.dl[:-1]
         if bypass:
             y = int(x)
@@ -83,6 +96,12 @@ class FirModel:
 
 # ------------------------------------------------------------ analisis CD-14
 def analysis(name, h, hq):
+    """Compara la respuesta ideal con la cuantizada e imprime el analisis de CD-14.
+
+    Reporta ganancia en continua, posibilidad de saturacion, coeficiente maximo, error
+    maximo por cuantizar y atenuacion minima en la banda de rechazo. Devuelve
+    (frecuencias, H ideal, H cuantizada) para la grafica.
+    """
     w, H = signal.freqz(h, worN=8192, fs=FS)
     _, Hq = signal.freqz(hq / (1 << Q), worN=8192, fs=FS)
     err_db = 20 * np.log10(np.abs(H - Hq).max() + 1e-12)
@@ -103,6 +122,11 @@ def analysis(name, h, hq):
 
 # ------------------------------------------------------------ vectores
 def write_case(path, desc, bank, ntaps, gain, bypass, xs_l, xs_r, coefs):
+    """Escribe un archivo de vectores: cabecera y una linea "entrada salida" por muestra.
+
+    La salida esperada se calcula con FirModel (un modelo por canal). Devuelve
+    (descripcion, hubo saturacion).
+    """
     ml, mr = FirModel(coefs, ntaps), FirModel(coefs, ntaps)
     with open(path, "w") as f:
         f.write(f"{bank} {ntaps} {gain} {int(bypass)} {len(xs_l)}\n")
@@ -114,6 +138,12 @@ def write_case(path, desc, bank, ntaps, gain, bypass, xs_l, xs_r, coefs):
 
 
 def vectors(outdir, banks):
+    """Genera los 8 casos de prueba en outdir y un README.md con su indice.
+
+    Usa una semilla fija (1113) para que el ruido sea siempre el mismo. El caso
+    "saturacion" usa como entrada el signo de cada coeficiente a fondo de escala: es la
+    entrada que maximiza la salida.
+    """
     outdir.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(1113)
     n = np.arange(200)
@@ -156,6 +186,10 @@ def vectors(outdir, banks):
 
 # ------------------------------------------------------------ exportar
 def export(banks_q, rtl_hex, c_header):
+    """Escribe los coeficientes para el RTL (.hex, 256 lineas) y para C (fir_coefs.h).
+
+    Cada banco se rellena con ceros hasta MAX_TAPS en el .hex.
+    """
     flat = []
     for q in banks_q:
         flat += list(q) + [0] * (MAX_TAPS - len(q))
@@ -177,6 +211,8 @@ def export(banks_q, rtl_hex, c_header):
 
 
 def plot(path, curves):
+    """Grafica la magnitud ideal frente a la cuantizada de ambos filtros y la guarda en path.
+    """
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -197,6 +233,7 @@ def plot(path, curves):
 
 
 def main():
+    """Disena, cuantiza, analiza y genera todos los archivos derivados bajo --out."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=str(ROOT), help="raiz donde escribir (por defecto el repo)")
     a = ap.parse_args()

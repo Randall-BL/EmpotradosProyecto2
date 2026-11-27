@@ -16,6 +16,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$HERE/scripts/env.sh"
 
+# Nombre del sistema y carpeta del SoC.
 SYS=audio_soc
 HW="$HERE/hw/soc"
 # Componentes propios (hw/rtl/*_hw.tcl) ademas de la biblioteca de Quartus ($).

@@ -23,13 +23,15 @@
 #include <stdint.h>
 #include "playlist.h"
 
+/* Estados de reproduccion. */
 typedef enum {
-    FSM_STOPPED = 0,
-    FSM_PLAYING,
-    FSM_PAUSED,
-    FSM_NUM_STATES
+    FSM_STOPPED = 0,                       /* detenido: sin flujo, tiempo en 0 */
+    FSM_PLAYING,                           /* reproduciendo: se envia audio al codec */
+    FSM_PAUSED,                            /* pausado: se conserva la posicion */
+    FSM_NUM_STATES                         /* cantidad de estados (tamano de la tabla) */
 } fsm_state_t;
 
+/* Eventos que recibe la FSM: botones y avisos de la fuente. */
 typedef enum {
     FSM_EV_PLAY_PAUSE = 0,                 /* KEY0 */
     FSM_EV_STOP,                           /* KEY1 */
@@ -37,7 +39,7 @@ typedef enum {
     FSM_EV_NEXT,                           /* KEY3 */
     FSM_EV_TRACK_END,                      /* el HPS termino de entregar la pista */
     FSM_EV_ERROR,                          /* la pista no se pudo leer */
-    FSM_NUM_EVENTS
+    FSM_NUM_EVENTS                         /* cantidad de eventos (tamano de la tabla) */
 } fsm_event_t;
 
 /* Acciones para el lazo principal. */
@@ -51,17 +53,19 @@ typedef enum {
 #define FSM_ACT_ALL_FAILED (1u << 7)   /* ninguna pista se pudo reproducir */
 
 typedef struct {
-    fsm_state_t state;
-    playlist_t *pl;
+    fsm_state_t state;                     /* estado actual */
+    playlist_t *pl;                        /* lista que mueven NEXT/PREV/fin/error */
     uint32_t errors;                       /* errores seguidos */
 } fsm_t;
 
+/* Arranca en DETENIDO sobre la lista pl. */
 void fsm_init(fsm_t *f, playlist_t *pl);
 
 /* Procesa un evento: actualiza estado y playlist, devuelve FSM_ACT_*. Un evento fuera
  * de rango o con la lista vacia no hace nada (devuelve 0). */
 uint32_t fsm_handle(fsm_t *f, fsm_event_t ev);
 
+/* Nombre del estado ("DETENIDO", "REPRODUCIENDO", "PAUSADO"). */
 const char *fsm_state_name(fsm_state_t s);
 
 #endif /* COMMON_FSM_H */

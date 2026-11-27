@@ -18,7 +18,7 @@
 `timescale 1ns / 1ps
 
 module wm8731_model #(
-    parameter real BCLK_NS = 1.0e9 / 3.072e6
+    parameter real BCLK_NS = 1.0e9 / 3.072e6   // periodo de BCLK en ns
 ) (
     input  wire        enable,       // 1 = genera BCLK/LRCK
     // Audio
@@ -41,6 +41,7 @@ module wm8731_model #(
         right = '0;
     end
 
+    // Generador de BCLK (solo con enable).
     always begin
         #(BCLK_NS / 2.0);
         if (enable) bclk = ~bclk;
@@ -52,6 +53,8 @@ module wm8731_model #(
         if (bit_cnt == 0) daclrck = ~daclrck;
     end
 
+    // Receptor: con cada cambio de canal se reinicia la cuenta y se capturan los 16
+    // primeros bits (MSB primero); los otros 16 BCLK del canal se ignoran.
     logic [15:0] shift;
     int rx_bit = 0;
     always @(posedge daclrck or negedge daclrck) rx_bit = 0;
@@ -71,15 +74,16 @@ module wm8731_model #(
     end
 
     // ---------------- I2C ----------------
+    // SDA es de drenador abierto: el modelo solo la baja (para el ACK) o la suelta.
     logic       sda_drive_low = 1'b0;
     assign sda = sda_drive_low ? 1'b0 : 1'bz;
 
-    logic [8:0] regs [0:15];
-    logic [6:0] reg_addr;
-    logic [8:0] reg_data;
-    logic       reg_valid = 1'b0;
-    int         writes = 0;
-    int         other_writes = 0;
+    logic [8:0] regs [0:15];               // ultimo valor escrito en cada registro
+    logic [6:0] reg_addr;                  // ultima escritura: registro
+    logic [8:0] reg_data;                  //                   dato
+    logic       reg_valid = 1'b0;          // pulso por cada escritura al codec
+    int         writes = 0;                // escrituras al codec (0x34)
+    int         other_writes = 0;          // escrituras a otros dispositivos
     initial foreach (regs[i]) regs[i] = 'x;
 
     // Una transferencia: START, 3 bytes (direccion, B15..B8, B7..B0) con ACK, STOP.
@@ -106,10 +110,12 @@ module wm8731_model #(
         end else if (nbytes == 3)
             other_writes++;
     end
+    // Bits de datos: se muestrean con SCL en alto (flanco de subida).
     always @(posedge scl) if (in_frame && nbits < 8) begin
         byte_sr = {byte_sr[6:0], (sda === 1'b0) ? 1'b0 : 1'b1};
         nbits++;
     end
+    // Con SCL en bajo se maneja SDA: ACK despues de cada byte.
     always @(negedge scl) if (in_frame) begin
         if (nbits == 8) begin                 // 8 bits recibidos: ACK en el 9.o
             if (nbytes < 3) b[nbytes] = byte_sr;

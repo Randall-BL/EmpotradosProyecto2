@@ -27,8 +27,8 @@
 typedef struct {
     uintptr_t ctrl;     /* base del esclavo de control */
     uintptr_t chars;    /* base del esclavo de caracteres */
-    uint32_t  cols;
-    uint32_t  rows;
+    uint32_t  cols;     /* columnas visibles */
+    uint32_t  rows;     /* filas visibles */
 } vga_text_t;
 
 /* Lee la resolucion del IP y espera a que termine el borrado del arranque. Hay que
@@ -43,6 +43,7 @@ void vga_text_init(vga_text_t *t, uintptr_t ctrl, uintptr_t chars);
  * reescriben con espacios de relleno (vga_text_print con width), no se borra. */
 void vga_text_clear(const vga_text_t *t);
 
+/* Escribe un caracter en (x, y); fuera de la pantalla no hace nada. */
 void vga_text_put(const vga_text_t *t, uint32_t x, uint32_t y, char c);
 
 /* Escribe s desde (x, y) y rellena con espacios hasta completar width celdas

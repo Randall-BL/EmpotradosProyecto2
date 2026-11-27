@@ -20,7 +20,7 @@ module tb_audio;
     localparam logic [15:0] STEP = 16'h0123;
 
     logic clk = 1'b0, rst_n = 1'b0;
-    always #10 clk = ~clk;
+    always #10 clk = ~clk;                // 50 MHz
 
     wire [9:0] led;
     wire bclk, daclrck, dacdat, scl, sda;
@@ -45,16 +45,19 @@ module tb_audio;
         .vga_R          (), .vga_G  (), .vga_B  ()
     );
 
+    // Codec simulado: genera BCLK/LRCK y entrega cada par recibido en left/right.
     wm8731_model codec (
         .enable (rst_n), .bclk (bclk), .daclrck (daclrck), .dacdat (dacdat),
         .left (left), .right (right), .frame_valid (frame_valid),
         .scl (scl), .sda (sda)
     );
 
-    int errors = 0, frames = 0;
-    bit started = 0, saw_irq_stage = 0;
-    logic [15:0] expect_left;
+    int errors = 0, frames = 0;            // errores y pares verificados
+    bit started = 0, saw_irq_stage = 0;    // ya llego audio / se vio la etapa de IRQ
+    logic [15:0] expect_left;              // proximo valor esperado en el canal L
 
+    // Verificador: corre con cada par completo que deserializa el codec. Se arranca
+    // con el primer par no nulo (antes la FIFO solo saca ceros).
     always @(posedge frame_valid) begin
         if (!started && left != 16'h0000) begin
             started = 1;
@@ -78,6 +81,7 @@ module tb_audio;
         end
     end
 
+    // Control: suelta el reset y espera FRAMES pares (o 15 ms como limite).
     initial begin
         $display("TB_AUDIO: inicio");
         #200 rst_n = 1'b1;

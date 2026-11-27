@@ -20,13 +20,16 @@
 #include "system.h"
 #include "pio.h"
 
-#define WORDS       (SHM_SPAN / 4u)
-#define MARCH_WORDS 64u
-#define PATTERN     0xAAAAAAAAu
-#define ANTIPATTERN 0x55555555u
+#define WORDS       (SHM_SPAN / 4u)    /* palabras de 32 bits en shm */
+#define MARCH_WORDS 64u                /* palabras que recorre el March C- */
+#define PATTERN     0xAAAAAAAAu        /* 1010... */
+#define ANTIPATTERN 0x55555555u        /* 0101... (complemento) */
 
+/* Variable en la RAM del programa: si shm se solapara con la RAM, las pruebas la
+ * pisarian y la prueba 4 lo detecta. */
 static volatile uint32_t ram_marker = 0xC0FFEE00u;
 
+/* Prueba 1: escribe y relee cada bit por separado. Devuelve 1 si alguno falla. */
 static int data_bus(volatile uint32_t *m)
 {
     for (uint32_t bit = 1; bit != 0; bit <<= 1) {
@@ -37,6 +40,7 @@ static int data_bus(volatile uint32_t *m)
     return 0;
 }
 
+/* Prueba 2: bus de direcciones (ver cabecera). Devuelve 1 si alguna linea falla. */
 static int address_bus(volatile uint32_t *m)
 {
     for (uint32_t off = 1; off < WORDS; off <<= 1)
@@ -60,6 +64,8 @@ static int address_bus(volatile uint32_t *m)
     return 0;
 }
 
+/* Prueba 3: March C- reducido sobre MARCH_WORDS palabras desde m. Devuelve 1 si
+ * alguna celda no guarda el valor escrito. */
 static int march(volatile uint32_t *m)
 {
     for (uint32_t i = 0; i < MARCH_WORDS; ++i) m[i] = 0;
@@ -76,6 +82,8 @@ static int march(volatile uint32_t *m)
     return 0;
 }
 
+/* Ejecuta las 5 pruebas en orden; devuelve 0 si todas pasan o el numero de la
+ * primera que fallo. */
 static uint32_t run(void)
 {
     volatile uint32_t *m = (volatile uint32_t *)SHM_BASE;
@@ -85,6 +93,8 @@ static uint32_t run(void)
     if (march(m) || march(m + WORDS - MARCH_WORDS)) return 3;
     if (ram_marker != 0xC0FFEE00u) return 4;
 
+    /* Prueba 5: byte 1 = 0xAB y media palabra 1 (bytes 2-3) = 0x1234 deben formar
+     * 0x1234AB00 en la palabra 0 (little-endian). */
     volatile uint8_t  *b = (volatile uint8_t *)SHM_BASE;
     volatile uint16_t *h = (volatile uint16_t *)SHM_BASE;
     m[0] = 0;
@@ -94,6 +104,7 @@ static uint32_t run(void)
     return 0;
 }
 
+/* Corre las pruebas y deja el resultado en LEDR. */
 int main(void)
 {
     pio_write(PIO_LED_BASE, 0x2A1);

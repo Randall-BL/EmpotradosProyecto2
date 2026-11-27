@@ -16,36 +16,46 @@
 
 /* ---------- mocks ---------- */
 
+/* Lado HPS: memoria compartida en RAM y su modelo productor. */
 static shm_t shm;
 static hps_model_t hps;
 static uint32_t hps_rate = 256;            /* cuadros que produce el HPS por ms */
+/* Lado Nios V: fuente, cola de botones, buffers de reverberacion y la app. */
 static shm_source_t src;
 static evq_t events;
 static int16_t rev_l[APP_REVERB_FRAMES], rev_r[APP_REVERB_FRAMES];
 static app_t app;
 
+/* Reloj simulado (ms) y estado de la FIFO del codec simulada. */
 static uint32_t now_ms;
 static uint32_t fifo_level;                /* cuadros en la FIFO del codec */
 static uint32_t frames_out;                /* cuadros escritos por la app */
 static uint32_t last_frame;
 static uint32_t stream_errors;             /* cuadros fuera de orden o de otra pista */
 static uint32_t exp_track = 0xFFFF, exp_pos;
-static int check_stream = 1;
+static int check_stream = 1;               /* 0 = no verificar el orden (reverberacion) */
 
+/* Entradas que fija cada prueba y salidas que registran los mocks. */
 static uint32_t sw_value, adc_value = 4095;
 static filter_id_t hw_filter = FILTER_COUNT;
 static uint32_t hw_gain, filter_calls, gain_calls;
 static uint32_t panel_time = 999, panel_track = 999, panel_leds;
-static char grid[SCREEN_ROWS][SCREEN_COLS + 1];
+static char grid[SCREEN_ROWS][SCREEN_COLS + 1];   /* copia de la pantalla */
 
 #define AUDIO_DEPTH_MOCK 128u             /* FIFO del IP de Audio (NV-06) */
 
+/* audio.space del codec simulado: lo que falta para llenar la FIFO. */
 static uint32_t audio_space(void *ctx)
 {
     (void)ctx;
     return AUDIO_DEPTH_MOCK - fifo_level;
 }
 
+/*
+ * audio.write del codec simulado: mete el cuadro en la FIFO y verifica que el flujo
+ * sea el esperado (cada pista nueva empieza en la posicion 0 y las posiciones son
+ * consecutivas). Los errores se cuentan en stream_errors.
+ */
 static void audio_write(void *ctx, uint32_t lr)
 {
     (void)ctx;
@@ -65,6 +75,7 @@ static void audio_write(void *ctx, uint32_t lr)
     exp_pos = pos;
 }
 
+/* Mocks de una linea: guardan lo que la app pidio o devuelven el valor fijado. */
 static void fx_filter(void *ctx, filter_id_t f) { (void)ctx; hw_filter = f; filter_calls++; }
 static void fx_gain(void *ctx, uint32_t g) { (void)ctx; hw_gain = g; gain_calls++; }
 static uint32_t clock_ms(void *ctx) { (void)ctx; return now_ms; }
@@ -74,6 +85,7 @@ static void panel_set_leds(void *ctx, uint32_t v) { (void)ctx; panel_leds = v; }
 static uint32_t in_sw(void *ctx) { (void)ctx; return sw_value; }
 static uint32_t in_adc(void *ctx) { (void)ctx; return adc_value; }
 
+/* screen.print: escribe en la matriz grid igual que vga_text_print en la tarjeta. */
 static void grid_print(void *ctx, uint32_t x, uint32_t y, const char *s, uint32_t width)
 {
     (void)ctx;
@@ -86,6 +98,7 @@ static void grid_print(void *ctx, uint32_t x, uint32_t y, const char *s, uint32_
         grid[y][x + i] = ' ';
 }
 
+/* 1 si la fila y de la pantalla contiene el texto s. */
 static int row_has(uint32_t y, const char *s) { return strstr(grid[y], s) != NULL; }
 
 /* Un ms: la app da una vuelta (o varias), el HPS produce y el codec consume 48. */
@@ -101,11 +114,18 @@ static void step_ms(uint32_t n)
     }
 }
 
+/* Simula la ISR de botones: encola la pulsacion de KEY[key]. */
 static void press(uint32_t key)
 {
     evq_push(&events, APP_EV_KEY(key));
 }
 
+/*
+ * Deja todo como recien encendido: shm y pantalla en blanco, reloj en 1000 ms, mocks
+ * en cero, puertos conectados y app_init(). Si start_hps, el modelo del HPS publica
+ * ntracks pistas de frames cuadros (bad_mask = pistas que fallan); si no, el HPS
+ * "no arranco" todavia.
+ */
 static void setup(uint32_t ntracks, uint32_t frames, uint32_t bad_mask, int start_hps)
 {
     memset(&shm, 0, sizeof shm);
@@ -139,6 +159,8 @@ static void setup(uint32_t ntracks, uint32_t frames, uint32_t bad_mask, int star
 
 /* ---------- pruebas ---------- */
 
+/* Antes de que el HPS publique la tabla: mensaje de espera y botones sin efecto.
+ * Al publicarse, la lista y la pantalla se llenan. */
 static void test_waiting_for_hps(void)
 {
     setup(0, 0, 0, 0);
@@ -166,6 +188,8 @@ static void test_waiting_for_hps(void)
     CHECK(!row_has(7, "Esperando"));
 }
 
+/* PLAY arranca rapido y cuenta el tiempo; PAUSA congela audio y tiempo; reanudar no
+ * recarga la pista; STOP vuelve el tiempo a cero. */
 static void test_play_pause_stop(void)
 {
     setup(10, 3u * 48000u, 0, 1);
@@ -212,6 +236,8 @@ static void test_play_pause_stop(void)
     CHECK_EQ(app.underruns, 0);
 }
 
+/* Anterior/siguiente detenido, reproduciendo (cambio en < 2 s sin restos de la pista
+ * anterior) y en pausa; un rebote se descarta. */
 static void test_navigation(void)
 {
     setup(10, 2u * 48000u, 0, 1);
@@ -293,6 +319,7 @@ static void test_two_laps(void)
     CHECK(frames_out >= 20u * frames);
 }
 
+/* Las pistas que no se pueden leer se saltan; si fallan todas, se detiene con alerta. */
 static void test_bad_tracks(void)
 {
     setup(10, 4800, (1u << 2) | (1u << 3), 1);
@@ -313,6 +340,7 @@ static void test_bad_tracks(void)
     CHECK(row_has(7, "ninguna cancion"));
 }
 
+/* HPS sin SD: alerta y mensaje. Menos de 10 pistas: funciona pero avisa. */
 static void test_hps_failed(void)
 {
     setup(0, 0, 0, 0);
@@ -329,6 +357,7 @@ static void test_hps_failed(void)
     CHECK(row_has(7, "menos de 10"));
 }
 
+/* Si el HPS deja de producir, la FIFO se vacia: cada episodio cuenta un subdesborde. */
 static void test_underrun(void)
 {
     setup(10, 10u * 48000u, 0, 1);
@@ -429,6 +458,7 @@ static void test_key_led(void)
     CHECK_EQ(app.keys_accepted, 2);
 }
 
+/* Corre todas las pruebas y devuelve 0 si ninguna comprobacion fallo. */
 int main(void)
 {
     RUN(test_waiting_for_hps);

@@ -12,6 +12,7 @@ import pathlib
 import sys
 import xml.etree.ElementTree as ET
 
+# Rutas: raiz del repo, descripcion del SoC y system.h del BSP de la aplicacion.
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SOPC = ROOT / "hw" / "soc" / "audio_soc.sopcinfo"
 SYSTEM_H = ROOT / "build" / "niosv" / "bsp" / "system.h"
@@ -31,6 +32,7 @@ def system_h_spans():
 
 
 def params(node):
+    """Diccionario nombre -> valor de los <parameter> de un nodo del .sopcinfo."""
     out = {}
     for p in node.findall("parameter"):
         v = p.find("value")
@@ -56,6 +58,11 @@ def span_bytes(itf, p):
 
 
 def main():
+    """Lee el .sopcinfo y escribe en Markdown el mapa de cada maestro y las IRQ.
+
+    Pasos: tipo y tamano de cada esclavo; conexiones avalon (maestro -> esclavo con
+    su base) e interrupt (numero, fuente, receptor); y las tablas ordenadas.
+    """
     if not SOPC.exists():
         sys.exit(f"ERROR: falta {SOPC}; corra scripts/build-soc.sh")
     root = ET.parse(SOPC).getroot()
@@ -72,6 +79,8 @@ def main():
     hspans = system_h_spans()
 
     def span_of(slave):
+        """Tamano de un esclavo: primero el de system.h, si no el calculado del .sopcinfo.
+        """
         inst, itf = slave.split(".")
         for key in (f"{inst}_{itf}".upper(), inst.upper()):
             if key in hspans:

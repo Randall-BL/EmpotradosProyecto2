@@ -45,13 +45,19 @@ def env(i: int, n: int, fs: int, a: float = 0.01, r: float = 0.05) -> float:
 
 
 class Song:
+    """Cancion estereo en construccion: dos listas de muestras en [-1, 1] a fs Hz."""
+
     def __init__(self, fs: int):
+        """Cancion vacia a fs Hz; nyq es el limite de frecuencia que se permite sintetizar.
+        """
         self.fs = fs
         self.nyq = 0.45 * fs
         self.left: list = []
         self.right: list = []
 
     def add(self, l: list, r: list) -> None:
+        """Agrega una seccion (canal izquierdo y derecho) seguida de GAP segundos de silencio.
+        """
         self.left += l
         self.right += r
         gap = int(GAP * self.fs)
@@ -68,10 +74,12 @@ class Song:
                 / norm for i in range(n)]
 
     def silence(self, dur: float) -> list:
+        """dur segundos de silencio (una lista de ceros)."""
         return [0.0] * int(dur * self.fs)
 
 
 def compose(fs: int) -> Song:
+    """Sintetiza las 9 secciones de la cancion a fs Hz (ver la lista del encabezado)."""
     s = Song(fs)
     organ = (1.0, 0.5, 0.25, 0.12)
 
@@ -134,12 +142,15 @@ def compose(fs: int) -> Song:
 
 
 def chunk(cid: bytes, body: bytes) -> bytes:
+    """Chunk RIFF: id + tamano + cuerpo, con el byte de relleno si el largo es impar."""
     data = cid + struct.pack("<I", len(body)) + body
     return data + (b"\x00" if len(body) % 2 else b"")
 
 
 def info(title: str) -> bytes:
+    """Chunk LIST/INFO con el titulo dado y el artista y album fijos."""
     def z(s: str) -> bytes:
+        """Texto ASCII terminado en byte 0."""
         return s.encode("ascii") + b"\x00"
     body = b"INFO" + chunk(b"INAM", z(title)) + chunk(b"IART", z(ARTIST)) + \
         chunk(b"IPRD", z(ALBUM))
@@ -147,6 +158,9 @@ def info(title: str) -> bytes:
 
 
 def write_wav(path: str, s: Song, title: str) -> None:
+    """Escribe la cancion como WAV estereo de 16 bits: recorta a [-1, 1], escala a PEAK
+    y arma RIFF/WAVE con fmt, LIST/INFO y data.
+    """
     fs = s.fs
     pcm = bytearray()
     for l, r in zip(s.left, s.right):
@@ -159,6 +173,8 @@ def write_wav(path: str, s: Song, title: str) -> None:
 
 
 def main() -> None:
+    """Genera una copia de la cancion por cada frecuencia de RATES en la carpeta de salida.
+    """
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(here, "build", "hps", "music-sd")
     os.makedirs(out, exist_ok=True)

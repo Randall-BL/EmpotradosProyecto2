@@ -17,6 +17,7 @@ JOBS="${JOBS:-2}"
 OUT="$HERE/build/sim/test-all"
 mkdir -p "$OUT"
 
+# Pruebas rapidas (nombre o nombre:opciones de elaboracion) y modulos aislados.
 TESTS=("pio" "audio" "adc" "adc:-gLTC=1" "shm")
 RTL=("filtro_audio" "seg7_time")
 if [ "${1:-}" = "--all" ]; then
@@ -24,12 +25,15 @@ if [ "${1:-}" = "--all" ]; then
     RTL+=("filtro_respuesta")
 fi
 
+# Resultados de las pruebas que corren en serie: PC y modulos aislados.
 declare -A RESULT
 if make -C "$HERE/tests" > "$OUT/pc.log" 2>&1; then RESULT[pc]=PASS; else RESULT[pc]=FAIL; fi
 for m in "${RTL[@]}"; do
     if "$HERE/scripts/sim-rtl.sh" "$m" > "$OUT/rtl_$m.log" 2>&1; then RESULT[rtl_$m]=PASS; else RESULT[rtl_$m]=FAIL; fi
 done
 
+# Corre un testbench del SoC y escribe "nombre|PASS" o "nombre|FAIL". Se exporta
+# para que xargs lo pueda llamar en paralelo.
 run_one() {
     local spec="$1" name="${1%%:*}" opts="" tag
     [[ "$spec" == *:* ]] && opts="${spec#*:}"
@@ -52,6 +56,7 @@ done
 export NOBUILD=1
 printf '%s\n' "${TESTS[@]}" | xargs -P "$JOBS" -I{} bash -c 'run_one "$@"' _ {} > "$OUT/summary.txt"
 
+# Tabla final en Markdown; el codigo de salida es 0 solo si no hubo ningun FAIL.
 echo "| Prueba | Resultado |"
 echo "|---|---|"
 echo "| PC (make -C tests) | ${RESULT[pc]} |"

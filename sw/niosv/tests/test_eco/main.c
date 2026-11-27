@@ -10,6 +10,7 @@
 #include "system.h"
 #include "pio.h"
 
+/* Paso 1: todos los LEDs encendidos hasta que cambie algun switch. Paso 2: LEDR = SW. */
 int main(void)
 {
     uint32_t inicial = pio_read(PIO_SW_BASE) & 0x3FFu;

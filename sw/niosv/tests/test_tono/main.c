@@ -20,12 +20,13 @@
 #include "vga_text.h"
 #include "volume.h"
 
-#define FS             48000u
-#define CODEC_TIMEOUT  20000000u
-#define POT_CHANNEL    0u
+#define FS             48000u        /* frecuencia del codec */
+#define CODEC_TIMEOUT  20000000u     /* lecturas de estado antes de rendirse */
+#define POT_CHANNEL    0u            /* canal del ADC del potenciometro */
 
 static vga_text_t vga;
 
+/* Puerto de pantalla sobre el driver de texto VGA. */
 static void vga_port_print(void *ctx, uint32_t x, uint32_t y, const char *s, uint32_t width)
 {
     vga_text_print((const vga_text_t *)ctx, x, y, s, width);
@@ -40,6 +41,7 @@ static uint32_t led_bar(uint32_t step)
     return (1u << n) - 1u;
 }
 
+/* Pantalla, codec, ADC y tono; despues genera audio sin fin y atiende controles. */
 int main(void)
 {
     vga_text_init(&vga, CHAR_BUF_AVALON_CHAR_CONTROL_SLAVE_BASE,
@@ -58,10 +60,12 @@ int main(void)
         }
     }
 
+    /* Volumen inicial segun la posicion actual del potenciometro. */
     adc_init(ADC_BASE);
     volume_t vol;
     volume_init(&vol, adc_read(ADC_BASE, POT_CHANNEL));
 
+    /* Frecuencia segun SW0; descarta flancos de botones viejos. */
     tone_t tone;
     uint32_t sw0 = pio_read(PIO_SW_BASE) & 1u;
     tone_init(&tone, sw0 ? 1000u : 440u, FS);
@@ -74,6 +78,7 @@ int main(void)
         /* Audio: llenar lo que quepa en la FIFO. */
         uint32_t n = audio_space(AUDIO_BASE);
         for (uint32_t i = 0; i < n; ++i) {
+            /* Mismo valor en los dos canales; el volumen se aplica en software. */
             int16_t s = muted ? 0 : volume_scale(tone_next(&tone), vol.gain_q15);
             audio_write_frame(AUDIO_BASE, s, s);
         }

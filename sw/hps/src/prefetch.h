@@ -21,9 +21,9 @@
 #define PREFETCH_SLOW_MS 50u              /* fread mas lento que esto se reporta */
 
 typedef struct {
-    pthread_t th;
-    pthread_mutex_t mu;
-    pthread_cond_t cv;
+    pthread_t th;                         /* hilo lector */
+    pthread_mutex_t mu;                   /* protege indices y banderas */
+    pthread_cond_t cv;                    /* avisa "hay datos" y "hay espacio" */
     int ready;                            /* mu y cv inicializados */
     int running;                          /* hay un hilo que unir */
     uint8_t *buf;                         /* PREFETCH_BYTES, se reserva una vez */
@@ -31,12 +31,12 @@ typedef struct {
     size_t left;                          /* bytes del archivo que faltan leer */
     size_t head, tail;                    /* bytes escritos / consumidos (libres) */
     int done;                             /* el hilo termino (EOF, error o cancelado) */
-    int cancel;
+    int cancel;                           /* pedido de terminar al hilo */
     int verbose;                          /* imprimir las lecturas lentas */
     uint32_t track;                       /* solo para los mensajes */
 
     /* estadisticas de la pista en curso */
-    uint32_t reads, slow_reads, max_read_ms;
+    uint32_t reads, slow_reads, max_read_ms;   /* fread hechos, lentos, el mas lento */
     size_t min_level;                     /* menor ocupacion vista al consumir */
 } prefetch_t;
 

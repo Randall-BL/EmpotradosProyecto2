@@ -8,13 +8,14 @@
 #include <string.h>
 #include "screen.h"
 
-static char grid[SCREEN_ROWS][SCREEN_COLS + 1];
-static int failures;
+static char grid[SCREEN_ROWS][SCREEN_COLS + 1];   /* pantalla simulada (filas con '\0') */
+static int failures;                               /* comprobaciones fallidas */
 
 #define CHECK(cond) do { \
     if (!(cond)) { printf("FALLO %s:%d: %s\n", __FILE__, __LINE__, #cond); failures++; } \
 } while (0)
 
+/* Puerto de pantalla sobre la matriz: igual que vga_text_print en la tarjeta. */
 static void grid_print(void *ctx, uint32_t x, uint32_t y, const char *s, uint32_t width)
 {
     (void)ctx;
@@ -27,11 +28,18 @@ static void grid_print(void *ctx, uint32_t x, uint32_t y, const char *s, uint32_
         grid[y][x + i] = ' ';
 }
 
+/* 1 si la fila y, desde la columna x, empieza con el texto s. */
 static int starts(uint32_t y, uint32_t x, const char *s)
 {
     return strncmp(&grid[y][x], s, strlen(s)) == 0;
 }
 
+/*
+ * 1. Formato de numeros (MM:SS y enteros con relleno).
+ * 2. Dibujo completo sobre una matriz llena de '.': no debe quedar ningun '.' y cada
+ *    campo debe estar en su fila y columna.
+ * 3. Redibujo con textos mas cortos: los anteriores quedan borrados.
+ */
 int main(int argc, char **argv)
 {
     char b[16];

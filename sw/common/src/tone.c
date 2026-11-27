@@ -1,3 +1,11 @@
+/*
+ * Generador de tono senoidal por tabla (IN-02, IN-03). Ver tone.h.
+ *
+ * Sintesis digital directa (DDS): un acumulador de fase de 32 bits recorre un ciclo
+ * completo de seno cuando da la vuelta (2^32 = 360 grados). Los 10 bits altos de la
+ * fase eligen una de las 1024 muestras de la tabla. Avanzar la fase en
+ * step = f * 2^32 / fs por muestra produce un tono de frecuencia f.
+ */
 #include "tone.h"
 
 /* Generada por scripts/gen_sine_table.py: 1024 muestras, amplitud 16384 (-6 dBFS). */
@@ -132,6 +140,7 @@ static const int16_t sine_table[TONE_TABLE_SIZE] = {
       -804,   -704,   -603,   -503,   -402,   -302,   -201,   -101,
 };
 
+/* Prepara el tono: fase en 0 y paso de fase para freq_hz a la frecuencia fs_hz. */
 void tone_init(tone_t *t, uint32_t freq_hz, uint32_t fs_hz)
 {
     t->phase = 0;
@@ -139,9 +148,10 @@ void tone_init(tone_t *t, uint32_t freq_hz, uint32_t fs_hz)
     t->step = (uint32_t)(((uint64_t)freq_hz << 32) / fs_hz);
 }
 
+/* Devuelve la muestra actual y avanza la fase un paso (la suma da la vuelta sola). */
 int16_t tone_next(tone_t *t)
 {
-    int16_t s = sine_table[t->phase >> 22];
+    int16_t s = sine_table[t->phase >> 22];   /* 32 - 22 = 10 bits -> indice 0..1023 */
     t->phase += t->step;
     return s;
 }

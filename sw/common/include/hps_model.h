@@ -14,15 +14,15 @@
 #include <stdint.h>
 #include "shm_proto.h"
 
-#define HPS_MODEL_TAG 0x4000u
+#define HPS_MODEL_TAG 0x4000u              /* marca en el canal derecho de cada cuadro */
 
 typedef struct {
-    volatile shm_t *s;
-    uint32_t ntracks;
+    volatile shm_t *s;                     /* memoria compartida simulada */
+    uint32_t ntracks;                      /* pistas publicadas */
     uint32_t frames;                       /* cuadros por pista */
     uint32_t bad_mask;                     /* bit i = la pista i "no se puede leer" */
     uint32_t streaming;                    /* 1 mientras entrega una pista */
-    uint32_t track, pos;
+    uint32_t track, pos;                   /* pista en curso y siguiente cuadro a escribir */
     uint32_t commands;                     /* comandos atendidos */
 } hps_model_t;
 
