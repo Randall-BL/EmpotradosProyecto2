@@ -1,0 +1,38 @@
+% Arquitectura de hardware del SoC (equivale al diagrama Mermaid "arq-hw").
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[font=\small]
+  % FPGA
+  \node[blkn,minimum width=2.8cm] (cpu) at (1.4,-0.6) {Nios V/m\\pipeline};
+  \node[blkn,minimum width=2.8cm] (ram) at (1.4,-2.4) {RAM on-chip\\128 KB};
+  \node[blkn,minimum width=2.8cm] (shm) at (1.4,-5.0) {\texttt{shm} 64 KB\\doble puerto};
+  \node[blkn,minimum width=2.8cm,font=\footnotesize] (pll) at (1.4,-8.4) {Audio PLL 12.288 MHz\\Video PLL 25 MHz};
+  \draw[line width=2.2pt,cGris] (3.6,0.2) -- (3.6,-10.0) node[below,font=\footnotesize,black] {Avalon-MM};
+  \foreach \n/\y/\t in {pio/-0.4/{PIO KEY / SW / LEDR},aud/-1.8/{IP de Audio\\FIFO 128},cfg/-3.2/{Audio/Video Config\\(I\textsuperscript{2}C)},adc/-4.6/{ADC Controller},cb/-6.0/{Character Buffer\\80 $\times$ 60}}{
+    \node[blkl,minimum width=3.2cm] (\n) at (6.0,\y) {\t};
+    \draw[thick] (3.6,\y) -- (\n.west);}
+  \node[blkp,minimum width=3.2cm,draw=cOwn,fill=cOwn!10] (fil) at (6.0,-7.6) {\texttt{filtro\_audio}\\FIR + ganancia (propio)};
+  \node[blkp,minimum width=3.2cm,draw=cOwn,fill=cOwn!10] (seg) at (6.0,-9.1) {\texttt{seg7\_time}\\MM:SS (propio)};
+  \draw[thick] (3.6,-7.6) -- (fil.west);
+  \draw[thick] (3.6,-9.1) -- (seg.west);
+  \foreach \n in {cpu,ram,shm} \draw[thick] (\n.east) -- (3.6,0 |- \n.east);
+  \node[blkl,minimum width=2.6cm] (vga) at (9.6,-6.0) {FIFO doble reloj\\+ VGA Controller};
+  \draw[ln] (cb) -- (vga);
+  \begin{scope}[on background layer]
+    \node[draw=cLog,dashed,rounded corners=4pt,fit=(cpu)(pll)(pio)(seg)(vga),inner sep=10pt,
+          label={[font=\small\bfseries,text=cLog]above:FPGA --- Platform Designer (\texttt{audio\_soc})}] {};
+  \end{scope}
+  % Externos
+  \node[blkn,minimum width=2.6cm] (hps) at (-4.0,-5.0) {HPS ARM Cortex-A9\\Linux mínimo\\SD + FAT32 + WAV};
+  \draw[{Latex[length=2mm]}-{Latex[length=2mm]},thick] (hps) -- node[above,font=\footnotesize,pos=0.45]{puente} node[below,font=\footnotesize,pos=0.45]{H2F} (shm);
+  \node[blkn,minimum width=2.4cm] (codec) at (13.2,-2.5) {Códec\\WM8731};
+  \node[blkn,minimum width=2.4cm] (chip) at (13.2,-4.6) {AD7928 / LTC2308\\potenciómetro};
+  \node[blkn,minimum width=2.4cm] (mon) at (13.2,-6.0) {Monitor VGA};
+  \node[blkn,minimum width=2.4cm] (hex) at (13.2,-9.1) {HEX5..HEX0};
+  \node[blkn,minimum width=2.4cm] (brd) at (13.2,-0.4) {KEY, SW, LEDR};
+  \draw[ln] (aud.east) -- node[above,font=\footnotesize]{DACDAT} (codec.west |- aud.east);
+  \draw[ln] (cfg.east) -- node[below,font=\footnotesize]{I\textsuperscript{2}C} (codec.west |- cfg.east);
+  \draw[{Latex[length=2mm]}-{Latex[length=2mm]},thick] (adc) -- node[above,font=\footnotesize]{SPI} (chip);
+  \draw[ln] (vga) -- (mon);
+  \draw[ln] (seg) -- (hex);
+  \draw[{Latex[length=2mm]}-{Latex[length=2mm]},thick] (pio) -- (brd);
+\end{tikzpicture}}

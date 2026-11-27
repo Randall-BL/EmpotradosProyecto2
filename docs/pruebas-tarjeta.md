@@ -84,8 +84,8 @@ aquí se confirma con la SD, el códec y el tiempo real.
 | PR-07 respuesta a botones | Grabar a 60 fps (o con SignalTap sobre `KEY` y `LEDR6`) mientras se pulsa KEY3 varias veces. | LEDR6 cambia con cada pulsación aceptada: contar los cuadros entre el dedo y el LED. < 200 ms (≤ 12 cuadros a 60 fps). En simulación: 17 µs (`tb_pio`) y una vuelta del lazo (`tb_player`). | |
 | PR-07 cambio de filtro | Con música, mover SW0 (pasa-bajos) y grabar el line-out y la tarjeta. | El sonido cambia < 100 ms después del LED (LEDR0). En simulación ≤ 41 ms (`test_app`). | |
 | PR-07 cambio de canción | KEY3 reproduciendo; grabar audio y video. | La canción nueva suena < 2 s después de la pulsación (depende de la lectura de la SD del HPS). | |
-| PR-07 arranque | Cronometrar desde el reset (o el encendido) hasta que suena la primera canción con KEY0, o hasta que la pantalla muestra la lista. | < 10 s (lo domina el arranque del HPS, D). | |
-| PR-08 estabilidad | Reproducir la lista completa dos vueltas sin tocar nada. | Sin reinicios ni cortes audibles; LEDR5 apagado y sin "Subdesbordes" en la fila de mensajes de la pantalla al final. | |
+| PR-07 arranque | Cronometrar desde el reset (o el encendido) hasta que suena la primera canción con KEY0, o hasta que la pantalla muestra la lista. | < 10 s (lo domina el arranque del HPS, D). | **OK** (nov 2026): arranca en menos de 5 s. |
+| PR-08 estabilidad | Reproducir la lista completa dos vueltas sin tocar nada. | Sin reinicios ni cortes audibles; LEDR5 apagado y sin "Subdesbordes" en la fila de mensajes de la pantalla al final. | **OK** (nov 2026): la lista completa sin cortes ni reinicios. |
 
 ## Si algo falla
 
