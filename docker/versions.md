@@ -19,7 +19,7 @@ Consultadas el 2026-11-03 con `apt-cache policy` dentro de la base.
 | Grupo (capa) | Paquete | Versión | Para qué |
 |---|---|---|---|
 | Compilación nativa | `gcc` | 4:13.2.0-7ubuntu1 (gcc 13.3) | Pruebas en C de `sw/common` (`make test`), con ASan/UBSan |
-| | `libc6-dev` | 2.39-0ubuntu8.9 | |
+| | `libc6-dev` | 2.39-0ubuntu8.12 | |
 | | `make` | 4.3-4.1build2 | Makefile raíz (DK-10) |
 | | `file` | 1:5.45-3build1 | Comprobar el tipo de ELF (DK-08, `make hps`) |
 | | `ca-certificates` | 20260816ubuntu0.24.04.2 | `pip` por HTTPS |
