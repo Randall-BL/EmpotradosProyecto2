@@ -901,10 +901,11 @@ subir de un extremo al otro.
 - [x] **DK-18** Subir como artefactos los reportes, logs y formas de onda (VCD/FST),
       también cuando fallan (`if: always()`), con tiempo de retención definido. *GRUPO* ⟵
       DK-17
-- [~] **DK-19** `C·1` Hacer obligatorio el check de CI en la protección de `main` y `develop`
+- [x] **DK-19** `C·1` Hacer obligatorio el check de CI en la protección de `main` y `develop`
       (lo configura quien administra el repositorio). *§5 p.8* ⟵ DK-17
       Pasos en [docker/README.md](docker/README.md#hacer-obligatorio-el-check-dk-19); falta que
       lo active quien administra el repositorio, después de la primera corrida en un PR.
+      Activo desde el 27 nov en `main` y `develop` (check `lint, test, sim, hps`).
 
 ### 8.5 Documentación
 
