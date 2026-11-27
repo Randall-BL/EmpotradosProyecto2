@@ -421,7 +421,7 @@ subir de un extremo al otro.
 
 - [x] **GIT-01** Ramas `main`/`develop`, protección de `main`, `CONTRIBUTING.md`, etiquetas,
       hitos e issues de planeamiento, `.gitignore`. *§5 p.8*
-- [~] **GIT-02** `Todos` Estructura de directorios (ver "Reglas transversales"). Ya existen
+- [x] **GIT-02** `Todos` Estructura de directorios (ver "Reglas transversales"). Ya existen
       `hw/soc/`, `scripts/`, `sim/questa/`, `sw/niosv/src/`, `docs/`; faltan `hw/rtl/`,
       `sw/common/`, `sw/hps/`, `tests/`, `docker/`, que se crean con su primer archivo real.
       *§5 p.8* · #2
@@ -459,7 +459,7 @@ subir de un extremo al otro.
       contenedor (DK-02).
       **Decidido:** Linux mínimo (U-Boot 2024.01, Linux 6.6.60, BusyBox en initramfs) →
       [docs/decisiones/CD-02.md](docs/decisiones/CD-02.md).
-- [ ] **CD-03** `D·2` Camino de las muestras y presupuesto de latencia: SD → HPS → buffer
+- [x] **CD-03** `D·2` Camino de las muestras y presupuesto de latencia: SD → HPS → buffer
       compartido → Nios V → filtro → FIFO del IP de Audio. Calcular tamaños de buffer: el
       audio que ya pasó por el filtro y espera salir debe durar < 100 ms (cambio de filtro,
       §3-F p.4) y el buffer previo debe cubrir el peor caso de lectura de la SD (sin cortes,
@@ -511,7 +511,7 @@ subir de un extremo al otro.
 - [x] **CD-15** `D·2` Comparar al menos dos arquitecturas completas (p. ej. A con filtros en
       HW vs A con filtros en HPS) en una tabla de rendimiento, latencia, recursos y
       complejidad. *§3 p.3, §5 p.7 (7%)* ⟵ CD-01..14, RP-04 · #3 (EVID)
-- [ ] **CD-16** `D·2` Diagramas de arquitectura de hardware (bloques del SoC) y de software
+- [x] **CD-16** `D·2` Diagramas de arquitectura de hardware (bloques del SoC) y de software
       (módulos, flujo, ISR, comunicación HPS ↔ Nios V). *§5 p.8 (README)* ⟵ CD-01 · #4 (EVID)
 
 ## 3. Hardware (FPGA)
@@ -856,7 +856,7 @@ subir de un extremo al otro.
 - [x] **DK-08** `D·1` "Hola mundo" ARM compilado en el contenedor; `file` muestra un ELF de ARM.
       *GRUPO* ⟵ DK-05
       `hps_player` y BusyBox: ELF ARM estáticos compilados en el contenedor `hps`.
-- [ ] **DK-09** `B·1` Simulación trivial con cocotb (p. ej. un contador) que pasa en Icarus
+- [x] **DK-09** `B·1` Simulación trivial con cocotb (p. ej. un contador) que pasa en Icarus
       dentro del contenedor. *GRUPO* ⟵ DK-05
 
 ### 8.3 Simulación y pruebas
@@ -868,16 +868,16 @@ subir de un extremo al otro.
       Hecho antes que DK-09: `make sim` corre cada `sim/cocotb/<modulo>/Makefile` que
       exista (hoy ninguno) y `make hps` compila `sw/common` para ARM hasta que exista
       `sw/hps/Makefile`. Además `make ci` y `make docker-<objetivo>`.
-- [ ] **DK-11** `B·3` Testbench cocotb del filtro obligatorio contra el modelo NumPy/SciPy con
+- [x] **DK-11** `B·3` Testbench cocotb del filtro obligatorio contra el modelo NumPy/SciPy con
       los mismos coeficientes cuantizados: impulso (salida = coeficientes), escalón (valor
       final = suma de coeficientes), senoidales en banda de paso y de rechazo (atenuación
       esperada), saturación con entradas extremas, reset y bypass (identidad). Tolerancia en
       LSB justificada por el redondeo de CD-14. *§3-HW p.4* ⟵ HW-13, HW-12, DK-09 · #10 (OBL,
       EVID)
-- [ ] **DK-12** `B·2` Testbench cocotb de la interfaz de registros Avalon-MM: valores de reset,
+- [x] **DK-12** `B·2` Testbench cocotb de la interfaz de registros Avalon-MM: valores de reset,
       lectura/escritura de cada registro, bits de solo lectura, carga y relectura de
       coeficientes, dirección inválida. *§3-HW p.4* ⟵ HW-14, DK-09 · #10 (OBL, EVID)
-- [ ] **DK-13** `B·1` Testbench cocotb de cada módulo HDL propio restante (`seg7_time`,
+- [x] **DK-13** `B·1` Testbench cocotb de cada módulo HDL propio restante (`seg7_time`,
       volumen si es HW, remuestreo si es HW). *GRUPO + §3-HW p.4* ⟵ HW-10, HW-15
 - [x] **DK-14** Pruebas en C de `sw/common/` (Unity vendorizado o un `test.h` mínimo) con archivos en `tests/data/` generados por `tests/data/gen_wavs.py`
       (8/16/44.1 kHz, mono/estéreo, con y sin `LIST/INFO`, chunks extra y tamaños impares,
@@ -901,10 +901,11 @@ subir de un extremo al otro.
 - [x] **DK-18** Subir como artefactos los reportes, logs y formas de onda (VCD/FST),
       también cuando fallan (`if: always()`), con tiempo de retención definido. *GRUPO* ⟵
       DK-17
-- [~] **DK-19** `C·1` Hacer obligatorio el check de CI en la protección de `main` y `develop`
+- [x] **DK-19** `C·1` Hacer obligatorio el check de CI en la protección de `main` y `develop`
       (lo configura quien administra el repositorio). *§5 p.8* ⟵ DK-17
       Pasos en [docker/README.md](docker/README.md#hacer-obligatorio-el-check-dk-19); falta que
       lo active quien administra el repositorio, después de la primera corrida en un PR.
+      Activo desde el 27 nov en `main` y `develop` (check `lint, test, sim, hps`).
 
 ### 8.5 Documentación
 
@@ -947,7 +948,7 @@ subir de un extremo al otro.
       Instrumentado (LEDR6 cambia con cada botón aceptado) y medido sin tarjeta: el botón
       se atiende en la misma vuelta del lazo, filtro ≤ 41 ms, canción < 2 s con el modelo
       del HPS (`test_app`, `tb_player`). Falta en la tarjeta (`docs/pruebas-tarjeta.md`).
-- [~] **PR-08** `C·1` Estabilidad: la lista completa al menos dos vueltas sin reinicios y con el
+- [x] **PR-08** `C·1` Estabilidad: la lista completa al menos dos vueltas sin reinicios y con el
       contador de underruns en 0. *§3-F p.4* ⟵ IN-09 · #20 (OBL, EVID)
       Contador de subdesbordes en LEDR5 y en la pantalla; dos vueltas sin subdesbordes en
       `test_app` y `tb_player`. Falta en la tarjeta.
@@ -973,12 +974,12 @@ subir de un extremo al otro.
 - [x] **RP-04** Costo de mover un filtro de software a hardware: recursos y potencia del
       módulo frente a ciclos por muestra del mismo filtro en software (medidos con `mcycle`).
       *§3-REC p.6* ⟵ RP-02, CD-12
-- [~] **RP-05** `A·1` Discusión de cómo la partición HW/SW afectó recursos y potencia. *§3-REC
+- [x] **RP-05** `A·1` Discusión de cómo la partición HW/SW afectó recursos y potencia. *§3-REC
       p.6, §5 p.8 (3%)* ⟵ RP-01..04 (OBL)
 
 ## 11. Documentación y entregables — #22 a #25
 
-- [~] **DOC-01** `C·2` Documento de diseño de software: módulos, métodos, bibliotecas, API
+- [x] **DOC-01** `C·2` Documento de diseño de software: módulos, métodos, bibliotecas, API
       (headers documentados), requisitos de software (del PDF y del profesor) y lista de
       chequeo de cumplimiento. *§5 p.7 (3%)* ⟵ PR-01, NV-14, HP-07 · #22 (OBL)
       [docs/software/diseno-software.md](docs/software/diseno-software.md); falta la parte
@@ -986,12 +987,12 @@ subir de un extremo al otro.
 - [x] **DOC-02** `D·2` Metodología de diseño del sistema: análisis del problema, investigación,
       propuestas, comparación, evaluación y justificación del co-diseño (CD-01..16). *§5 p.7 (7%)*
       ⟵ CD-15 · #22 (OBL)
-- [~] **DOC-03** `B·2` Diseño del hardware personalizado: diagrama de bloques, registros, mapa
+- [x] **DOC-03** `B·2` Diseño del hardware personalizado: diagrama de bloques, registros, mapa
       de memoria, diagramas de tiempo y justificación. *§5 p.7 (4%)* ⟵ HW-11, HW-18, HW-24 ·
       #22 (OBL)
-- [~] **DOC-04** `A·1` Análisis de recursos y consumo (RP-01..05). *§5 p.8 (3%)* ⟵ RP-05 · #22
+- [x] **DOC-04** `A·1` Análisis de recursos y consumo (RP-01..05). *§5 p.8 (3%)* ⟵ RP-05 · #22
       (OBL)
-- [~] **DOC-05** `B·2` Herramientas de ingeniería: herramientas usadas (Quartus, Platform
+- [x] **DOC-05** `B·2` Herramientas de ingeniería: herramientas usadas (Quartus, Platform
       Designer, Questa, Docker, cocotb, GitHub Actions), modelos y ecuaciones (FIR, punto
       fijo, duración, volumen, presupuesto de latencia), scripts creados o modificados
       (incluye [docs/reutilizado-taller9.md](docs/reutilizado-taller9.md)). *§5 p.8 (3%)* ·

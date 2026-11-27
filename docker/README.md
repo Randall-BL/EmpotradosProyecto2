@@ -77,6 +77,9 @@ artefactos durante 14 días, también si algo falla (DK-18).
 
 ### Hacer obligatorio el check (DK-19)
 
+**Activo** en `main` y `develop` desde el 27 de noviembre de 2026: ningún PR se puede
+mergear sin que pase `lint, test, sim, hps`. Para cambiarlo:
+
 Lo configura quien administra el repositorio en GitHub: *Settings → Branches →* regla
 de `main` y de `develop` → *Require status checks to pass before merging* → buscar y
 marcar **`lint, test, sim, hps`** (el nombre del job). Para que aparezca en la lista, el
