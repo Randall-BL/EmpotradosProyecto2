@@ -508,7 +508,7 @@ subir de un extremo al otro.
 - [x] **CD-14** Formato de punto fijo: muestras Q1.15, coeficientes (Q1.15 o Q2.14), ancho
       del acumulador (16 + 16 + ⌈log2 N⌉ bits), redondeo y saturación. *§3-SIS p.5* · #9 →
       documento con el análisis de error.
-- [ ] **CD-15** `D·2` Comparar al menos dos arquitecturas completas (p. ej. A con filtros en
+- [x] **CD-15** `D·2` Comparar al menos dos arquitecturas completas (p. ej. A con filtros en
       HW vs A con filtros en HPS) en una tabla de rendimiento, latencia, recursos y
       complejidad. *§3 p.3, §5 p.7 (7%)* ⟵ CD-01..14, RP-04 · #3 (EVID)
 - [ ] **CD-16** `D·2` Diagramas de arquitectura de hardware (bloques del SoC) y de software
@@ -983,7 +983,7 @@ subir de un extremo al otro.
       chequeo de cumplimiento. *§5 p.7 (3%)* ⟵ PR-01, NV-14, HP-07 · #22 (OBL)
       [docs/software/diseno-software.md](docs/software/diseno-software.md); falta la parte
       del HPS cuando exista (HP-07, D).
-- [ ] **DOC-02** `D·2` Metodología de diseño del sistema: análisis del problema, investigación,
+- [x] **DOC-02** `D·2` Metodología de diseño del sistema: análisis del problema, investigación,
       propuestas, comparación, evaluación y justificación del co-diseño (CD-01..16). *§5 p.7 (7%)*
       ⟵ CD-15 · #22 (OBL)
 - [~] **DOC-03** `B·2` Diseño del hardware personalizado: diagrama de bloques, registros, mapa
@@ -1005,7 +1005,8 @@ subir de un extremo al otro.
       `docs/img/`. *§5 p.8* ⟵ CD-16, HW-18
 - [ ] **DOC-08** `D·2` Videos demostrativos (arranque, controles, filtros, volumen, cambio de
       canción) enlazados desde el README. *§5 p.8* ⟵ IN-09 · #23 (EVID)
-- [ ] **DOC-09** `A·1` Formato final de la documentación de diseño (PDF aparte o en `docs/`). *§5 p.7*
+- [x] **DOC-09** `A·1` Formato final de la documentación de diseño (PDF aparte o en `docs/`). *§5 p.7*
+      → `docs/documento-diseno.md` (fuente) y `docs/documento-diseno.pdf` (`scripts/build-doc.sh`).
 - [ ] **DOC-10** `B·2` Presentación funcional: guion que recorra cada requisito de §3, ensayo
       cronometrado, tarjeta SD de respaldo y video de respaldo por si falla el hardware.
       *§5 p.7 (60%)* ⟵ IN-09 · #24 (OBL)

@@ -290,6 +290,12 @@ Sistema completo (con el módulo propio; sin el HPS todavía), de
 
 ## Decisiones de diseño
 
+Documento de diseño completo (§5: metodología, comparación de arquitecturas, hardware
+propio, software con lista de chequeo, recursos y potencia, herramientas):
+[docs/documento-diseno.md](docs/documento-diseno.md) · [PDF](docs/documento-diseno.pdf).
+Navegador del código por requisito: `python3 scripts/gen-mapa-codigo.py` → `docs/mapa-codigo.html`.
+
+
 | Decisión | Resumen |
 |---|---|
 | [CD-06](docs/decisiones/CD-06.md) Memoria | Todo en on-chip: 128 KB para el Nios V y 64 KB de doble puerto compartidos con el HPS; sin SDRAM |

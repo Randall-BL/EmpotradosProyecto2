@@ -1,0 +1,29 @@
+% Diagrama de bloques del modulo propio (equivale al Mermaid "filtro").
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[font=\small]
+  \node[blkn,minimum height=5.6cm,minimum width=1.6cm] (bus) at (-0.4,0) {Avalon-MM\\(Nios V)};
+  \node[blkl,minimum width=3.0cm] (regs) at (3.6,2.0) {Registros\\CTRL, STATUS, NTAPS,\\GAIN, COEF\_*};
+  \node[blkl,minimum width=3.0cm] (lat) at (4.0,-1.2) {Latch de entrada\\+ configuración};
+  \node[blkl,minimum width=3.4cm,font=\footnotesize] (fsm) at (7.4,3.0) {Control: CLEAR, IDLE, LOAD, MAC,\\DRAIN, ROUND, GAIN, DONE};
+  \node[blkp,minimum width=2.6cm] (cm) at (7.4,1.1) {Coeficientes\\2 $\times$ 128 $\times$ 16 b};
+  \node[blkp,minimum width=2.0cm] (dl) at (7.4,-0.6) {Retardo L};
+  \node[blkp,minimum width=2.0cm] (dr) at (7.4,-2.2) {Retardo R};
+  \foreach \c/\y in {l/-0.6,r/-2.2}{
+    \node[blkn,minimum width=1.2cm] (m\c) at (10.0,\y) {$\times$ DSP};
+    \node[blkn,minimum width=1.3cm] (a\c) at (11.9,\y) {$\Sigma$ 40 b};
+    \node[blkn,minimum width=1.6cm,font=\footnotesize] (r\c) at (13.9,\y) {redondeo\\+ sat};
+    \node[blkn,minimum width=1.8cm,font=\footnotesize] (g\c) at (16.1,\y) {$\times$ ganancia\\+ sat};
+    \draw[ln] (m\c) -- (a\c); \draw[ln] (a\c) -- (r\c); \draw[ln] (r\c) -- (g\c);}
+  \draw[ln] (dl) -- (ml); \draw[ln] (dr) -- (mr);
+  \draw[ln] (cm.east) -| (ml.north);
+  \draw[ln] (cm.east) -| ([xshift=3mm]ml.north east) |- (mr.east);
+  \draw[ln] (bus.east |- regs) -- (regs);
+  \draw[ln] (bus.east |- lat) -- node[above,font=\footnotesize,pos=0.4]{DATA\_IN} (lat);
+  \draw[ln] (regs) -- (fsm.west);
+  \draw[ln] (regs.east) -- (cm.west);
+  \draw[ln] (lat.east) -- (dl.west);
+  \draw[ln] (lat.east) -- (dr.west);
+  \draw[ln,dashed] (lat.south) |- node[pos=0.75,below,font=\footnotesize]{bypass} ([yshift=-8mm]gr.south) -- (gr.south);
+  \draw[ln] (gl.east) -- ++(0.6,0) |- ([yshift=-17mm]bus.south) node[pos=0.25,right,font=\footnotesize]{DATA\_OUT \{R,L\}} -- (bus.south);
+  \draw[ln] (gr.east) -- ++(0.6,0);
+\end{tikzpicture}}
