@@ -617,7 +617,7 @@ subir de un extremo al otro.
       función → requisito) y quitar los que no tengan función (p. ej. la JTAG UART en la
       versión final, salvo que se use para mediciones). *§3-HW p.5* ⟵ HW-01..17 · #5 (OBL,
       EVID)
-- [~] **HW-24** `A·1` Mapa de memoria final visto desde el Nios V y desde el HPS (exportado de
+- [x] **HW-24** `A·1` Mapa de memoria final visto desde el Nios V y desde el HPS (exportado de
       Platform Designer). *§5 p.7–8* ⟵ HW-23 · #4 (EVID)
 
 ## 4. Software portable `sw/common/` — #11, #12, #14
@@ -728,7 +728,7 @@ subir de un extremo al otro.
 - [x] **NV-15** Autoprueba del módulo propio en el arranque: escribe vectores conocidos y
       compara con la salida esperada (la "rutina de prueba en software" de §3-HW p.4).
       *§3-HW p.4* ⟵ NV-10 · #10 (EVID)
-- [~] **NV-16** `A·1` Gestión de memoria: revisar el `.map` y `riscv32-unknown-elf-size`, ubicar
+- [x] **NV-16** `A·1` Gestión de memoria: revisar el `.map` y `riscv32-unknown-elf-size`, ubicar
       buffers en la memoria elegida y documentar el uso. *§3-SW p.5* ⟵ NV-14 · #15 (OBL, EVID)
 - [x] **NV-17** Auditoría sin HAL: `grep -rnE 'IOWR|IORD|alt_' sw/niosv/ sw/common/` solo
       muestra `alt_ic_isr_register` / `alt_ic_irq_enable` / `alt_ic_irq_disable`. *§3-SW p.5*

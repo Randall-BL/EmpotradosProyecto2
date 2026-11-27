@@ -29,7 +29,7 @@ Las filas marcadas con la tarea entre paréntesis se agregan al Tcl en esa tarea
 | Vista | Dirección de `shm` | Puerto | Estado |
 |---|---|---|---|
 | Nios V | `0x0002_0000` – `0x0002_FFFF` (`SHM_BASE`) | `shm.s1` | En el SoC; verificado con `tb_shm` (bus de datos, bus de direcciones, March C-, accesos de 8/16 bits) |
-| HPS | Propuesta: `0xFF20_0000` (offset 0 del bridge liviano H2F) | `shm.s2` | Lo conecta D en HW-05 con `add_connection hps.h2f_lw_axi_master shm.s2` |
+| HPS | `0xFF20_0000` – `0xFF20_FFFF` (offset 0 del puente liviano H2F; `LWH2F_BASE` en `sw/hps/src/devmem.h`) | `shm.s2` | En el SoC (`map hps.h2f_lw_axi_master shm.s2 0x0`); probado en la tarjeta: el HPS publica la tabla de pistas y llena el ring |
 
 Los dos puertos son independientes (RAM de doble puerto): el HPS escribe muestras y el
 Nios V las lee sin arbitraje de bus. El handshake son los índices de productor y
@@ -61,8 +61,27 @@ enteros de 10 Kbit; por ejemplo, el Character Buffer reserva 8 KB (direcciones d
 para 4 800 caracteres.
 
 El mapa exportado de Platform Designer (`python3 scripts/report-memory-map.py`) está en
-[mapa-memoria-generado.md](mapa-memoria-generado.md) y coincide con esta tabla. Cuando D
-agregue el HPS (HW-05), el mismo script lista también la vista desde su bridge (HW-24).
+[mapa-memoria-generado.md](mapa-memoria-generado.md) y coincide con esta tabla. Incluye
+también la vista desde el HPS (HW-24), resumida en la sección siguiente.
+
+## Mapa visto desde el HPS (HW-24)
+
+Direcciones físicas del ARM que usa el software del HPS. La aplicación (`hps_player`)
+solo toca las tres marcadas, por `mmap` de `/dev/mem` con punteros `volatile`
+(`sw/hps/src/devmem.c`); el resto lo manejan los drivers del kernel o U-Boot.
+
+| Base | Fin | Tamaño | Región | Quién la usa |
+|---|---|---|---|---|
+| `0x0000_0000` | `0x3FFF_FFFF` | 1 GB | DDR3 del HPS | Linux; el buffer de lectura anticipada (4 MiB) de `prefetch.c` |
+| `0xFF20_0000` | `0xFF20_FFFF` | 64 KB | Puente liviano H2F → `shm.s2` | **`hps_player`**: control, tabla de pistas y ring (`shm_proto.h`) |
+| `0xFF70_4000` | `0xFF70_4FFF` | 4 KB | Controlador SD/MMC | Driver `dw_mmc` del kernel (con el parche de tiempo de espera) |
+| `0xFF70_6000` | `0xFF70_6FFF` | 4 KB | FPGA Manager | **`hps_player`**: `stat[2:0]` = 4 indica que la FPGA está configurada antes de tocar el puente; U-Boot carga el `.rbf` |
+| `0xFF80_0000` | `0xFF80_0FFF` | 4 KB | Registros del L3 (`remap`) | U-Boot (`bridge enable`); escribirlo con Linux corriendo congela el sistema (CD-02) |
+| `0xFFC0_2000` | `0xFFC0_20FF` | 256 B | UART0 | Consola del kernel a 115 200 baudios |
+| `0xFFD0_5000` | `0xFFD0_50FF` | 256 B | Reset Manager | **`hps_player`**: saca de reset el puente liviano (`brgmodrst` bit 1) |
+
+El puente liviano ocupa 2 MB (`0xFF20_0000` – `0xFF3F_FFFF`); solo `shm` está conectada,
+al inicio. El Nios V ve la misma memoria en `0x0002_0000`.
 
 ## Uso de la RAM del Nios V por el programa (NV-16)
 
@@ -76,11 +95,14 @@ los IP):
 | `test_pio` | 8 308 | 516 | 320 | 9 144 | 7 % |
 | `test_audio` | 8 444 | 516 | 316 | 9 276 | 7 % |
 | `test_tono` (drivers + pantalla + volumen + tono) | 19 004 | 516 | 328 | 19 848 | 15 % |
-| prueba de humo con `printf` (`sw/niosv/src`) | 20 684 | 516 | 312 | 21 512 | 16 % |
+| prueba de humo con `printf` (`sw/niosv/src`, versión inicial) | 20 684 | 516 | 312 | 21 512 | 16 % |
+| **`audio_player`** (aplicación final, `sw/niosv/src`) | 20 560 | 500 | 10 828 | **31 888** | **24 %** |
 
 - El `printf` de picolibc con soporte de punto flotante cuesta ~10 KB (`vfprintf`,
   `__dtoa_engine`, `__udivdi3`): la aplicación final no lo usa en el lazo de audio y, si
   hace falta para mediciones, conviene formatear enteros a mano como `sw/common/src/screen.c`.
 - La tabla de seno de `tone.c` (2 KB) y la de volumen (64 B) van en `.rodata`.
-- Quedan ~108 KB para pila, heap y el resto de la aplicación (C, NV-14). Los buffers de
-  audio grandes no van aquí sino en `shm` (CD-06).
+- En la aplicación final, 9 600 B del `.bss` son las dos líneas de retardo de la
+  reverberación (2 × 2 400 muestras). No hay memoria dinámica: todo el estado es estático.
+- Quedan 99 184 B (76 %) para pila y heap. Los buffers de audio grandes no van aquí sino
+  en `shm` (ring de 32 KB) y, del lado del HPS, en la DDR3 (4 MiB de lectura anticipada).
