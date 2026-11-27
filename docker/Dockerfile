@@ -59,6 +59,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN apt-get update && apt-get install -y --no-install-recommends \
         python3=3.12.3-0ubuntu2.1 \
         python3-venv=3.12.3-0ubuntu2.1 \
+        libpython3.12t64=3.12.3-1ubuntu0.17 \
     && rm -rf /var/lib/apt/lists/* \
     && python3 -m venv /opt/venv \
     && /opt/venv/bin/pip install --no-cache-dir \

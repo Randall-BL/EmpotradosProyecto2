@@ -32,6 +32,7 @@ Consultadas el 2026-11-03 con `apt-cache policy` dentro de la base.
 | | `mtools` | 4.0.43-1build1 | Copiar a la FAT32 sin montar (sin root) |
 | | `u-boot-tools` | 2025.10-0ubuntu0.24.04.4 | `mkimage` (scripts de arranque de U-Boot) |
 | Python | `python3`, `python3-venv` | 3.12.3-0ubuntu2.1 | Entorno de cocotb |
+| | `libpython3.12t64` | 3.12.3-1ubuntu0.17 | `libpython3.12.so`, que cocotb carga dentro de Icarus |
 
 ## Paquetes de Python (venv en `/opt/venv`)
 

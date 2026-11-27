@@ -856,7 +856,7 @@ subir de un extremo al otro.
 - [x] **DK-08** `D·1` "Hola mundo" ARM compilado en el contenedor; `file` muestra un ELF de ARM.
       *GRUPO* ⟵ DK-05
       `hps_player` y BusyBox: ELF ARM estáticos compilados en el contenedor `hps`.
-- [ ] **DK-09** `B·1` Simulación trivial con cocotb (p. ej. un contador) que pasa en Icarus
+- [x] **DK-09** `B·1` Simulación trivial con cocotb (p. ej. un contador) que pasa en Icarus
       dentro del contenedor. *GRUPO* ⟵ DK-05
 
 ### 8.3 Simulación y pruebas
@@ -868,16 +868,16 @@ subir de un extremo al otro.
       Hecho antes que DK-09: `make sim` corre cada `sim/cocotb/<modulo>/Makefile` que
       exista (hoy ninguno) y `make hps` compila `sw/common` para ARM hasta que exista
       `sw/hps/Makefile`. Además `make ci` y `make docker-<objetivo>`.
-- [ ] **DK-11** `B·3` Testbench cocotb del filtro obligatorio contra el modelo NumPy/SciPy con
+- [x] **DK-11** `B·3` Testbench cocotb del filtro obligatorio contra el modelo NumPy/SciPy con
       los mismos coeficientes cuantizados: impulso (salida = coeficientes), escalón (valor
       final = suma de coeficientes), senoidales en banda de paso y de rechazo (atenuación
       esperada), saturación con entradas extremas, reset y bypass (identidad). Tolerancia en
       LSB justificada por el redondeo de CD-14. *§3-HW p.4* ⟵ HW-13, HW-12, DK-09 · #10 (OBL,
       EVID)
-- [ ] **DK-12** `B·2` Testbench cocotb de la interfaz de registros Avalon-MM: valores de reset,
+- [x] **DK-12** `B·2` Testbench cocotb de la interfaz de registros Avalon-MM: valores de reset,
       lectura/escritura de cada registro, bits de solo lectura, carga y relectura de
       coeficientes, dirección inválida. *§3-HW p.4* ⟵ HW-14, DK-09 · #10 (OBL, EVID)
-- [ ] **DK-13** `B·1` Testbench cocotb de cada módulo HDL propio restante (`seg7_time`,
+- [x] **DK-13** `B·1` Testbench cocotb de cada módulo HDL propio restante (`seg7_time`,
       volumen si es HW, remuestreo si es HW). *GRUPO + §3-HW p.4* ⟵ HW-10, HW-15
 - [x] **DK-14** Pruebas en C de `sw/common/` (Unity vendorizado o un `test.h` mínimo) con archivos en `tests/data/` generados por `tests/data/gen_wavs.py`
       (8/16/44.1 kHz, mono/estéreo, con y sin `LIST/INFO`, chunks extra y tamaños impares,
