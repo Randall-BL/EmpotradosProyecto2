@@ -5,8 +5,9 @@ sobre la **Altera DE1-SoC** (Cyclone V 5CSEMA5F31C6), construido con **Platform 
 y **Quartus Prime Lite 25.1std**. El procesador de la FPGA es un **Nios V/m** programado
 *bare metal* sin HAL; el HPS (ARM Cortex-A9) lee la tarjeta SD.
 
-> Estado: en desarrollo (entrega: 2 de diciembre de 2026). Plan y avance: [TODO.md](TODO.md).
-> Las secciones marcadas *(pendiente)* se completan con las tareas indicadas.
+> Versión 1.1 (entrega: 2 de diciembre de 2026), probada en la tarjeta: arranca solo desde
+> la SD en menos de 5 s y reproduce la lista completa sin cortes. Documento de diseño:
+> [docs/documento-diseno.md](docs/documento-diseno.md) ([PDF](docs/documento-diseno.pdf)).
 
 ## Contenido
 
@@ -54,9 +55,9 @@ flowchart LR
   SD[("microSD")] --- HPS
 ```
 
-Todo lo anterior está en `hw/soc/build_system.tcl`, compila en Quartus y está verificado
-por simulación, incluidos los dos módulos de hardware propio (`filtro_audio` y
-`seg7_time`, en `hw/rtl/`). Falta el HPS con su bridge (HW-05, D).
+Todo lo anterior está en `hw/soc/build_system.tcl`, compila en Quartus, está verificado
+por simulación y funciona en la tarjeta, incluidos los dos módulos de hardware propio
+(`filtro_audio` y `seg7_time`, en `hw/rtl/`) y el HPS con su puente liviano hacia `shm`.
 
 ### Hardware propio
 
@@ -131,8 +132,9 @@ scripts/audit-hal.sh       # NV-17 (también en make lint): solo aparece irq.c
 | `sw/niosv/src/` | Aplicación del reproductor (NV-14) |
 | `sw/niosv/bsp.tcl` | Ajustes del BSP |
 | `sw/common/include/`, `sw/common/src/` | Lógica portable (sin `system.h`): WAV, playlist, FSM, cola, protocolo con el HPS, lazo principal ([README](sw/common/README.md)) |
-| `sw/hps/` | Software del HPS *(pendiente, D)* |
+| `sw/hps/src/`, `sw/hps/linux/` | Software del HPS (`hps_player`: SD, WAV, remuestreo y ring en `shm`) y Linux mínimo (`init`, device tree, kernel, U-Boot) |
 | `sim/questa/` | Testbenches autoverificables y modelos del códec y del ADC |
+| `sim/cocotb/` | Testbenches cocotb + Icarus del hardware propio (corren en la CI) |
 | `tests/` | Pruebas en el PC (`make test`) y generador de WAV de prueba (`tests/data/gen_wavs.py`) |
 | `docker/`, `Makefile` | Contenedor de desarrollo y objetivos `make test/sim/lint/hps/ci` |
 | `.github/workflows/` | CI: lint, pruebas y compilación para el HPS en el contenedor |
@@ -186,7 +188,7 @@ scripts/build-quartus.sh   # 3. Quartus: síntesis, fitter, .sof y Timing Analyz
 Para cambiar solo el software sin recompilar el hardware: `scripts/update-sw.sh` (~20 s).
 
 Resultado actual de la compilación: sin errores ni warnings críticos, tiempos cumplidos en
-las cuatro esquinas del Timing Analyzer (slack mínimo de setup **+7.18 ns** a 50 MHz, hold +0.06 ns).
+las cuatro esquinas del Timing Analyzer (slack mínimo de setup **+7.905 ns** a 50 MHz, hold +0.020 ns; sistema completo con el HPS).
 
 ## Verificación sin tarjeta
 
@@ -204,6 +206,7 @@ scripts/sim-tb.sh pio      # un testbench del SoC: pio, audio, codec, adc, shm, 
 ELAB_OPTS=-gLTC=1 scripts/sim-tb.sh adc   # ADC con LTC2308 en vez de AD7928
 make test                  # lógica portable en el PC (o make docker-test)
 make lint                  # Verilator + auditoría sin HAL
+make docker-sim            # cocotb + Icarus del hardware propio (16 pruebas, también en la CI)
 ```
 
 | Prueba | Qué verifica | Resultado |
@@ -217,6 +220,7 @@ make lint                  # Verilator + auditoría sin HAL
 | `rtl_filtro_audio` | Módulo propio **aislado**, solo por Avalon-MM: registros y 8 casos dorados comparados bit a bit (impulso, escalón, senos, saturación, banco 1, bypass, 16 taps, ganancia alta) | PASS, 1 253 comprobaciones; 136 ciclos por muestra |
 | `rtl_seg7_time` | `seg7_time` aislado: 00:00 … 99:59, saturación, canción, apagado | PASS |
 | `rtl_filtro_respuesta` | Respuesta en frecuencia medida con 30 senos por banco | Error ≤ 0.83 dB en la banda de paso, rechazo ≥ 55.7 dB |
+| cocotb (`sim/cocotb/`) | `filtro_audio` (registros y datapath contra el modelo de `design_fir.py`, 13 pruebas) y `seg7_time` (2), aislados | PASS, 16 pruebas en cada PR |
 | `tb_filtro` | **Co-simulación HW/SW**: el Nios V carga coeficientes y corre la autoprueba del módulo (431 pares contra el modelo en C) dentro del SoC; displays | PASS, 0 diferencias; `03 02:05` en HEX |
 | `tb_ciclos` | Costo por muestra en el Nios V/m (`-O2`): volumen 271, FIR 8 181, biquad 2 404, reverberación 54 ciclos | Base de CD-04, CD-05 y CD-12 |
 | `tb_player` | **Reproductor completo en el Nios V**: lógica real (`app.c`), botones por IRQ, switches, LEDs, displays y la memoria compartida real con un modelo del HPS (10 pistas): navegación con vuelta, avance automático durante **dos vueltas**, pausa, stop, filtros por switches y combinación inválida | PASS; respuesta botón → LED ≤ **2.2 ms**, 0 subdesbordes |
@@ -244,9 +248,28 @@ Hallazgos de la verificación que cambiaron el diseño:
   línea y la salida X del `dcfifo` en modo *show-ahead*.
 
 Salida completa de cada testbench: [docs/verificacion/](docs/verificacion/README.md).
-Pruebas que faltan en la tarjeta y su procedimiento: [docs/pruebas-tarjeta.md](docs/pruebas-tarjeta.md).
+Pruebas en la tarjeta, procedimiento y resultados: [docs/pruebas-tarjeta.md](docs/pruebas-tarjeta.md).
 
 ## Programar la tarjeta
+
+### Arranque autónomo desde la SD (uso normal)
+
+U-Boot configura la FPGA con el `.rbf` y arranca Linux, que lanza el reproductor. Se prepara
+una sola vez (sin correr Quartus al mismo tiempo que el contenedor si la máquina tiene poca RAM):
+
+```bash
+scripts/build-quartus.sh                       # .sof y .rbf comprimido
+scripts/convert-music.sh                       # Musica/* -> WAV con metadatos (canciones.tsv)
+docker compose -f docker/compose.yml run --rm -e JOBS=2 hps \
+    bash -c 'scripts/build-hps-linux.sh && scripts/make-sdimage.sh build/hps/music-sd'
+lsblk                                          # confirmar cuál es la microSD
+sudo dd if=build/hps/sdcard.img of=/dev/sdX bs=4M conv=fsync status=progress
+```
+
+En la tarjeta, SW10 (MSEL) = `01010` (FPP x16 con compresión). La consola del HPS está en el
+mini-USB "UART to USB" a 115 200 baudios.
+
+### Por JTAG (desarrollo)
 
 ```bash
 scripts/program.sh                                   # .sof por JTAG (FPGA = dispositivo 2)
@@ -276,17 +299,18 @@ niosv-download -g -r build/niosv/app/build/audio_player.elf   # solo el programa
 
 ## Recursos y potencia
 
-Sistema completo (con el módulo propio; sin el HPS todavía), de
-`python3 scripts/report-resources.py` y `scripts/report-power.sh`:
+Sistema completo con el HPS, de `python3 scripts/report-resources.py` y
+`scripts/report-power.sh` (análisis completo en el capítulo 7 del
+[documento de diseño](docs/documento-diseno.md)):
 
 | Recurso | Uso |
 |---|---|
-| Lógica | 3 773 / 32 070 ALMs (12 %) |
-| Registros | 5 304 |
+| Lógica | 4 087 / 32 070 ALMs (13 %); hardware propio: 358 ALMs |
+| Registros | 5 777 |
 | Memoria embebida | 1 661 056 bits (41 %), 210 / 397 M10K (53 %) |
 | DSP | 4 / 87 (el filtro propio) |
 | PLL | 2 / 6 |
-| Potencia total estimada | 557.0 mW (dinámica del núcleo 99.3 mW, estática 421.7 mW, E/S 36.0 mW; estimación sin vectores); el filtro propio, 4.4 mW |
+| Potencia total estimada | 699.5 mW (dinámica del núcleo 205.4 mW, estática 422.5 mW, E/S 71.6 mW; estimación sin vectores); el filtro propio, 4.3 mW |
 
 ## Decisiones de diseño
 
@@ -312,9 +336,11 @@ Navegador del código por requisito: `python3 scripts/gen-mapa-codigo.py` → `d
 
 ## Equipo
 
-| Persona | Área |
+| Integrante | Carné |
 |---|---|
-| A — Randall Bolaños | SoC y plataforma: Platform Designer, Quartus, periféricos de catálogo y sus drivers |
-| B | Hardware propio y DSP *(trabajo hecho por Randall Bolaños; persona por asignar)* |
-| C | Software de aplicación |
-| D | HPS y arranque |
+| Randall Bolaños López | 2019043784 |
+| Aldo Alessandro Bagliano Gómez | 2020018456 |
+| Yendry Badilla Gutierrez | 2016113047 |
+| Christopher David Rodriguez Cordero | 2022040771 |
+
+Profesor: Dr.-Ing. Jeferson González Gómez.
