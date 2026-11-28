@@ -908,6 +908,7 @@ DSP (5 %) dejan espacio de sobra para el ecualizador opcional.
 | Módulo aislado | `rtl_filtro_audio` | Registros y 8 casos dorados bit a bit | PASS, 1 253 comprobaciones |
 | Módulo aislado | `rtl_filtro_respuesta` | Respuesta en frecuencia, 30 senos por banco | ≤ 0.83 dB; ≥ 55.7 dB |
 | Módulo aislado | `rtl_seg7_time` | 00:00 … 99:59, saturación, canción, apagado | PASS |
+| Módulo aislado (CI) | cocotb + Icarus (`sim/cocotb/`) | `filtro_audio`: registros y datapath contra `FirModel` (impulso, escalón, senos de los dos bancos, saturación, bypass, vectores dorados); `seg7_time` | PASS, 16 pruebas en cada PR |
 | SoC (Questa) | `tb_pio` | LEDR, SW, IRQ de cada KEY, rebote | PASS; botón → LED 17 µs |
 | SoC | `tb_audio` | 240 pares seguidos sin pérdidas ni cruces de canal | PASS |
 | SoC | `tb_codec` | 57 transferencias I²C; formato y frecuencia; de-énfasis | PASS |
@@ -921,7 +922,9 @@ DSP (5 %) dejan espacio de sobra para el ecualizador opcional.
 | Tarjeta | Arranque, controles, filtros, volumen, VGA, dos vueltas | Procedimiento de `docs/pruebas-tarjeta.md` | Arranque < 5 s; dos vueltas sin cortes |
 
 Salida completa de cada prueba: `docs/verificacion/`. Todo se corre con
-`scripts/test-all.sh` (o `make test`, `make sim`, `make lint` en el contenedor).
+`scripts/test-all.sh` (o `make test`, `make sim`, `make lint` en el contenedor). La CI
+corre `make lint test sim hps` en cada PR y es obligatoria para mergear en `main` y
+`develop`.
 
 ## 10. Limitaciones y trabajo futuro
 

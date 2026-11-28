@@ -2,7 +2,8 @@
 
 Documento de diseño de software del reproductor (§5 p.7, 3 %): módulos, métodos,
 bibliotecas, API y lista de chequeo de los requisitos de software. Cubre el Nios V y la
-lógica portable; el software del HPS (persona D) se agrega cuando exista `sw/hps/`.
+lógica portable. El software del HPS está en la sección 6.7 de
+[documento-diseno.md](../documento-diseno.md).
 
 ## 1. Organización
 
@@ -15,7 +16,7 @@ sw/
 │   ├── drivers/       un .h/.c por periférico, punteros volatile a system.h
 │   ├── src/           aplicación del reproductor (main.c)
 │   └── tests/         un programa por periférico o escenario (PR-05) + testbench en sim/questa/
-└── hps/               (persona D) SD, FAT32, productor del ring
+└── hps/               SD, WAV, remuestreo y productor del ring (hps_player) + Linux mínimo
 tests/                 pruebas en el PC de sw/common (make test)
 ```
 
@@ -200,22 +201,21 @@ reverberación). El audio en tránsito vive en `shm` (32 KB del ring) y en la FI
 | Requisito (PDF) | Cómo se cumple | Evidencia | Estado |
 |---|---|---|---|
 | Sin HAL; acceso por punteros (§3-SW p.5) | Drivers con `HW_REG`; HAL solo en `irq.c` | `scripts/audit-hal.sh` en `make lint` y en la CI | Cumple |
-| Interrupciones para los botones (§3-SW p.5) | `keys.c`: ISR corta + cola | `tb_pio`, `tb_player` | Cumple (simulación) |
+| Interrupciones para los botones (§3-SW p.5) | `keys.c`: ISR corta + cola | `tb_pio`, `tb_player` | Cumple (simulación y tarjeta) |
 | Gestión de memoria (§3-SW p.5) | Todo estático, 24 % de la RAM | §6 de este documento | Cumple |
-| Interfaz de usuario (§3-SW p.5) | Lazo `app_step`, pantalla a 10 Hz, LEDs | `test_app`, `tb_player` | Cumple (simulación) |
+| Interfaz de usuario (§3-SW p.5) | Lazo `app_step`, pantalla a 10 Hz, LEDs | `test_app`, `tb_player` | Cumple (simulación y tarjeta) |
 | Leer WAV y metadatos (§3-F p.3) | `wav.c` (PCM 16 bits, 8/16/44.1/48 kHz, `LIST/INFO`, ID3) | `test_wav` (26 archivos) | Cumple |
-| ≥ 10 canciones, siguiente/anterior, avance automático (§3-F p.3) | `playlist` + `fsm`, lista circular | `test_fsm`, `test_app`, `tb_player` (2 vueltas) | Cumple (simulación); falta IN-07 en tarjeta |
-| Play/pausa/stop (§3-F p.3) | FSM | `test_fsm`, `tb_player` | Cumple (simulación) |
+| ≥ 10 canciones, siguiente/anterior, avance automático (§3-F p.3) | `playlist` + `fsm`, lista circular | `test_fsm`, `test_app`, `tb_player` (2 vueltas) | Cumple (simulación y tarjeta) |
+| Play/pausa/stop (§3-F p.3) | FSM | `test_fsm`, `tb_player` | Cumple (simulación y tarjeta) |
 | Tiempo transcurrido y duración (§3-F p.3, §3-SIS p.6) | Cuadros / 48 000 (CD-10); duración del parser | `test_app` | Cumple |
-| Respuesta a botones < 200 ms (§3-F p.4) | ISR + lazo sin bloqueo | `tb_pio` (17 µs), `test_app`, `tb_player` | Cumple (simulación); PR-07 en tarjeta |
-| Cambio de filtro < 100 ms (§3-F p.4) | Encuesta de 20 ms + FIFO de 2.7 ms | `test_app` (≤ 41 ms) | Cumple (simulación); PR-07 |
-| Cambio de canción < 2 s (§3-F p.4) | Comando al HPS + descarte del ring | `test_app` | Cumple con el modelo del HPS; PR-07 con la SD real |
-| Reproducción sin cortes (§3-F p.4) | Ring de 170 ms + contador de subdesbordes (LEDR5) | `test_app` (0 en 2 vueltas) | PR-08 en tarjeta |
-| SD mediante el HPS (§3-SW p.5) | Protocolo `shm_proto.h` | `test_shm` | Lado Nios V listo; HPS pendiente (D) |
-| Arranque < 10 s, sin interacción con el SO (§3-F p.4, §3-SW p.5) | — | — | Pendiente (D: HP-04, HP-08) |
+| Respuesta a botones < 200 ms (§3-F p.4) | ISR + lazo sin bloqueo | `tb_pio` (17 µs), `test_app`, `tb_player` | Cumple (simulación y tarjeta) |
+| Cambio de filtro < 100 ms (§3-F p.4) | Encuesta de 20 ms + FIFO de 2.7 ms | `test_app` (≤ 41 ms) | Cumple (simulación y tarjeta) |
+| Cambio de canción < 2 s (§3-F p.4) | Comando al HPS + descarte del ring | `test_app` | Cumple (modelo del HPS y tarjeta) |
+| Reproducción sin cortes (§3-F p.4) | Ring de 170 ms + contador de subdesbordes (LEDR5) | `test_app` (0 en 2 vueltas) | Cumple (tarjeta: lista completa sin cortes) |
+| SD mediante el HPS (§3-SW p.5) | `hps_player` + protocolo `shm_proto.h` | `test_shm`, `test_producer`, tarjeta | Cumple |
+| Arranque < 10 s, sin interacción con el SO (§3-F p.4, §3-SW p.5) | Linux mínimo en initramfs; `init` solo lanza el reproductor | Tarjeta: < 5 s | Cumple |
 
-## 8. Pendiente
+## 8. Estado
 
-- Integrar con el productor real del HPS (HP-06/HP-07, D) y revisar con D el borrador de
-  `shm_proto.h` (SC-13).
-- Pruebas en la tarjeta: IN-07, PR-07, PR-08 ([docs/pruebas-tarjeta.md](../pruebas-tarjeta.md)).
+Integrado y probado en la tarjeta con el productor real del HPS: arranque en menos de
+5 s y la lista completa sin cortes ([pruebas-tarjeta.md](../pruebas-tarjeta.md)).

@@ -271,13 +271,13 @@ SECTIONS = [
           [L("docs/decisiones/CD-05.md", None, "CD-05 Volumen")]),
     ]},
     {"id": "rend", "title": "Rendimiento del sistema", "cite": "§3 p.4", "items": [
-        R("Operativo en < 10 s tras el reset", "§3 · Tiempo de inicio", "parcial",
+        R("Operativo en < 10 s tras el reset", "§3 · Tiempo de inicio", "ok",
           "Nios V: main() inicializa todo y entra al lazo. HPS: U-Boot → Linux mínimo → init "
-          "monta la SD y lanza hps_player. Falta cronometrarlo en la tarjeta (PR-07 / IN-09).",
+          "monta la SD y lanza hps_player. Medido en la tarjeta: menos de 5 s.",
           [L("sw/niosv/src/main.c", r"^int main", "Nios V: main()"),
            L("sw/hps/linux/init", None, "HPS: script init"),
            L("sw/hps/linux/boot.cmd", None, "boot.cmd (U-Boot)")],
-          docs=[L("docs/pruebas-tarjeta.md", r"PR-07 arranque", "Procedimiento PR-07 (pendiente)")]),
+          docs=[L("docs/pruebas-tarjeta.md", r"PR-07 arranque", "Medición en la tarjeta (PR-07)")]),
         R("Respuesta a botones < 200 ms", "§3 · Respuesta a botones", "ok",
           "ISR + cola + lazo no bloqueante: 17 µs en tb_pio, ≤ 2.2 ms en tb_player.",
           [L(APP, r"^void app_step", "app_step(): lazo principal no bloqueante")],
@@ -320,7 +320,10 @@ SECTIONS = [
            L("sim/questa/rtl/tb_seg7_time.sv", None, "tb_seg7_time.sv"),
            L("scripts/sim-rtl.sh", None, "sim-rtl.sh"),
            L("scripts/plot_vectors.py", None, "plot_vectors.py"),
-           L("sw/niosv/drivers/filtro.c", r"^uint32_t filtro_selftest", "filtro_selftest(): rutina SW")],
+           L("sw/niosv/drivers/filtro.c", r"^uint32_t filtro_selftest", "filtro_selftest(): rutina SW"),
+           L("sim/cocotb/filtro_audio/test_registros.py", None, "cocotb: test_registros.py (CI)"),
+           L("sim/cocotb/filtro_audio/test_filtro.py", None, "cocotb: test_filtro.py (CI)"),
+           L("sim/cocotb/seg7_time/test_seg7_time.py", None, "cocotb: test_seg7_time.py (CI)")],
           [L("docs/verificacion/resultados/rtl_filtro_audio.txt", None, "Resultado rtl_filtro_audio"),
            L("docs/verificacion/resultados/rtl_filtro_respuesta.txt", None, "Resultado rtl_filtro_respuesta"),
            L("docs/verificacion/resultados/rtl_seg7_time.txt", None, "Resultado rtl_seg7_time")],
@@ -394,11 +397,12 @@ SECTIONS = [
            L("sw/common/src/clock.c", None, "clock.c")]),
         R("Control de reproducción como FSM", "§3-SIS", "ok", "FSM en software (CD-11).",
           [L("sw/common/src/fsm.c", r"^static const transition_t table", "Tabla de transiciones")]),
-        R("Partición HW/SW justificada", "§3 / §5 Metodología", "parcial",
-          "Decisiones CD-01..CD-14 escritas. Pendiente: comparar dos arquitecturas completas "
-          "(CD-15) y el documento de metodología (DOC-02).",
+        R("Partición HW/SW justificada", "§3 / §5 Metodología", "ok",
+          "Decisiones CD-01..CD-14 y comparación de tres arquitecturas completas (CD-15) en el "
+          "capítulo 3 del documento de diseño.",
           [L("sim/questa/tb_ciclos.sv", None, "tb_ciclos (medición que sustenta CD-04/05/12)")],
-          docs=[L(f"docs/decisiones/{p}", None, p.replace(".md", "")) for p in
+          docs=[L("docs/documento-diseno.md", r"^## 3\. Metodología", "Documento de diseño, cap. 3", 1)] +
+               [L(f"docs/decisiones/{p}", None, p.replace(".md", "")) for p in
                 ["CD-01.md", "CD-02.md", "CD-04.md", "CD-05.md", "CD-06.md", "CD-07.md", "CD-08.md",
                  "CD-09.md", "CD-10.md", "CD-11.md", "CD-12.md", "CD-13.md", "CD-14.md"]]),
     ]},
@@ -411,7 +415,10 @@ SECTIONS = [
     ]},
     {"id": "entreg", "title": "Entregables de documentación y repositorio", "cite": "§5 p.7–8", "items": [
         R("Documento de diseño de software + checklist", "§5 (3 %)", "ok", "",
-          [], docs=[L("docs/software/diseno-software.md", None, "docs/software/diseno-software.md")]),
+          [], docs=[L("docs/documento-diseno.md", r"^### 6\.11", "Documento de diseño: lista de chequeo", 1),
+                    L("docs/software/diseno-software.md", None, "docs/software/diseno-software.md")]),
+        R("Presentación funcional", "§5 (60 %)", "ok", "Guion de la demostración, plan B y preguntas probables.",
+          [], docs=[L("docs/presentacion.md", None, "docs/presentacion.md")]),
         R("Diseño del hardware personalizado", "§5 (4 %)", "ok", "",
           [], docs=[L("docs/hw/modulo-filtro.md", None, "modulo-filtro.md"),
                     L("docs/hw/seg7-time.md", None, "seg7-time.md"),
@@ -420,7 +427,8 @@ SECTIONS = [
           [L("Makefile", None, "Makefile"), L("docker/Dockerfile", None, "Dockerfile")],
           docs=[L("docs/herramientas.md", None, "docs/herramientas.md")]),
         R("Flujo Git, CI, README completo", "§5 (20 %)", "parcial",
-          "README con diagramas, mapas y resultados; faltan videos demostrativos (DOC-08).",
+          "README con diagramas, mapas, resultados y uso; CI obligatoria en main y develop. "
+          "Faltan los videos demostrativos (DOC-08).",
           [L(".github/workflows/ci.yml", None, "ci.yml")],
           docs=[L("README.md", None, "README.md"), L("CONTRIBUTING.md", None, "CONTRIBUTING.md"),
                 L("TODO.md", None, "TODO.md")]),
